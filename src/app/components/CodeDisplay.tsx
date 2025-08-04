@@ -102,11 +102,6 @@ export const CodeDisplay = ({ snippet }: { snippet?: Snippet }) => {
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 mb-2">
-                <div className="avatar placeholder">
-                  <div className="bg-primary text-primary-content rounded-lg w-10">
-                    <BiCode className="w-5 h-5" />
-                  </div>
-                </div>
                 <div className="flex-1 min-w-0">
                   <h2 className="text-xl font-bold text-base-content truncate">
                     {snippet.Title}

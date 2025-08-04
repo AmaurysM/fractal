@@ -6,6 +6,7 @@ import { BiUser, BiFolder, BiCode } from "react-icons/bi";
 import { CodeDisplay } from "./components/CodeDisplay";
 import { FileTile } from "./components/FileTIle";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import { AiFillFileAdd, AiFillFolderAdd } from "react-icons/ai";
 
 export default function Home() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
@@ -131,13 +132,20 @@ export default function Home() {
     );
   }
 
+  const onAddFile = () => {
+
+  }
+
+  const onAddFolder = () => {
+
+  }
+
   return (
     <div className="h-screen flex flex-col bg-slate-50">
       {/* Header */}
       <div className="navbar bg-base-100 shadow-sm border-b border-slate-200">
         <div className="flex-1">
           <div className="flex items-center gap-3">
-
             <div>
               <div className="text-xl font-bold text-base-content">Fractal</div>
               <div className="text-sm text-base-content/70">Manage your code library</div>
@@ -178,11 +186,18 @@ export default function Home() {
           <div className="flex-1 overflow-auto">
             <div className="p-4">
               <div className="flex items-center gap-2 mb-4">
-                <BiFolder className="w-5 h-5 text-primary" />
                 <h3 className="font-semibold text-base-content">Libraries</h3>
                 {loadingLibrarys && (
                   <span className="loading loading-spinner loading-sm text-primary"></span>
                 )}
+                <div className="flex w-full items-end justify-end space-x-3">
+                  <div className="w-8 h-8 flex items-center justify-center" onClick={onAddFile}>
+                    <AiFillFileAdd className="w-6 h-6 cursor-pointer hover:text-slate-400 transition-colors duration-200" />
+                  </div>
+                  <div className="w-8 h-8 flex items-center justify-center" onClick={onAddFolder}>
+                    <AiFillFolderAdd className="w-6 h-6 cursor-pointer hover:text-slate-400 transition-colors duration-200" />
+                  </div>
+                </div>
               </div>
 
               {loadingLibrarys ? (
@@ -227,8 +242,9 @@ export default function Home() {
           </div>
         </Panel>
 
-        <PanelResizeHandle className="w-0 bg-slate-300 cursor-col-resize" />
-
+        <PanelResizeHandle
+          className="w-0.5 bg-slate-300 cursor-col-resize transition-all duration-200 ease-in-out rounded hover:w-1.5 hover:bg-slate-400 hover:shadow"
+        />
         {/* Main Content */}
         <Panel className="flex-1 flex flex-col">
           {selectedSnippet ? (
