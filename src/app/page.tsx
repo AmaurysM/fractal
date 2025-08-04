@@ -20,7 +20,7 @@ export default function Home() {
 
   const fetchAllLibraries = async (userId: string) => {
     try {
-      const res = await fetch(`api/librarys`, {
+      const res = await fetch(`api/libraries`, {
         method: "GET",
         headers: {
           "x-user-id": userId
@@ -73,7 +73,7 @@ export default function Home() {
   const fetchLibrarys = async (userId: string) => {
     setLoadingLibrarys(true);
     try {
-      const res = await fetch(`api/librarys/parents`, {
+      const res = await fetch(`api/libraries/parents`, {
         method: "GET",
         headers: {
           "x-user-id": userId
@@ -99,6 +99,14 @@ export default function Home() {
       fetchLibrarys(user.Id);
     }
   }, [user]);
+
+  const onAddFile = () => {
+
+  }
+
+  const onAddFolder = () => {
+    
+  }
 
   if (loadingUser && loadingSnippets) {
     return (
@@ -132,13 +140,7 @@ export default function Home() {
     );
   }
 
-  const onAddFile = () => {
 
-  }
-
-  const onAddFolder = () => {
-
-  }
 
   return (
     <div className="h-screen flex flex-col bg-slate-50">

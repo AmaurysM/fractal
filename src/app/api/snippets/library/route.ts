@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   }
   
   try{
-    const result = await db.query('SELECT s.* FROM "SnippetJunction" sj JOIN "Snippets" s ON sj."SnippetId" = s."Id" WHERE sj."LibraryId" = $1 ', [libraryId]);
+    const result = await db.query('SELECT s.* FROM "SnippetJunction" sj JOIN "Snippet" s ON sj."SnippetId" = s."Id" WHERE sj."LibraryId" = $1 ', [libraryId]);
     
     const snippets: Snippet[] = result.rows;
     return NextResponse.json(snippets);

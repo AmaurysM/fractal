@@ -4,7 +4,7 @@ import { User } from "@/app/lib/types";
 
 export async function GET() {
   try {
-    const result = await db.query('SELECT * FROM "Users" WHERE "Id" = $1', [
+    const result = await db.query('SELECT * FROM "User" WHERE "Id" = $1', [
       "00000000-0000-0000-0000-000000000001",
     ]);
 

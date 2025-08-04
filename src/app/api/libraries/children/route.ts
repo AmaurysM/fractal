@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     const libraries: Library[] = [];
     
     for (const item of libraryJunctions) {
-      const libraryItemResult = await db.query('SELECT * From "Libraries" WHERE "Id" = $1', [item.ChildLibrary]);
+      const libraryItemResult = await db.query('SELECT * From "Library" WHERE "Id" = $1', [item.ChildLibrary]);
       if (libraryItemResult.rows.length > 0) {
         libraries.push(libraryItemResult.rows[0] as Library);
       }

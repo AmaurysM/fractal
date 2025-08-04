@@ -1,4 +1,5 @@
 import db from "@/app/lib/db";
+import { Library } from "@/app/lib/types";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
@@ -9,11 +10,12 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const result = await db.query('SELECT l.* FROM "Libraries" l LEFT JOIN "LibraryJunction" lj ON l."Id" = lj."ParentLibrary" WHERE l."UserId" = $1 AND lj."Id" IS NOT NULL',[userId]
+    const result = await db.query(
+      'SELECT * FROM "Library" WHERE "UserId" = $1',
+      [userId]
     );
-    const libraries = result.rows;
-    console.log("What happend" + result.rows)
-    return NextResponse.json(libraries);
+    const librarys: Library[] = result.rows;
+    return NextResponse.json(librarys);
   } catch (error) {
     console.error(error);
     return NextResponse.json(

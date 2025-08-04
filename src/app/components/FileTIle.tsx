@@ -23,7 +23,7 @@ export const FileTile = ({
     const fetchChildren = async (childId: string) => {
         setLoadingChildren(true);
         try {
-            const res = await fetch(`api/librarys/children`, {
+            const res = await fetch(`api/libraries/children`, {
                 method: "GET",
                 headers: {
                     "x-parent-id": childId

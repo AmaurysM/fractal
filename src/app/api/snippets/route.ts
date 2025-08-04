@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Missing userId" }, { status: 400 });
   }
   try{
-    const result = await db.query('SELECT s.* FROM "Snippets" s WHERE s."UserId" = $1 ', [userId]);
+    const result = await db.query('SELECT s.* FROM "Snippet" s WHERE s."UserId" = $1 ', [userId]);
     
     const snippets: Snippet[] = result.rows;
     return NextResponse.json(snippets);
