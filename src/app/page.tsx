@@ -17,6 +17,31 @@ export default function Home() {
   const [loadingLibrarys, setLoadingLibrarys] = useState<boolean>(false);
   const [selectedSnippet, SetSelectedSnippet] = useState<Snippet>();
   const [allLibraries, setAllLibraries] = useState<Library[]>([]);
+  const [addingFolderName, setAddingFolderName] = useState<string>("");
+  const [isAddingFolder, setIsAddingFoler] = useState<boolean>();
+  const [isAddingFile, setIsAddingFile] = useState<boolean>();
+  const [lastFolderClicked, setLastFolderCLicked] = useState<Library>();
+  const [newFileData, setNewFileData] = useState({
+    title: "",
+    language: "",
+    description: "",
+    text: ""
+  });
+  const [hoveringResizer, setHoveringResizer] = useState<boolean>();
+  const [isDragging, setIsDragging] = useState(false);
+  
+  const handleAddFolderSubmit = async () => {
+    if (!addingFolderName || !addingFolderName.trim()) return;
+    await addFolder(addingFolderName.trim());
+    setAddingFolderName("");         
+    setIsAddingFoler(false);        
+    if (user) fetchLibrarys(user.Id); 
+  };
+
+  const handleAddFolderCancel = () => {
+    setIsAddingFoler(false);
+    setAddingFolderName("");
+  };
 
   const fetchAllLibraries = async (userId: string) => {
     try {
@@ -100,12 +125,42 @@ export default function Home() {
     }
   }, [user]);
 
-  const onAddFile = () => {
+  const onAddFile = async (UserId: string, Language: string, Title: string, Description: string, Text: string) => {
+
+    try {
+      const res = await fetch(`api/snippets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: UserId,
+          language: Language,
+          description: Description,
+          title: Title,
+          text: Text
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to add file");
+
+    } catch (error) {
+      console.error(error);
+    }
 
   }
 
-  const onAddFolder = () => {
-    
+  const addFolder = async (folderName: string) => {
+    try {
+      const res = await fetch(`api/libraries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user?.Id,
+          title: folderName,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to add folder");
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   if (loadingUser && loadingSnippets) {
@@ -140,12 +195,10 @@ export default function Home() {
     );
   }
 
-
-
   return (
     <div className="h-screen flex flex-col bg-slate-50">
       {/* Header */}
-      <div className="navbar bg-base-100 shadow-sm border-b border-slate-200">
+      <div className="navbar bg-base-100 shadow-sm border-b border-slate-200 ">
         <div className="flex-1">
           <div className="flex items-center gap-3">
             <div>
@@ -186,46 +239,85 @@ export default function Home() {
 
           {/* Libraries Section */}
           <div className="flex-1 overflow-auto">
-            <div className="p-4">
-              <div className="flex items-center gap-2 mb-4">
-                <h3 className="font-semibold text-base-content">Libraries</h3>
+            <div className="">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
+                <h3 className="font-medium text-base-content text-sm uppercase tracking-wide">Explorer</h3>
                 {loadingLibrarys && (
                   <span className="loading loading-spinner loading-sm text-primary"></span>
                 )}
-                <div className="flex w-full items-end justify-end space-x-3">
-                  <div className="w-8 h-8 flex items-center justify-center" onClick={onAddFile}>
-                    <AiFillFileAdd className="w-6 h-6 cursor-pointer hover:text-slate-400 transition-colors duration-200" />
-                  </div>
-                  <div className="w-8 h-8 flex items-center justify-center" onClick={onAddFolder}>
-                    <AiFillFolderAdd className="w-6 h-6 cursor-pointer hover:text-slate-400 transition-colors duration-200" />
-                  </div>
+                <div className="flex ml-auto items-center gap-1">
+                  <button 
+                    onClick={() => setIsAddingFile(!isAddingFile)}
+                    className="p-1 rounded hover:bg-slate-200/60 transition-colors duration-150 group"
+                    title="New File"
+                  >
+                    <AiFillFileAdd className="w-4 h-4 text-slate-600 group-hover:text-slate-800" />
+                  </button>
+                  <button 
+                    onClick={() => setIsAddingFoler(!isAddingFolder)}
+                    className="p-1 rounded hover:bg-slate-200/60 transition-colors duration-150 group"
+                    title="New Folder"
+                  >
+                    <AiFillFolderAdd className="w-4 h-4 text-slate-600 group-hover:text-slate-800" />
+                  </button>
                 </div>
               </div>
-
-              {loadingLibrarys ? (
-                <div className="space-y-3">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="skeleton h-12 w-full"></div>
-                  ))}
-                </div>
-              ) : librarys.length > 0 ? (
-                <div className="space-y-2">
-                  {librarys.map((lib) => (
-                    <FileTile
-                      key={lib.Id}
-                      library={lib}
-                      onSnippetSelected={SetSelectedSnippet}
-                      selectedSnippet={selectedSnippet}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <BiFolder className="w-12 h-12 text-base-content/30 mx-auto mb-3" />
-                  <p className="text-base-content/70 text-sm">No libraries found</p>
-                  <p className="text-base-content/50 text-xs">Create your first library to get started</p>
+              
+              {/* VSCode-style folder creation */}
+              {isAddingFolder && (
+                <div className="bg-slate-50/50 border-l-2 border-blue-500">
+                  <div className="flex items-center gap-2 py-1">
+                    <div className="flex-1 relative">
+                      <input
+                        type="text"
+                        value={addingFolderName}
+                        onChange={(e) => setAddingFolderName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            handleAddFolderSubmit();
+                          } else if (e.key === "Escape") {
+                            handleAddFolderCancel();
+                          }
+                        }}
+                        onBlur={handleAddFolderCancel}
+                        autoFocus
+                        placeholder="Folder name"
+                        className="w-full px-2 py-1 text-sm bg-white border border-blue-400 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-black"
+                        style={{ fontSize: '13px' }}
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
+
+              <div className="">
+                {loadingLibrarys ? (
+                  <div className="space-y-1 ">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="flex items-center gap-2  py-1">
+                        <div className="w-4 h-4 bg-slate-200 rounded animate-pulse"></div>
+                        <div className="h-4 bg-slate-200 rounded flex-1 animate-pulse"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : librarys.length > 0 ? (
+                  <div className="py-1">
+                    {librarys.map((lib) => (
+                      <FileTile
+                        key={lib.Id}
+                        library={lib}
+                        onSnippetSelected={SetSelectedSnippet}
+                        selectedSnippet={selectedSnippet}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 px-4">
+                    <p className="text-slate-500 text-sm">No folders yet</p>
+                    <p className="text-slate-400 text-xs mt-1">Click the folder icon to create one</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -245,8 +337,12 @@ export default function Home() {
         </Panel>
 
         <PanelResizeHandle
-          className="w-0.5 bg-slate-300 cursor-col-resize transition-all duration-200 ease-in-out rounded hover:w-1.5 hover:bg-slate-400 hover:shadow"
+          className={`transition-all duration-200 ease-in-out rounded ${(hoveringResizer || isDragging) ? 'w-1.5 bg-slate-400 shadow' : 'w-0.5 bg-slate-300'} cursor-col-resize`}
+          onMouseEnter={() => setHoveringResizer(true)}
+          onMouseLeave={() => setHoveringResizer(false)}
+          onDragging={(isDragging) => setIsDragging(isDragging)}
         />
+
         {/* Main Content */}
         <Panel className="flex-1 flex flex-col">
           {selectedSnippet ? (

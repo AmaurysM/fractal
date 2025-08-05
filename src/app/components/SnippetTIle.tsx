@@ -4,11 +4,14 @@ import { Snippet } from "../lib/types";
 export const SnippetTile = ({
     snippet,
     onSnippetSelect,
-    selectedSnippet
+    selectedSnippet,
+    step,
+
 }: {
     snippet: Snippet;
     onSnippetSelect: (snippet: Snippet) => void;
     selectedSnippet?: Snippet;
+    step?: number;
 }) => {
     const isSelected = selectedSnippet?.Id === snippet.Id;
 
@@ -26,42 +29,39 @@ export const SnippetTile = ({
         };
         return colors[language || ''] || 'badge-ghost';
     };
+    const stepLevel = step ?? 0;
 
     return (
         <div
-            className={`group relative cursor-pointer transition-all duration-200 ${
-                isSelected
-                    ? "bg-primary/10 border-l-4 border-primary shadow-sm"
-                    : "hover:bg-base-200/50 border-l-4 border-transparent"
-            }`}
+            className={`group relative cursor-pointer transition-all duration-200 ${isSelected
+                ? "bg-primary/10 border-l-4 border-primary shadow-sm"
+                : "hover:bg-base-200/50 border-l-4 border-transparent"
+                }`}
             onClick={() => onSnippetSelect(snippet)}
         >
-            <div className="flex items-center gap-3 p-3">
+            <div className="flex items-center gap-3 p-3" style={{paddingLeft: `${stepLevel * 16 +16}px`}}>
                 {/* Icon */}
-                <div className="avatar placeholder">
-                    <div className={`w-8 h-8 rounded-lg p-2 ${
-                        isSelected 
-                            ? "bg-primary text-primary-content" 
-                            : "bg-base-200 text-base-content group-hover:bg-base-300"
-                    }`}>
+                {/* <div className="avatar placeholder">
+                    <div className={`w-8 h-8 rounded-lg p-2 ${isSelected
+                        ? "bg-primary text-primary-content"
+                        : "bg-base-200 text-base-content group-hover:bg-base-300"
+                        }`}>
                         <BiCode className="w-4 h-4" />
                     </div>
-                </div>
+                </div> */}
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                            <h4 className={`font-medium text-sm truncate ${
-                                isSelected ? "text-primary" : "text-base-content"
-                            }`}>
+                            <h4 className={`font-medium text-sm truncate ${isSelected ? "text-primary" : "text-base-content"
+                                }`}>
                                 {snippet.Title}
                             </h4>
-                            
+
                             {snippet.Description && (
-                                <p className={`text-xs mt-1 truncate ${
-                                    isSelected ? "text-primary/70" : "text-base-content/60"
-                                }`}>
+                                <p className={`text-xs mt-1 truncate ${isSelected ? "text-primary/70" : "text-base-content/60"
+                                    }`}>
                                     {snippet.Description}
                                 </p>
                             )}
@@ -69,11 +69,10 @@ export const SnippetTile = ({
 
                         {/* Language Badge */}
                         {snippet.Language && (
-                            <div className={`badge badge-sm ${
-                                isSelected 
-                                    ? "badge-primary badge-outline" 
-                                    : getLanguageBadgeColor(snippet.Language)
-                            }`}>
+                            <div className={`badge badge-sm ${isSelected
+                                ? "badge-primary badge-outline"
+                                : getLanguageBadgeColor(snippet.Language)
+                                }`}>
                                 {snippet.Language}
                             </div>
                         )}
@@ -100,11 +99,10 @@ export const SnippetTile = ({
             </div>
 
             {/* Hover Effect */}
-            <div className={`absolute inset-0 pointer-events-none transition-opacity duration-200 ${
-                isSelected 
-                    ? "opacity-0" 
-                    : "opacity-0 group-hover:opacity-100 bg-base-content/5"
-            }`}></div>
+            <div className={`absolute inset-0 pointer-events-none transition-opacity duration-200 ${isSelected
+                ? "opacity-0"
+                : "opacity-0 group-hover:opacity-100 bg-base-content/5"
+                }`}></div>
         </div>
     );
 };

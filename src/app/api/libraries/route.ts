@@ -24,3 +24,19 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export async function POST(req: NextRequest) {
+  const body = await req.json();
+  const  {userId, title } = body;
+
+  try {
+    const result = await db.query('INSERT INTO "Library" ("UserId", "LibraryName") VALUES ($1, $2)', [userId, title]);
+    
+    return NextResponse.json({staturs : 201});
+
+
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: 'Something went wrong'}, { status: 500});
+  }
+}
