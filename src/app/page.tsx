@@ -7,6 +7,8 @@ import { CodeDisplay } from "./components/CodeDisplay";
 import { FileTile } from "./components/FileTIle";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { AiFillFileAdd, AiFillFolderAdd } from "react-icons/ai";
+import { ItemCreation } from "./components/ItemCreation";
+import { TreeItem } from "./components/TreeItem";
 
 export default function Home() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
@@ -18,7 +20,7 @@ export default function Home() {
   const [selectedSnippet, SetSelectedSnippet] = useState<Snippet>();
   const [allLibraries, setAllLibraries] = useState<Library[]>([]);
   const [addingFolderName, setAddingFolderName] = useState<string>("");
-  const [isAddingFolder, setIsAddingFoler] = useState<boolean>();
+  const [isAddingFolder, setIsAddingFolder] = useState<boolean>();
   const [isAddingFile, setIsAddingFile] = useState<boolean>();
   const [lastFolderClicked, setLastFolderCLicked] = useState<Library>();
   const [newFileData, setNewFileData] = useState({
@@ -29,17 +31,18 @@ export default function Home() {
   });
   const [hoveringResizer, setHoveringResizer] = useState<boolean>();
   const [isDragging, setIsDragging] = useState(false);
-  
+  const [lastItemClicked, setLastItemClicked] = useState<Library | Snippet | null>();
+
   const handleAddFolderSubmit = async () => {
     if (!addingFolderName || !addingFolderName.trim()) return;
     await addFolder(addingFolderName.trim());
-    setAddingFolderName("");         
-    setIsAddingFoler(false);        
-    if (user) fetchLibrarys(user.Id); 
+    setAddingFolderName("");
+    setIsAddingFolder(false);
+    if (user) fetchLibrarys(user.Id);
   };
 
   const handleAddFolderCancel = () => {
-    setIsAddingFoler(false);
+    setIsAddingFolder(false);
     setAddingFolderName("");
   };
 
@@ -163,6 +166,27 @@ export default function Home() {
     }
   }
 
+  // const buildTree = (libId : string | undefined) => {
+  //   return (
+  //     {librarys.map((lib) => (
+  //                 <div key={lib.Id} onClick={(e) => {
+  //                   e.stopPropagation(); // Prevent the parent onClick from firing
+  //                   setLastItemClicked(lib);
+  //                 }}>
+  //                   <TreeItem
+  //                     item={lib}
+  //                     type='folder'
+  //                     isSelected={lastItemClicked?.Id === lib.Id}
+  //                     onSelect={() => {
+  //                       setLastItemClicked(lib); // Update the selected item
+  //                     }}
+  //                     children
+  //                   />
+  //                 </div>
+  //               ))}
+  //   )
+  // }
+
   if (loadingUser && loadingSnippets) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -236,89 +260,102 @@ export default function Home() {
               </div>
             </div>
           </div>
-
-          {/* Libraries Section */}
-          <div className="flex-1 overflow-auto">
-            <div className="">
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
-                <h3 className="font-medium text-base-content text-sm uppercase tracking-wide">Explorer</h3>
-                {loadingLibrarys && (
-                  <span className="loading loading-spinner loading-sm text-primary"></span>
-                )}
-                <div className="flex ml-auto items-center gap-1">
-                  <button 
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
+            <h3 className="font-medium text-base-content text-sm uppercase tracking-wide">Explorer</h3>
+            {loadingLibrarys && (
+              <span className="loading loading-spinner loading-sm text-primary"></span>
+            )}
+            <div className="flex ml-auto items-center gap-1">
+              {/* <button 
                     onClick={() => setIsAddingFile(!isAddingFile)}
                     className="p-1 rounded hover:bg-slate-200/60 transition-colors duration-150 group"
                     title="New File"
                   >
                     <AiFillFileAdd className="w-4 h-4 text-slate-600 group-hover:text-slate-800" />
-                  </button>
-                  <button 
-                    onClick={() => setIsAddingFoler(!isAddingFolder)}
-                    className="p-1 rounded hover:bg-slate-200/60 transition-colors duration-150 group"
-                    title="New Folder"
-                  >
-                    <AiFillFolderAdd className="w-4 h-4 text-slate-600 group-hover:text-slate-800" />
-                  </button>
-                </div>
-              </div>
-              
-              {/* VSCode-style folder creation */}
-              {isAddingFolder && (
-                <div className="bg-slate-50/50 border-l-2 border-blue-500">
-                  <div className="flex items-center gap-2 py-1">
-                    <div className="flex-1 relative">
-                      <input
-                        type="text"
-                        value={addingFolderName}
-                        onChange={(e) => setAddingFolderName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            handleAddFolderSubmit();
-                          } else if (e.key === "Escape") {
-                            handleAddFolderCancel();
-                          }
-                        }}
-                        onBlur={handleAddFolderCancel}
-                        autoFocus
-                        placeholder="Folder name"
-                        className="w-full px-2 py-1 text-sm bg-white border border-blue-400 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-black"
-                        style={{ fontSize: '13px' }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="">
-                {loadingLibrarys ? (
-                  <div className="space-y-1 ">
-                    {[...Array(3)].map((_, i) => (
-                      <div key={i} className="flex items-center gap-2  py-1">
-                        <div className="w-4 h-4 bg-slate-200 rounded animate-pulse"></div>
-                        <div className="h-4 bg-slate-200 rounded flex-1 animate-pulse"></div>
-                      </div>
-                    ))}
-                  </div>
-                ) : librarys.length > 0 ? (
-                  <div className="py-1">
-                    {librarys.map((lib) => (
-                      <FileTile
-                        key={lib.Id}
-                        library={lib}
-                        onSnippetSelected={SetSelectedSnippet}
-                        selectedSnippet={selectedSnippet}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 px-4">
-                    <p className="text-slate-500 text-sm">No folders yet</p>
-                    <p className="text-slate-400 text-xs mt-1">Click the folder icon to create one</p>
-                  </div>
-                )}
+                  </button> */}
+              <div
+                onClick={() => { setIsAddingFolder((prev) => !prev); }}
+                // onClick={}
+                className="p-1 rounded hover:bg-slate-200/60 transition-colors duration-150 group"
+                title="New Folder"
+              >
+                <AiFillFolderAdd className="w-4 h-4 text-slate-600 group-hover:text-slate-800" />
               </div>
             </div>
+          </div>
+          {/* Libraries Section */}
+          <div className="flex-1 overflow-auto" onClick={() => {
+            setLastItemClicked(null);
+            setIsAddingFolder(false);
+          }}>
+
+
+            {/* VSCode-style folder creation */}
+            {isAddingFolder && (lastItemClicked == null) && (
+              // <div className="bg-slate-50/50 border-l-2 border-blue-500">
+              //   <div className="flex items-center gap-2 py-1">
+              //     <div className="flex-1 relative">
+              //       <input
+              //         type="text"
+              //         value={addingFolderName}
+              //         onChange={(e) => setAddingFolderName(e.target.value)}
+              //         onKeyDown={(e) => {
+              //           if (e.key === "Enter") {
+              //             handleAddFolderSubmit();
+              //           } else if (e.key === "Escape") {
+              //             handleAddFolderCancel();
+              //           }
+              //         }}
+              //         onBlur={handleAddFolderCancel}
+              //         autoFocus
+              //         placeholder="Folder name"
+              //         className="w-full px-2 py-1 text-sm bg-white border border-blue-400 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-black"
+              //         style={{ fontSize: '13px' }}
+              //       />
+              //     </div>
+              //   </div>
+              // </div>
+              <ItemCreation
+                addingItemName={addingFolderName}
+                setAddingItemName={setAddingFolderName}
+                handleAddItemSumit={handleAddFolderSubmit}
+                handleAddItemCancel={handleAddFolderCancel}
+              />
+            )}
+
+            {loadingLibrarys ? (
+              <div className="space-y-1 ">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-2  py-1">
+                    <div className="w-4 h-4 bg-slate-200 rounded animate-pulse"></div>
+                    <div className="h-4 bg-slate-200 rounded flex-1 animate-pulse"></div>
+                  </div>
+                ))}
+              </div>
+            ) : librarys.length > 0 ? (
+              <div className="py-1" >
+                {librarys.map((lib) => (
+                  <div key={lib.Id} onClick={(e) => {
+                    e.stopPropagation(); // Prevent the parent onClick from firing
+                    setLastItemClicked(lib);
+                  }}>
+                    <TreeItem
+                      item={lib}
+                      type='folder'
+                      isSelected={lastItemClicked?.Id === lib.Id}
+                      onSelect={() => {
+                        setLastItemClicked(lib); // Update the selected item
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 px-4">
+                <p className="text-slate-500 text-sm">No folders yet</p>
+                <p className="text-slate-400 text-xs mt-1">Click the folder icon to create one</p>
+              </div>
+            )}
           </div>
 
           {/* Stats */}
