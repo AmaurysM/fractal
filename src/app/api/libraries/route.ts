@@ -27,16 +27,45 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const  {userId, title } = body;
+  const { userId, title, parentId } = body;
 
   try {
-    const result = await db.query('INSERT INTO "Library" ("UserId", "LibraryName") VALUES ($1, $2)', [userId, title]);
-    
-    return NextResponse.json({staturs : 201});
+    const result = await db.query(
+      `INSERT INTO "Library" ("UserId", "LibraryName") 
+       VALUES ($1, $2) 
+       RETURNING "Id"`,
+      [userId, title]
+    );
 
+    const newLibraryId = result.rows[0].Id;
 
+    if (parentId) {
+      await db.query(
+        `INSERT INTO "LibraryJunction" ("ParentLibrary", "ChildLibrary") 
+         VALUES ($1, $2)`,
+        [parentId, newLibraryId]
+      );
+    }
+
+    return NextResponse.json({ status: 201, libraryId: newLibraryId });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: 'Something went wrong'}, { status: 500});
+    return NextResponse.json(
+      { error: "Something went wrong" },
+      { status: 500 }
+    );
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  const { libraryId } = await req.json();
+
+  try {
+    await db.query(`DELETE FROM "Library" WHERE "Id" = $1`, [libraryId]);
+    return NextResponse.json({ status: 200 });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
+  }
+}
+

@@ -9,6 +9,7 @@ import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { AiFillFileAdd, AiFillFolderAdd } from "react-icons/ai";
 import { ItemCreation } from "./components/ItemCreation";
 import { TreeItem } from "./components/TreeItem";
+import { TreeItemCreation } from "./components/TreeItemCreation";
 
 export default function Home() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
@@ -33,18 +34,37 @@ export default function Home() {
   const [isDragging, setIsDragging] = useState(false);
   const [lastItemClicked, setLastItemClicked] = useState<Library | Snippet | null>();
 
-  const handleAddFolderSubmit = async () => {
-    if (!addingFolderName || !addingFolderName.trim()) return;
-    await addFolder(addingFolderName.trim());
-    setAddingFolderName("");
+  const handleAddFolderSubmit = async (title: string, parentId?: string) => {
+    //if (!addingFolderName || !addingFolderName.trim()) return;
+    await addFolder(title.trim(), parentId);
+    //setAddingFolderName("");
     setIsAddingFolder(false);
     if (user) fetchLibrarys(user.Id);
   };
 
   const handleAddFolderCancel = () => {
     setIsAddingFolder(false);
-    setAddingFolderName("");
+    //setAddingFolderName("");
   };
+
+  const deleteLibrary = async (libraryId: string) => {
+    try {
+      const res = await fetch(`api/libraries`,
+        {
+          method: "DELETE",
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            libraryId
+          }),
+        }
+      )
+      if (!res.ok) throw new Error("Failed to add folder");
+    } catch (error) {
+      console.error(error);
+    }
+
+    
+  }
 
   const fetchAllLibraries = async (userId: string) => {
     try {
@@ -150,13 +170,14 @@ export default function Home() {
 
   }
 
-  const addFolder = async (folderName: string) => {
+  const addFolder = async (folderName: string, parentId?: string) => {
     try {
       const res = await fetch(`api/libraries`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: user?.Id,
+          parentId: parentId,
           title: folderName,
         }),
       });
@@ -250,7 +271,7 @@ export default function Home() {
 
       <PanelGroup direction="horizontal" className="h-full">
         {/* Sidebar */}
-        <Panel defaultSize={20} minSize={20} maxSize={70} className="w-80 bg-base-100 border-r border-slate-200 flex flex-col overflow-auto">
+        <Panel defaultSize={30} minSize={20} maxSize={80} className="w-80 bg-base-100 border-r border-slate-200 flex flex-col overflow-auto">
           {/* User Info */}
           <div className="p-6 border-b border-slate-200">
             <div className="flex items-center gap-3">
@@ -315,11 +336,16 @@ export default function Home() {
               //     </div>
               //   </div>
               // </div>
-              <ItemCreation
-                addingItemName={addingFolderName}
-                setAddingItemName={setAddingFolderName}
-                handleAddItemSumit={handleAddFolderSubmit}
-                handleAddItemCancel={handleAddFolderCancel}
+              // <ItemCreation
+              //   addingItemName={addingFolderName}
+              //   setAddingItemName={setAddingFolderName}
+              //   handleAddItemSumit={handleAddFolderSubmit}
+              //   handleAddItemCancel={handleAddFolderCancel}
+              // />
+              <TreeItemCreation
+                type="folder"
+                onCancel={handleAddFolderCancel}
+                onConfirm={handleAddFolderSubmit}
               />
             )}
 
@@ -342,10 +368,22 @@ export default function Home() {
                     <TreeItem
                       item={lib}
                       type='folder'
-                      isSelected={lastItemClicked?.Id === lib.Id}
-                      onSelect={() => {
+                      selectedItem={lastItemClicked}
+                      creatingFolder={setIsAddingFolder}
+                      isCreatingFolder={isAddingFolder}
+                      onSelect={(lib) => {
+                        if (lib && 'Text' in lib) {
+                          SetSelectedSnippet(lib as Snippet);
+                        }
                         setLastItemClicked(lib); // Update the selected item
                       }}
+                      onCreateFolder={
+                        handleAddFolderSubmit
+                      }
+                      onCancelFolderCreation={
+                        handleAddFolderCancel
+                      }
+                      onDelete={deleteLibrary}
                     />
                   </div>
                 ))}

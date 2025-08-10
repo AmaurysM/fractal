@@ -1,37 +1,98 @@
 "use client"
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Library, Snippet } from "../lib/types";
 import { BiChevronRight, BiFolder, BiFile, BiPlus, BiTrash } from "react-icons/bi";
+import { TreeItemCreation } from "./TreeItemCreation";
 
 export const TreeItem = (
     {
         item,
         type,
         level = 0,
-        isSelected,
+        selectedItem,
+        creatingFolder,
+        isCreatingFolder,
         onSelect,
         onCreateFolder,
+        onCancelFolderCreation,
         onCreateFile,
         onDelete,
-        children
+        //children
     }: {
         item: Library | Snippet;
         type: 'folder' | 'file';
         level?: number;
-        isSelected: boolean;
-        onSelect: () => void;
-        onCreateFolder?: (parentId: string) => void;
+        selectedItem: Library | Snippet | null | undefined;
+        creatingFolder?: (creating: boolean) => void;
+        isCreatingFolder?: boolean;
+        onSelect: (item: Library | Snippet | null | undefined) => void;
+        onCreateFolder?: (title: string, parentId?: string) => void;
+        onCancelFolderCreation: () => void;
         onCreateFile?: (parentId: string) => void;
-        onDelete?: () => void;
-        children?: React.ReactNode;
+        onDelete?: (libraryId: string) => void;
+        //children?: React.ReactNode;
     }
 ) => {
 
     const [isExpanded, setIsExpanded] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
+    const [childFolders, setChildFolders] = useState<Library[]>();
+    const [childFiles, setChildFiles] = useState<Snippet[]>();
+
+    const [loadingChildren, setLoadingChildren] = useState(false);
+
+    const isSelected = selectedItem?.Id == item.Id;
+
+    const fetchLibrarys = async (libraryId: string) => {
+        setLoadingChildren(true);
+        try {
+            const res = await fetch(`api/libraries/children`, {
+                method: "GET",
+                headers: {
+                    "x-library-id": libraryId
+                }
+            });
+            if (!res.ok) throw new Error("Failed to fetch child librarys");
+            const data: Library[] = await res.json();
+            setChildFolders(data);
+        } catch (error) {
+            console.log("Failed To Fetch Libraries: " + (error as Error).message);
+            setChildFolders([]);
+        } finally {
+            setLoadingChildren(false);
+        }
+    }
+
+    const fetchFiles = async (libraryId: string) => {
+        setLoadingChildren(true);
+        try {
+            const res = await fetch(`api/snippets/library`, {
+                method: "GET",
+                headers: {
+                    "x-library-id": libraryId
+                }
+            });
+            if (!res.ok) throw new Error("Failed to fetch child files");
+            const data: Snippet[] = await res.json();
+            setChildFiles(data);
+        } catch (error) {
+            console.log("Failed To Fetch Libraries: " + (error as Error).message);
+            setChildFiles([]);
+        } finally {
+            setLoadingChildren(false);
+        }
+    }
+
+    useEffect(() => {
+        if (isExpanded == true) {
+            fetchLibrarys(item.Id);
+            fetchFiles(item.Id);
+        }
+    }, [isExpanded]);
 
     const paddingLeft = level * 16 + 12;
+
     return (
         <div>
             <div
@@ -45,10 +106,10 @@ export const TreeItem = (
                 onClick={
                     () => {
                         if (type === 'folder') {
-                            
                             setIsExpanded(!isExpanded);
+                            creatingFolder?.(false);
                         }
-                        onSelect();
+                        onSelect(item);
                     }
                 }
 
@@ -82,7 +143,10 @@ export const TreeItem = (
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    onCreateFolder(item.Id);
+                                    creatingFolder?.(true);
+                                    setIsExpanded(true);
+                                    //onCreateFolder(item.Id);
+
                                 }}
                                 className="p-1 hover:bg-blue-200 rounded"
                                 title="New folder"
@@ -108,7 +172,7 @@ export const TreeItem = (
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    onDelete();
+                                    onDelete(item.Id);
                                 }}
                                 className="p-1 hover:bg-red-200 rounded"
                                 title="Delete"
@@ -120,7 +184,65 @@ export const TreeItem = (
                 )}
             </div>
 
-            {type === 'folder' && isExpanded && children}
+            {type === 'folder' && isExpanded && (
+                <div>
+
+                    {isCreatingFolder && isSelected &&
+                        <TreeItemCreation
+                            level={level + 1}
+                            type="folder"
+                            parentId={item.Id}
+                            onConfirm={
+                                onCreateFolder
+                                    ? (title: string) => onCreateFolder(title, item.Id)
+                                    : () => { }
+                            }
+                            onCancel={onCancelFolderCreation}
+
+                        />
+                    }
+
+                    {childFolders && childFolders.map((lib) => (
+                        <div key={lib.Id} onClick={(e) => {
+                            e.stopPropagation(); // Prevent the parent onClick from firing
+                            onSelect(lib);
+                        }}>
+                            <TreeItem
+                                item={lib}
+                                type='folder'
+                                level={level + 1}
+                                creatingFolder={creatingFolder}
+                                isCreatingFolder={isCreatingFolder}
+                                selectedItem={selectedItem}
+                                onSelect={(lib) => {
+                                    onSelect(lib); // Update the selected item
+                                }}
+                                onCreateFolder={onCreateFolder}
+                                onCancelFolderCreation={onCancelFolderCreation}
+                            />
+                        </div>
+                    ))}
+
+                    {childFiles && childFiles.map((file) => (
+                        <div key={file.Id} onClick={(e) => {
+                            e.stopPropagation(); // Prevent the parent onClick from firing
+                            onSelect(file);
+                        }}>
+                            <TreeItem
+                                item={file}
+                                type='file'
+                                level={level + 1}
+                                creatingFolder={creatingFolder}
+                                selectedItem={selectedItem}
+                                onSelect={(file) => {
+                                    onSelect(file); // Update the selected item
+                                }}
+                                onCancelFolderCreation={onCancelFolderCreation}
+                            />
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }
