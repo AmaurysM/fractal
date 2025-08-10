@@ -9,8 +9,8 @@ export type Snippet = {
   UserId: string;
   Language?: string;
   Title: string;
-  Description: string;
-  Text: string;
+  Description?: string;
+  Text?: string;
 };
 
 export type Library = {

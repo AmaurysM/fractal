@@ -27,19 +27,47 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { userId, language, description, title, text } = body;
+  const { userId, fileTitle, parentId} = body;
 
   try {
     const result = await db.query(
-      'INSERT INTO "Snippet" ("UserId", "Language", "Title", "Description", "Text") VALUES ($1, $2 ,$3 ,$4 ,$5 )',
-      [userId, language, description, title, text]
+      'INSERT INTO "Snippet" ("UserId", "Title" ) VALUES ($1, $2) RETURNING "Id"',
+      [userId, fileTitle]
     );
+    
+    const newFileId = result.rows[0].Id;
 
-    return NextResponse.json({ staturs: 201 });
+    if(parentId) {
+      await db.query(
+        'INSERT INTO "SnippetJunction" ("LibraryId", "SnippetId") VALUES ($1, $2)', [parentId,newFileId]
+      )
+    }
+
+    return NextResponse.json({ status: 201 });
   } catch (error) {
     console.error(error);
     return NextResponse.json(
-      { error: "Something went wrong" },
+      { error: "Failed to add file/snippet" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  const body = await req.json();
+  const {fileId} = body;
+
+  try {
+    const result = await db.query(
+      'DELETE FROM "Snippet" WHERE "Id" = ($1)',
+      [fileId]
+    );
+
+    return NextResponse.json({ status: 201})
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Failed to delete file/snippet" },
       { status: 500 }
     );
   }

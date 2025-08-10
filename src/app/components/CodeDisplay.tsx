@@ -8,23 +8,23 @@ export const CodeDisplay = ({ snippet }: { snippet?: Snippet }) => {
 
   const handleCopy = async () => {
     if (!snippet?.Text) return;
-    
+
     try {
       await navigator.clipboard.writeText(snippet.Text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy text: ', err);
+      console.error("Failed to copy text: ", err);
     }
   };
 
   const handleDownload = () => {
-    if (!snippet) return;
-    
+    if (!snippet?.Text) return;
+
     const element = document.createElement("a");
-    const file = new Blob([snippet.Text], { type: 'text/plain' });
+    const file = new Blob([snippet.Text], { type: "text/plain" });
     element.href = URL.createObjectURL(file);
-    element.download = `${snippet.Title}.${getFileExtension(snippet.Language)}`;
+    element.download = `${snippet.Title || "snippet"}.${getFileExtension(snippet.Language)}`;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
@@ -32,32 +32,32 @@ export const CodeDisplay = ({ snippet }: { snippet?: Snippet }) => {
 
   const getFileExtension = (language?: string) => {
     const extensions: { [key: string]: string } = {
-      JavaScript: 'js',
-      TypeScript: 'ts',
-      Python: 'py',
-      Java: 'java',
-      'C++': 'cpp',
-      'C#': 'cs',
-      C: 'c',
-      Kotlin: 'kt',
-      'Node.js': 'js'
+      JavaScript: "js",
+      TypeScript: "ts",
+      Python: "py",
+      Java: "java",
+      "C++": "cpp",
+      "C#": "cs",
+      C: "c",
+      Kotlin: "kt",
+      "Node.js": "js",
     };
-    return extensions[language || ''] || 'txt';
+    return extensions[language || ""] || "txt";
   };
 
   const getLanguageBadgeColor = (language?: string) => {
     const colors: { [key: string]: string } = {
-      JavaScript: 'badge-warning',
-      TypeScript: 'badge-info',
-      Python: 'badge-success',
-      Java: 'badge-error',
-      'C++': 'badge-secondary',
-      'C#': 'badge-primary',
-      C: 'badge-neutral',
-      Kotlin: 'badge-accent',
-      'Node.js': 'badge-warning'
+      JavaScript: "badge-warning",
+      TypeScript: "badge-info",
+      Python: "badge-success",
+      Java: "badge-error",
+      "C++": "badge-secondary",
+      "C#": "badge-primary",
+      C: "badge-neutral",
+      Kotlin: "badge-accent",
+      "Node.js": "badge-warning",
     };
-    return colors[language || ''] || 'badge-ghost';
+    return colors[language || ""] || "badge-ghost";
   };
 
   if (!snippet) {
@@ -94,6 +94,11 @@ export const CodeDisplay = ({ snippet }: { snippet?: Snippet }) => {
     );
   }
 
+  // Use optional chaining and fallback defaults for Text
+  const text = snippet.Text || "";
+  const lineCount = text ? text.split("\n").length : 0;
+  const charCount = text.length;
+
   return (
     <div className="h-full flex flex-col bg-base-100">
       {/* Header */}
@@ -104,10 +109,14 @@ export const CodeDisplay = ({ snippet }: { snippet?: Snippet }) => {
               <div className="flex items-center gap-3 mb-2">
                 <div className="flex-1 min-w-0">
                   <h2 className="text-xl font-bold text-base-content truncate">
-                    {snippet.Title}
+                    {snippet.Title || "Untitled Snippet"}
                   </h2>
                   {snippet.Language && (
-                    <div className={`badge ${getLanguageBadgeColor(snippet.Language)}  badge-sm mt-1`}>
+                    <div
+                      className={`badge ${getLanguageBadgeColor(
+                        snippet.Language
+                      )} badge-sm mt-1`}
+                    >
                       {snippet.Language}
                     </div>
                   )}
@@ -127,20 +136,25 @@ export const CodeDisplay = ({ snippet }: { snippet?: Snippet }) => {
                   <BiEdit className="w-4 h-4" />
                 </button>
               </div>
-              
+
               <div className="tooltip" data-tip="Download file">
-                <button 
+                <button
                   className="btn btn-ghost btn-sm btn-square"
                   onClick={handleDownload}
+                  disabled={!text}
                 >
                   <BiDownload className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="tooltip" data-tip={copied ? "Copied!" : "Copy to clipboard"}>
+              <div
+                className="tooltip"
+                data-tip={copied ? "Copied!" : "Copy to clipboard"}
+              >
                 <button
-                  className={`btn btn-sm ${copied ? 'btn-success' : 'btn-primary'}`}
+                  className={`btn btn-sm ${copied ? "btn-success" : "btn-primary"}`}
                   onClick={handleCopy}
+                  disabled={!text}
                 >
                   {copied ? (
                     <>
@@ -166,8 +180,7 @@ export const CodeDisplay = ({ snippet }: { snippet?: Snippet }) => {
           <div className="mockup-code h-full before:hidden">
             <pre className="px-6 py-4">
               <code className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-                <MarkdownDisplay markdown={snippet.Text} />
-
+                <MarkdownDisplay markdown={text} />
               </code>
             </pre>
           </div>
@@ -178,17 +191,9 @@ export const CodeDisplay = ({ snippet }: { snippet?: Snippet }) => {
       <div className="flex-shrink-0 bg-base-200 border-t border-base-300 px-6 py-3">
         <div className="flex items-center justify-between text-xs text-base-content/60">
           <div className="flex items-center gap-4">
-            <span>
-              Lines: {snippet.Text.split('\n').length}
-            </span>
-            <span>
-              Characters: {snippet.Text.length}
-            </span>
-            {snippet.Language && (
-              <span>
-                Type: {snippet.Language}
-              </span>
-            )}
+            <span>Lines: {lineCount}</span>
+            <span>Characters: {charCount}</span>
+            {snippet.Language && <span>Type: {snippet.Language}</span>}
           </div>
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-success rounded-full"></div>

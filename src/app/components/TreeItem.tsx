@@ -13,25 +13,31 @@ export const TreeItem = (
         selectedItem,
         creatingFolder,
         isCreatingFolder,
+        creatingFile,
+        isCreatingFile,
         onSelect,
         onCreateFolder,
         onCancelFolderCreation,
         onCreateFile,
-        onDelete,
-        //children
+        onCancelFileCreation,
+        onDeleteLibrary,
+        onDeleteFile
     }: {
         item: Library | Snippet;
         type: 'folder' | 'file';
         level?: number;
         selectedItem: Library | Snippet | null | undefined;
         creatingFolder?: (creating: boolean) => void;
+        creatingFile?: (creating: boolean) => void;
         isCreatingFolder?: boolean;
-        onSelect: (item: Library | Snippet | null | undefined) => void;
+        isCreatingFile?: boolean;
+        onSelect: (item: Library | Snippet) => void;
         onCreateFolder?: (title: string, parentId?: string) => void;
-        onCancelFolderCreation: () => void;
-        onCreateFile?: (parentId: string) => void;
-        onDelete?: (libraryId: string) => void;
-        //children?: React.ReactNode;
+        onCancelFolderCreation?: () => void;
+        onCreateFile?: (title: string, parentId?: string) => void;
+        onCancelFileCreation?: () => void;
+        onDeleteLibrary?: (libraryId: string) => void;
+        onDeleteFile?: (fileId: string) => void;
     }
 ) => {
 
@@ -155,7 +161,7 @@ export const TreeItem = (
                             </button>
                         )}
 
-                        {type === 'file' && onCreateFile && (
+                        {/* {type === 'file' && onCreateFile && (
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
@@ -166,13 +172,26 @@ export const TreeItem = (
                             >
                                 <BiPlus className="w-3 h-3" />
                             </button>
-                        )}
+                        )} */}
 
-                        {onDelete && (
+                        {onDeleteLibrary && (
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    onDelete(item.Id);
+                                    onDeleteLibrary(item.Id);
+                                }}
+                                className="p-1 hover:bg-red-200 rounded"
+                                title="Delete"
+                            >
+                                <BiTrash className="w-3 h-3 text-red-500" />
+                            </button>
+                        )}
+
+                        {onDeleteFile && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDeleteFile(item.Id);
                                 }}
                                 className="p-1 hover:bg-red-200 rounded"
                                 title="Delete"
@@ -197,14 +216,29 @@ export const TreeItem = (
                                     ? (title: string) => onCreateFolder(title, item.Id)
                                     : () => { }
                             }
-                            onCancel={onCancelFolderCreation}
+                            onCancel={onCancelFolderCreation ?? (onCancelFolderCreation ?? (() => { }))}
+
+                        />
+                    }
+
+                    {isCreatingFile && isSelected &&
+                        <TreeItemCreation
+                            level={level + 1}
+                            type="file"
+                            parentId={item.Id}
+                            onConfirm={
+                                onCreateFile
+                                    ? (title: string) => onCreateFile(title, item.Id)
+                                    : () => { }
+                            }
+                            onCancel={onCancelFileCreation ?? (onCancelFileCreation ?? (() => { }))}
 
                         />
                     }
 
                     {childFolders && childFolders.map((lib) => (
                         <div key={lib.Id} onClick={(e) => {
-                            e.stopPropagation(); // Prevent the parent onClick from firing
+                            e.stopPropagation();
                             onSelect(lib);
                         }}>
                             <TreeItem
@@ -213,19 +247,25 @@ export const TreeItem = (
                                 level={level + 1}
                                 creatingFolder={creatingFolder}
                                 isCreatingFolder={isCreatingFolder}
+                                creatingFile={creatingFile}
+                                isCreatingFile={isCreatingFile}
                                 selectedItem={selectedItem}
                                 onSelect={(lib) => {
-                                    onSelect(lib); // Update the selected item
+                                    onSelect(lib);
                                 }}
                                 onCreateFolder={onCreateFolder}
                                 onCancelFolderCreation={onCancelFolderCreation}
+                                onCreateFile={onCreateFile}
+                                onCancelFileCreation={onCancelFileCreation}
+                                onDeleteLibrary={onDeleteLibrary}
+                                onDeleteFile={onDeleteFile}
                             />
                         </div>
                     ))}
 
                     {childFiles && childFiles.map((file) => (
                         <div key={file.Id} onClick={(e) => {
-                            e.stopPropagation(); // Prevent the parent onClick from firing
+                            e.stopPropagation();
                             onSelect(file);
                         }}>
                             <TreeItem
@@ -235,9 +275,10 @@ export const TreeItem = (
                                 creatingFolder={creatingFolder}
                                 selectedItem={selectedItem}
                                 onSelect={(file) => {
-                                    onSelect(file); // Update the selected item
+                                    onSelect(file);
                                 }}
-                                onCancelFolderCreation={onCancelFolderCreation}
+                                onDeleteFile={onDeleteFile}
+
                             />
                         </div>
                     ))}
