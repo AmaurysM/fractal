@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react";
-import { Library, Snippet, User } from "./lib/types";
+import { ExplorerItemType, Library, Snippet, User } from "./lib/types";
 import { BiUser, BiFolder, BiCode } from "react-icons/bi";
 import { CodeDisplay } from "./components/CodeDisplay";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
@@ -253,6 +253,28 @@ export default function Home() {
     }
   };
 
+  const saveSnippet = async (newSnippet: Snippet) => {
+    try {
+      const res = await fetch(`/api/snippets`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          Id: newSnippet.Id,
+          UserId: newSnippet.UserId,
+          Language: newSnippet.Language,
+          Title: newSnippet.Title,
+          Description: newSnippet.Description,
+          Text: newSnippet.Text
+        })
+      });
+      if (!res.ok) {
+        throw new Error("Failed to patch file/snippet");
+      }
+    } catch (error) {
+      console.error("Error patching file/snippet: ", error)
+    }
+  }
+
   const handleItemSelect = (item: Library | Snippet) => {
     if (item && 'Text' in item) {
       setSelectedSnippet(item as Snippet);
@@ -405,7 +427,7 @@ export default function Home() {
             {/* Root level folder creation */}
             {isAddingFolder && lastItemClicked === null && (
               <TreeItemCreation
-                type="folder"
+                type={ExplorerItemType.Folder}
                 onCancel={handleAddFolderCancel}
                 onConfirm={handleAddFolderSubmit}
               />
@@ -414,7 +436,7 @@ export default function Home() {
             {/* Root level file creation */}
             {isAddingFile && lastItemClicked === null && (
               <TreeItemCreation
-                type="file"
+                type={ExplorerItemType.File}
                 onCancel={handleAddFileCancel}
                 onConfirm={handleAddFileSubmit}
               />
@@ -442,7 +464,7 @@ export default function Home() {
                   >
                     <TreeItem
                       item={lib}
-                      type="folder"
+                      type={ExplorerItemType.Folder}
                       selectedItem={lastItemClicked}
                       creatingFolder={setIsAddingFolder}
                       isCreatingFolder={isAddingFolder}
@@ -484,7 +506,7 @@ export default function Home() {
                   >
                     <TreeItem
                       item={snip}
-                      type="file"
+                      type={ExplorerItemType.File}
                       selectedItem={lastItemClicked}
                       creatingFile={setIsAddingFile}
                       isCreatingFile={isAddingFile}
@@ -536,7 +558,7 @@ export default function Home() {
         <Panel className="flex-1 flex flex-col">
           {selectedSnippet ? (
             <div className="flex-1 bg-base-100">
-              <CodeDisplay snippet={selectedSnippet} />
+              <CodeDisplay snippet={selectedSnippet} onSave={saveSnippet} />
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center bg-base-100">

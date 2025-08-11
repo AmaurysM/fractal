@@ -31,6 +31,10 @@ export type SnippetJunction = {
   SnippetId: string;
 };
 
+export enum ExplorerItemType {
+  File, Folder
+}
+
 export enum BadgeType {
   Java = "Java",
   Cpp = "C++",

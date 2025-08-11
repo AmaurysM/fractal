@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react";
-import { Library, Snippet } from "../lib/types";
+import { Library, Snippet, ExplorerItemType } from "../lib/types";
 import { BiChevronRight, BiFolder, BiFile, BiPlus, BiTrash } from "react-icons/bi";
 import { TreeItemCreation } from "./TreeItemCreation";
 
@@ -24,7 +24,7 @@ export const TreeItem = (
         onDeleteFile
     }: {
         item: Library | Snippet;
-        type: 'folder' | 'file';
+        type: ExplorerItemType;
         level?: number;
         selectedItem: Library | Snippet | null | undefined;
         creatingFolder?: (creating: boolean) => void;
@@ -111,7 +111,7 @@ export const TreeItem = (
                 style={{ paddingLeft }}
                 onClick={
                     () => {
-                        if (type === 'folder') {
+                        if (type === ExplorerItemType.Folder) {
                             setIsExpanded(!isExpanded);
                             creatingFolder?.(false);
                         }
@@ -122,7 +122,7 @@ export const TreeItem = (
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
             >
-                {type === 'folder' && (
+                {type === ExplorerItemType.Folder && (
                     <BiChevronRight
                         className={`w-3 h-3 text-gray-400 transition-transform mr-1 ${isExpanded ? 'rotate-90' : ''
                             }`}
@@ -130,14 +130,14 @@ export const TreeItem = (
                     />
                 )}
 
-                {type === 'folder' ? (
+                {type === ExplorerItemType.Folder ? (
                     <BiFolder className="w-4 h-4 text-blue-500 mr-2" />
                 ) : (
                     <BiFile className="w-4 h-4 text-gray-500 mr-2" />
                 )}
 
                 <span className="flex-1 text-sm truncate">
-                    {type === 'folder'
+                    {type === ExplorerItemType.Folder
                         ? (item as Library).LibraryName
                         : (item as Snippet).Title
                     }
@@ -145,7 +145,7 @@ export const TreeItem = (
 
                 {isHovered && (
                     <div className="flex items-center gap-1 ml-2">
-                        {type === 'folder' && onCreateFolder && (
+                        {type === ExplorerItemType.Folder && onCreateFolder && (
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
@@ -174,7 +174,7 @@ export const TreeItem = (
                             </button>
                         )} */}
 
-                        {onDeleteLibrary && (
+                        {onDeleteLibrary && type === ExplorerItemType.Folder && (
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
@@ -187,7 +187,7 @@ export const TreeItem = (
                             </button>
                         )}
 
-                        {onDeleteFile && (
+                        {onDeleteFile && type === ExplorerItemType.File && (
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
@@ -203,13 +203,13 @@ export const TreeItem = (
                 )}
             </div>
 
-            {type === 'folder' && isExpanded && (
+            {type === ExplorerItemType.Folder && isExpanded && (
                 <div>
 
                     {isCreatingFolder && isSelected &&
                         <TreeItemCreation
                             level={level + 1}
-                            type="folder"
+                            type={ExplorerItemType.Folder}
                             parentId={item.Id}
                             onConfirm={
                                 onCreateFolder
@@ -224,7 +224,7 @@ export const TreeItem = (
                     {isCreatingFile && isSelected &&
                         <TreeItemCreation
                             level={level + 1}
-                            type="file"
+                            type={ExplorerItemType.File}
                             parentId={item.Id}
                             onConfirm={
                                 onCreateFile
@@ -243,7 +243,7 @@ export const TreeItem = (
                         }}>
                             <TreeItem
                                 item={lib}
-                                type='folder'
+                                type={ExplorerItemType.Folder}
                                 level={level + 1}
                                 creatingFolder={creatingFolder}
                                 isCreatingFolder={isCreatingFolder}
@@ -270,7 +270,7 @@ export const TreeItem = (
                         }}>
                             <TreeItem
                                 item={file}
-                                type='file'
+                                type={ExplorerItemType.File}
                                 level={level + 1}
                                 creatingFolder={creatingFolder}
                                 selectedItem={selectedItem}

@@ -2,16 +2,17 @@
 
 import { useState, useEffect, useRef } from "react";
 import { BiFolder, BiFile, BiCheck, BiX, BiChevronRight } from "react-icons/bi";
+import { ExplorerItemType } from "../lib/types";
 
 export const TreeItemCreation = ({
     level = 0,
-    type = "folder",
+    type = ExplorerItemType.Folder,
     parentId,
     onConfirm,
     onCancel
 }: {
     level?: number;
-    type?: "folder" | "file";
+    type?: ExplorerItemType;
     parentId?: string;
     onConfirm: (title: string, parentId?: string) => void;
     onCancel: () => void;
@@ -46,7 +47,7 @@ export const TreeItemCreation = ({
                 onMouseLeave={() => setIsHovered(false)}
             >
 
-                {type === 'folder' && (
+                {type === ExplorerItemType.Folder && (
                     <BiChevronRight
                         className={`w-3 h-3 text-gray-400 transition-transform mr-1 ${false ? 'rotate-90' : ''
                             }`}
@@ -55,7 +56,7 @@ export const TreeItemCreation = ({
                 )}
 
 
-                {type === "folder" ? (
+                {type === ExplorerItemType.Folder ? (
                     <BiFolder className="w-4 h-4 text-blue-500 mr-2" />
                 ) : (
                     <BiFile className="w-4 h-4 text-gray-500 mr-2" />
@@ -68,7 +69,7 @@ export const TreeItemCreation = ({
                     onChange={(e) => setTitle(e.target.value)}
                     onKeyDown={handleKeyDown}
                     className="flex-1 text-sm bg-transparent border-b border-gray-500 focus:outline-none focus:border-blue-500 text-white placeholder-gray-400"
-                    placeholder={type === "folder" ? "New folder" : "New file"}
+                    placeholder={type === ExplorerItemType.Folder ? "New folder" : "New file"}
                 />
 
                 {isHovered && (

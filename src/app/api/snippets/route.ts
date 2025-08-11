@@ -27,20 +27,21 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { userId, fileTitle, parentId} = body;
+  const { userId, fileTitle, parentId } = body;
 
   try {
     const result = await db.query(
       'INSERT INTO "Snippet" ("UserId", "Title" ) VALUES ($1, $2) RETURNING "Id"',
       [userId, fileTitle]
     );
-    
+
     const newFileId = result.rows[0].Id;
 
-    if(parentId) {
+    if (parentId) {
       await db.query(
-        'INSERT INTO "SnippetJunction" ("LibraryId", "SnippetId") VALUES ($1, $2)', [parentId,newFileId]
-      )
+        'INSERT INTO "SnippetJunction" ("LibraryId", "SnippetId") VALUES ($1, $2)',
+        [parentId, newFileId]
+      );
     }
 
     return NextResponse.json({ status: 201 });
@@ -55,19 +56,43 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const body = await req.json();
-  const {fileId} = body;
+  const { fileId } = body;
 
   try {
-    const result = await db.query(
-      'DELETE FROM "Snippet" WHERE "Id" = ($1)',
-      [fileId]
-    );
+    const result = await db.query('DELETE FROM "Snippet" WHERE "Id" = ($1)', [
+      fileId,
+    ]);
 
-    return NextResponse.json({ status: 201})
+    return NextResponse.json({ status: 201 });
   } catch (error) {
     console.error(error);
     return NextResponse.json(
       { error: "Failed to delete file/snippet" },
+      { status: 500 }
+    );
+  }
+}
+export async function PATCH(req: NextRequest) {
+  const body = await req.json();
+  const { Id, UserId, Language, Title, Description, Text } = body;
+
+  try {
+    const result = await db.query(
+      `UPDATE "Snippet"
+       SET "UserId" = $1,
+           "Language" = $2,
+           "Title" = $3,
+           "Description" = $4,
+           "Text" = $5
+       WHERE "Id" = $6`,
+      [UserId, Language, Title, Description, Text, Id]
+    );
+
+    return NextResponse.json({ message: "Snippet updated successfully" }, { status: 200 });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Failed to update snippet" },
       { status: 500 }
     );
   }
