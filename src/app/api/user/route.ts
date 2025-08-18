@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import db from "@/app/lib/db";
-import { User } from "@/app/lib/types";
+import { User } from "../../../../types/types";
 
 export async function GET() {
   try {
-    const result = await db.query('SELECT * FROM "User" WHERE "Id" = $1', [
+    const result = await db.query('SELECT * FROM "User" WHERE id = $1', [
       "00000000-0000-0000-0000-000000000001",
     ]);
 

@@ -1,16 +1,18 @@
 "use client"
 
 import { useEffect, useState } from "react";
-import { ExplorerItemType, Library, Snippet, User } from "./lib/types";
+import { ExplorerItemType, Library, Snippet, User } from "../../types/types";
 import { BiUser, BiFolder, BiCode } from "react-icons/bi";
 import { CodeDisplay } from "./components/CodeDisplay";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { AiFillFileAdd, AiFillFolderAdd } from "react-icons/ai";
 import { TreeItem } from "./components/TreeItem";
 import { TreeItemCreation } from "./components/TreeItemCreation";
+import { useSession } from "next-auth/react";
 
 export default function Home() {
-  const [user, setUser] = useState<User | null | undefined>(undefined);
+  const { data: session } = useSession();
+  const [user, setUser] = useState<User | null>();
   const [allSnippets, setAllSnippets] = useState<Snippet[]>([]);
   const [libraries, setLibraries] = useState<Library[]>([]);
   const [loadingUser, setLoadingUser] = useState<boolean>(true);
@@ -33,7 +35,7 @@ export default function Home() {
     setIsAddingFolder(false);
 
     if (user) {
-      await fetchLibraries(user.Id);
+      await fetchLibraries(user.id);
     }
   };
 
@@ -48,8 +50,8 @@ export default function Home() {
     setIsAddingFile(false);
 
     if (user) {
-      await fetchAllFiles(user.Id);
-      await fetchParentFiles(user.Id);
+      await fetchAllFiles(user.id);
+      await fetchParentFiles(user.id);
     }
   };
 
@@ -59,11 +61,12 @@ export default function Home() {
 
   const addFile = async (fileTitle: string, parentId?: string) => {
     try {
+      console.log( parentId + " the file id in the db" )
       const res = await fetch(`/api/snippets`, {
         method: "POST",
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: user?.Id,
+          //userId: user?.id,
           fileTitle: fileTitle,
           parentId: parentId
         })
@@ -91,8 +94,8 @@ export default function Home() {
 
       // Refresh libraries after deletion
       if (user) {
-        await fetchLibraries(user.Id);
-        await fetchAllLibraries(user.Id);
+        await fetchLibraries(user.id);
+        await fetchAllLibraries(user.id);
       }
     } catch (error) {
       console.error("Error deleting library:", error);
@@ -113,8 +116,8 @@ export default function Home() {
 
       // Refresh files after deletion
       if (user) {
-        await fetchAllFiles(user.Id);
-        await fetchParentFiles(user.Id);
+        await fetchAllFiles(user.id);
+        await fetchParentFiles(user.id);
       }
     } catch (error) {
       console.error("Error deleting file:", error);
@@ -145,14 +148,20 @@ export default function Home() {
   const fetchUser = async () => {
     setLoadingUser(true);
     try {
-      const res = await fetch('/api/user');
-
-      if (!res.ok) {
-        throw new Error('Failed to fetch user');
+      if (session) {
+        setUser(session.user);
+       
       }
+      console.log("---0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-   " + user?.email)
+      //console.log("---------------------------------------------------"+session)
+      // const res = await fetch('/api/user');
 
-      const data: User = await res.json();
-      setUser(data);
+      // if (!res.ok) {
+      //   throw new Error('Failed to fetch user');
+      // }
+
+      // const data: User = await res.json();
+      // setUser(data);
     } catch (error) {
       console.error("Failed to fetch user:", error);
       setUser(null);
@@ -239,7 +248,7 @@ export default function Home() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: user?.Id,
+          userId: user?.id,
           parentId: parentId,
           title: folderName,
         }),
@@ -259,12 +268,12 @@ export default function Home() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          Id: newSnippet.Id,
-          UserId: newSnippet.UserId,
-          Language: newSnippet.Language,
-          Title: newSnippet.Title,
-          Description: newSnippet.Description,
-          Text: newSnippet.Text
+          Id: newSnippet.id,
+          UserId: newSnippet.userId,
+          Language: newSnippet.language,
+          Title: newSnippet.title,
+          Description: newSnippet.description,
+          Text: newSnippet.text
         })
       });
       if (!res.ok) {
@@ -276,7 +285,7 @@ export default function Home() {
   }
 
   const handleItemSelect = (item: Library | Snippet) => {
-    if (item && 'Text' in item) {
+    if ("text" in item) {
       setSelectedSnippet(item as Snippet);
     }
     setLastItemClicked(item);
@@ -295,10 +304,10 @@ export default function Home() {
       fetchUser();
     } else if (user) {
       Promise.all([
-        fetchAllLibraries(user.Id),
-        fetchAllFiles(user.Id),
-        fetchLibraries(user.Id),
-        fetchParentFiles(user.Id)
+        fetchAllLibraries(user.id),
+        fetchAllFiles(user.id),
+        fetchLibraries(user.id),
+        fetchParentFiles(user.id)
       ]).catch(error => {
         console.error("Error fetching initial data:", error);
       });
@@ -366,8 +375,8 @@ export default function Home() {
               </div>
             </div>
             <ul tabIndex={0} className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
-              <li className="menu-title">{user?.Username}</li>
-              <li><span className="text-xs text-base-content/70">{user?.UserEmail}</span></li>
+              <li className="menu-title">{user?.username}</li>
+              <li><span className="text-xs text-base-content/70">{user?.email}</span></li>
             </ul>
           </div>
         </div>
@@ -385,8 +394,8 @@ export default function Home() {
           <div className="p-6 border-b border-slate-200">
             <div className="flex items-center gap-3">
               <div className="flex-1 min-w-0">
-                <h2 className="font-semibold text-base-content truncate">{user?.Username}</h2>
-                <p className="text-sm text-base-content/70 truncate">{user?.UserEmail}</p>
+                <h2 className="font-semibold text-base-content truncate">{user?.username}</h2>
+                <p className="text-sm text-base-content/70 truncate">{user?.email}</p>
               </div>
             </div>
           </div>
@@ -456,7 +465,7 @@ export default function Home() {
               <div>
                 {libraries.map((lib) => (
                   <div
-                    key={lib.Id}
+                    key={lib.id}
                     onClick={(e) => {
                       e.stopPropagation();
                       setLastItemClicked(lib);
@@ -497,7 +506,7 @@ export default function Home() {
               <div>
                 {parentSnippets.map((snip) => (
                   <div
-                    key={snip.Id}
+                    key={snip.id}
                     onClick={(e) => {
                       e.stopPropagation();
                       setLastItemClicked(snip);

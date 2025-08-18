@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { FaChevronRight } from "react-icons/fa";
-import { Library, Snippet } from "../lib/types";
+import { Library, Snippet } from "../../../types/types";
 import { SnippetTile } from "./SnippetTIle";
 import { ItemCreation } from "./ItemCreation";
 
@@ -40,8 +40,8 @@ export const FileTile = ({
     await addFolder(addingFolderName.trim());
     setAddingFolderName("");
     setIsAddingItem(false);
-    fetchChildren(library.Id);
-    fetchSnippets(library.Id);
+    fetchChildren(library.id);
+    fetchSnippets(library.id);
   };
 
   const addFolder = async (folderName: string) => {
@@ -50,7 +50,7 @@ export const FileTile = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: library.UserId,
+          userId: library.id,
           title: folderName,
         }),
       });
@@ -105,8 +105,8 @@ export const FileTile = ({
   };
 
   useEffect(() => {
-    fetchChildren(library.Id);
-    fetchSnippets(library.Id);
+    fetchChildren(library.id);
+    fetchSnippets(library.id);
   }, [library]);
 
   const totalItems = childLibs.length + snippets.length;
@@ -124,7 +124,7 @@ export const FileTile = ({
         setIsHovering(false);
         setHoveringChild(false);
       }}
-      // onClick={() => {setLastItemClicked(library); console.log(lastItemClicked + "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")}}
+    // onClick={() => {setLastItemClicked(library); console.log(lastItemClicked + "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")}}
 
     >
       <div
@@ -133,14 +133,14 @@ export const FileTile = ({
       >
         <div
           className="card-body p-4 cursor-pointer hover:bg-base-200/50 transition-colors duration-150"
-          onClick={() => {setOpen(!open); setLastItemClicked(library);}}
+          onClick={() => { setOpen(!open); setLastItemClicked(library); }}
           style={{ paddingLeft: `${stepLevel * 16 + 16}px` }}
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-base-content truncate text-sm">
-                  {library.LibraryName}
+                  {library.libraryName}
                 </h3>
                 {totalItems > 0 && (
                   <p className="text-xs text-base-content/60 mt-0.5">
@@ -184,7 +184,7 @@ export const FileTile = ({
 
               <div>
                 {/* Child Libraries */}
-                {isAddingItem && lastItemClicked?.Id === library.Id && (
+                {isAddingItem && lastItemClicked?.id === library.id && (
                   <ItemCreation
                     addingItemName={addingFolderName}
                     setAddingItemName={setAddingFolderName}
@@ -193,7 +193,7 @@ export const FileTile = ({
                   />
                 )}
                 {childLibs.map((item) => (
-                  <div key={item.Id}>
+                  <div key={item.id}>
                     <FileTile
                       library={item}
                       onSnippetSelected={onSnippetSelected}
@@ -209,7 +209,7 @@ export const FileTile = ({
 
                 {/* Snippets */}
                 {snippets.map((item) => (
-                  <div key={item.Id}>
+                  <div key={item.id}>
                     <SnippetTile
                       snippet={item}
                       onSnippetSelect={onSnippetSelected}

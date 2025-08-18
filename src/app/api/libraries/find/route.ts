@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-        const result = await db.query('SELECT l.* FROM "Library" l WHERE l."Id" = $1', [libId])
+        const result = await db.query('SELECT l.* FROM "Library" l WHERE l.id = $1', [libId])
         const libraries = result.rows;
         return NextResponse.json(libraries);
     } catch (error) {

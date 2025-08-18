@@ -1,5 +1,5 @@
 import { BiCode, BiCopy, BiCheck, BiDownload, BiEdit, BiFullscreen, BiExitFullscreen } from "react-icons/bi";
-import { Snippet } from "../lib/types";
+import { Snippet } from "../../../types/types";
 import { useState, useEffect, useRef } from "react";
 import Editor, { Monaco } from "@monaco-editor/react";
 import * as monaco from "monaco-editor";
@@ -105,7 +105,6 @@ export const CodeDisplay = ({
       },
     });
 
-    // Add custom keybindings
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       if (snippet) {
         onSave?.(snippet);
@@ -115,13 +114,13 @@ export const CodeDisplay = ({
   };
 
   const handleEditorChange = (value: string | undefined) => {
-    updateField("Text", value || "");
+    updateField("text", value || "");
   };
 
   const handleCopy = async () => {
-    if (!snippet?.Text) return;
+    if (!snippet?.text) return;
     try {
-      await navigator.clipboard.writeText(snippet.Text);
+      await navigator.clipboard.writeText(snippet.text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -130,11 +129,11 @@ export const CodeDisplay = ({
   };
 
   const handleDownload = () => {
-    if (!snippet?.Text) return;
+    if (!snippet?.text) return;
     const element = document.createElement("a");
-    const file = new Blob([snippet.Text], { type: "text/plain" });
+    const file = new Blob([snippet.text], { type: "text/plain" });
     element.href = URL.createObjectURL(file);
-    element.download = `${snippet.Title || "snippet"}.${getFileExtension(snippet.Language)}`;
+    element.download = `${snippet.title || "snippet"}.${getFileExtension(snippet.language)}`;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
@@ -232,10 +231,10 @@ export const CodeDisplay = ({
     );
   }
 
-  const text = snippet.Text || "";
+  const text = snippet.text || "";
   const lineCount = text ? text.split("\n").length : 0;
   const charCount = text.length;
-  const selectedLanguage = LANGUAGES.find(l => l.value === snippet.Language);
+  const selectedLanguage = LANGUAGES.find(l => l.value === snippet.language);
 
   const containerClasses = `${isFullscreen ? "fixed inset-0 z-50" : "h-full"} flex flex-col bg-base-100 min-h-0`;
 
@@ -249,8 +248,8 @@ export const CodeDisplay = ({
             <input
               type="text"
               className="input input-ghost text-2xl font-bold w-full focus:input-primary transition-all duration-200 bg-transparent border-none pl-0 text-base-content"
-              value={snippet.Title || ""}
-              onChange={e => updateField("Title", e.target.value)}
+              value={snippet.title || ""}
+              onChange={e => updateField("title", e.target.value)}
               placeholder="Untitled Snippet"
             />
           </div>
@@ -278,8 +277,8 @@ export const CodeDisplay = ({
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <select
             className="select select-bordered select-primary bg-base-100"
-            value={snippet.Language || ""}
-            onChange={e => updateField("Language", e.target.value)}
+            value={snippet.language || ""}
+            onChange={e => updateField("language", e.target.value)}
           >
             {LANGUAGES.map(lang => (
               <option key={lang.value} value={lang.value}>
@@ -339,16 +338,16 @@ export const CodeDisplay = ({
             <textarea
               className="textarea textarea-bordered textarea-primary w-full bg-base-100 transition-all duration-200"
               rows={2}
-              value={snippet.Description || ""}
-              onChange={e => updateField("Description", e.target.value)}
+              value={snippet.description || ""}
+              onChange={e => updateField("description", e.target.value)}
               placeholder="Add a description for this snippet..."
             />
           </div>
         )}
 
-        {!isEditing && snippet.Description && (
+        {!isEditing && snippet.description && (
           <div className="mt-4 p-3 bg-base-100/50 rounded-lg border border-base-300/30">
-            <p className="text-base-content/80 leading-relaxed">{snippet.Description}</p>
+            <p className="text-base-content/80 leading-relaxed">{snippet.description}</p>
           </div>
         )}
       </div>
@@ -356,9 +355,9 @@ export const CodeDisplay = ({
       <div className="flex-1 min-h-0 relative">
         <div className="absolute inset-0">
           <Editor
-            language={getMonacoLanguage(snippet.Language)}
+            language={getMonacoLanguage(snippet.language)}
             theme={theme}
-            value={snippet.Text || ""}
+            value={snippet.text || ""}
             onChange={handleEditorChange}
             onMount={handleEditorDidMount}
             height="100%"
@@ -398,9 +397,9 @@ export const CodeDisplay = ({
               </span>
             </div>
 
-            {snippet.Language && (
+            {snippet.language && (
               <div className="text-sm text-base-content/60">
-                File: {snippet.Title || "untitled"}.{getFileExtension(snippet.Language)}
+                File: {snippet.title || "untitled"}.{getFileExtension(snippet.language)}
               </div>
             )}
 

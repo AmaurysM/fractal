@@ -1,15 +1,21 @@
 import db from "@/app/lib/db";
+import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
+import { authOptions } from "../../auth/[...nextauth]/route";
 
 export async function GET(req: NextRequest) {
-  const userId = req.headers.get("x-user-id");
+  const session = await getServerSession(authOptions);
 
-  if (!userId) {
-    return NextResponse.json({ message: "Missing headers" }, { status: 400 });
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const userId = session.user.id;
+
   try {
-    const result = await db.query('SELECT l.* FROM "Snippet" l LEFT JOIN "SnippetJunction" lj ON l."Id" = lj."SnippetId" WHERE l."UserId" = $1 AND lj."Id" IS NULL ORDER BY l."Title" ASC',[userId]
+    const result = await db.query(
+      'SELECT l.* FROM "Snippet" l LEFT JOIN "SnippetJunction" lj ON l.id = lj.snippetid WHERE l.userid = $1 AND lj.id IS NULL ORDER BY l.title ASC',
+      [userId]
     );
     const Snippets = result.rows;
     return NextResponse.json(Snippets);

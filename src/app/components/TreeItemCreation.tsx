@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { BiFolder, BiFile, BiCheck, BiX, BiChevronRight } from "react-icons/bi";
-import { ExplorerItemType } from "../lib/types";
+import { ExplorerItemType } from "../../../types/types";
 
 export const TreeItemCreation = ({
     level = 0,

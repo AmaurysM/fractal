@@ -1,20 +1,31 @@
 import db from "@/app/lib/db";
-import { Library } from "@/app/lib/types";
+import { Library } from "../../../../types/types";
 import { NextRequest, NextResponse } from "next/server";
+import { authOptions } from "../auth/[...nextauth]/route";
+import { getServerSession } from "next-auth";
 
 export async function GET(req: NextRequest) {
-  const userId = req.headers.get("x-user-id");
+  const session = await getServerSession(authOptions);
+  // console.log("getting libraries: ",{session})
 
+  if (!session) {
+    return NextResponse.json(
+      { message: "Error fetching Snippets" },
+      { status: 500 }
+    );
+  }
+
+  const userId = session.user.id;
   if (!userId) {
     return NextResponse.json({ message: "Missing headers" }, { status: 400 });
   }
 
   try {
-    const result = await db.query(
-      'SELECT * FROM "Library" WHERE "UserId" = $1',
-      [userId]
-    );
+    const result = await db.query('SELECT * FROM "Library" WHERE userid = $1', [
+      userId,
+    ]);
     const librarys: Library[] = result.rows;
+    console.log("libraries", {librarys})
     return NextResponse.json(librarys);
   } catch (error) {
     console.error(error);
@@ -27,13 +38,24 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { userId, title, parentId } = body;
+  const { title, parentId } = body;
+
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    return NextResponse.json(
+      { message: "Error fetching Snippets" },
+      { status: 500 }
+    );
+  }
+
+  const userId = session.user.id;
 
   try {
     const result = await db.query(
-      `INSERT INTO "Library" ("UserId", "LibraryName") 
+      `INSERT INTO "Library" (userid, libraryname) 
        VALUES ($1, $2) 
-       RETURNING "Id"`,
+       RETURNING id`,
       [userId, title]
     );
 
@@ -41,7 +63,7 @@ export async function POST(req: NextRequest) {
 
     if (parentId) {
       await db.query(
-        `INSERT INTO "LibraryJunction" ("ParentLibrary", "ChildLibrary") 
+        `INSERT INTO "LibraryJunction" (parentlibrary, childlibrary) 
          VALUES ($1, $2)`,
         [parentId, newLibraryId]
       );
@@ -61,11 +83,13 @@ export async function DELETE(req: NextRequest) {
   const { libraryId } = await req.json();
 
   try {
-    await db.query(`DELETE FROM "Library" WHERE "Id" = $1`, [libraryId]);
+    await db.query(`DELETE FROM "Library" WHERE id = $1`, [libraryId]);
     return NextResponse.json({ status: 200 });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Something went wrong" },
+      { status: 500 }
+    );
   }
 }
-

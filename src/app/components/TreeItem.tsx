@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react";
-import { Library, Snippet, ExplorerItemType } from "../lib/types";
+import { Library, Snippet, ExplorerItemType } from "../../../types/types";
 import { BiChevronRight, BiFolder, BiFile, BiPlus, BiTrash } from "react-icons/bi";
 import { TreeItemCreation } from "./TreeItemCreation";
 
@@ -48,7 +48,7 @@ export const TreeItem = (
 
     const [loadingChildren, setLoadingChildren] = useState(false);
 
-    const isSelected = selectedItem?.Id == item.Id;
+    const isSelected = selectedItem?.id == item.id;
 
     const fetchLibrarys = async (libraryId: string) => {
         setLoadingChildren(true);
@@ -92,8 +92,8 @@ export const TreeItem = (
 
     useEffect(() => {
         if (isExpanded == true) {
-            fetchLibrarys(item.Id);
-            fetchFiles(item.Id);
+            fetchLibrarys(item.id);
+            fetchFiles(item.id);
         }
     }, [isExpanded]);
 
@@ -115,6 +115,8 @@ export const TreeItem = (
                             setIsExpanded(!isExpanded);
                             creatingFolder?.(false);
                         }
+                        // console.log("-0-01-203-123-1231231231231231231231231231231231231", {item})
+
                         onSelect(item);
                     }
                 }
@@ -138,10 +140,12 @@ export const TreeItem = (
 
                 <span className="flex-1 text-sm truncate">
                     {type === ExplorerItemType.Folder
-                        ? (item as Library).LibraryName
-                        : (item as Snippet).Title
+                        ? (item as Library).libraryname
+                        : (item as Snippet).title
                     }
                 </span>
+
+                
 
                 {isHovered && (
                     <div className="flex items-center gap-1 ml-2">
@@ -178,7 +182,7 @@ export const TreeItem = (
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    onDeleteLibrary(item.Id);
+                                    onDeleteLibrary(item.id);
                                 }}
                                 className="p-1 hover:bg-red-200 rounded"
                                 title="Delete"
@@ -191,7 +195,7 @@ export const TreeItem = (
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    onDeleteFile(item.Id);
+                                    onDeleteFile(item.id);
                                 }}
                                 className="p-1 hover:bg-red-200 rounded"
                                 title="Delete"
@@ -210,10 +214,10 @@ export const TreeItem = (
                         <TreeItemCreation
                             level={level + 1}
                             type={ExplorerItemType.Folder}
-                            parentId={item.Id}
+                            parentId={item.id}
                             onConfirm={
                                 onCreateFolder
-                                    ? (title: string) => onCreateFolder(title, item.Id)
+                                    ? (title: string) => onCreateFolder(title, item.id)
                                     : () => { }
                             }
                             onCancel={onCancelFolderCreation ?? (onCancelFolderCreation ?? (() => { }))}
@@ -225,10 +229,10 @@ export const TreeItem = (
                         <TreeItemCreation
                             level={level + 1}
                             type={ExplorerItemType.File}
-                            parentId={item.Id}
+                            parentId={item.id}
                             onConfirm={
                                 onCreateFile
-                                    ? (title: string) => onCreateFile(title, item.Id)
+                                    ? (title: string) => onCreateFile(title, item.id)
                                     : () => { }
                             }
                             onCancel={onCancelFileCreation ?? (onCancelFileCreation ?? (() => { }))}
@@ -237,7 +241,7 @@ export const TreeItem = (
                     }
 
                     {childFolders && childFolders.map((lib) => (
-                        <div key={lib.Id} onClick={(e) => {
+                        <div key={lib.id} onClick={(e) => {
                             e.stopPropagation();
                             onSelect(lib);
                         }}>
@@ -264,7 +268,7 @@ export const TreeItem = (
                     ))}
 
                     {childFiles && childFiles.map((file) => (
-                        <div key={file.Id} onClick={(e) => {
+                        <div key={file.id} onClick={(e) => {
                             e.stopPropagation();
                             onSelect(file);
                         }}>

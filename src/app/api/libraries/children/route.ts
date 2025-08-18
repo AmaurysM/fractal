@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-        const result = await db.query('SELECT l.* FROM "Library" l LEFT JOIN "LibraryJunction" lj ON l."Id" = lj."ChildLibrary" WHERE lj."ParentLibrary" = $1', [libId])
+        const result = await db.query('SELECT l.* FROM "Library" l LEFT JOIN "LibraryJunction" lj ON l.id = lj.childlibrary WHERE lj.parentlibrary = $1', [libId])
         const libraries = result.rows;
         return NextResponse.json(libraries);
     } catch (error) {
