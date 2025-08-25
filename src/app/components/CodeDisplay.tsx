@@ -242,7 +242,7 @@ export const CodeDisplay = ({
   return (
     <div className={containerClasses}>
       {/* Header */}
-      <div className="flex-shrink-0 bg-gradient-to-r from-base-200 to-base-300 border-b border-base-300/50 p-6">
+      <div className="flex-shrink-0 border-b border-base-300/50 p-6">
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1 mr-4">
             <input
@@ -387,7 +387,7 @@ export const CodeDisplay = ({
         </div>
       </div>
 
-      <div className="flex-shrink-0 bg-base-200 border-t border-base-300/50 px-6 py-4">
+      <div className="flex-shrink-0 border-t border-base-300/50 px-6 py-4">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">

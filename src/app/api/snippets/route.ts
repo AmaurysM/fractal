@@ -50,7 +50,6 @@ export async function POST(req: NextRequest) {
   }
 
   const userId = session.user.id;
-  console.log("library ID: " + parentId);
 
   try {
     const result = await db.query(
@@ -58,7 +57,6 @@ export async function POST(req: NextRequest) {
       [userId, fileTitle]
     );
     const newFileId = result.rows[0].id;
-    console.log("snippet ID: " + newFileId);
     if (parentId) {
       await db.query(
         'INSERT INTO "SnippetJunction" (libraryid, snippetid) VALUES ($1, $2)',

@@ -6,7 +6,6 @@ import { getServerSession } from "next-auth";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  // console.log("getting libraries: ",{session})
 
   if (!session) {
     return NextResponse.json(
@@ -25,7 +24,6 @@ export async function GET(req: NextRequest) {
       userId,
     ]);
     const librarys: Library[] = result.rows;
-    console.log("libraries", {librarys})
     return NextResponse.json(librarys);
   } catch (error) {
     console.error(error);
@@ -59,7 +57,8 @@ export async function POST(req: NextRequest) {
       [userId, title]
     );
 
-    const newLibraryId = result.rows[0].Id;
+    const newLibraryId = result.rows[0].id;
+    
 
     if (parentId) {
       await db.query(

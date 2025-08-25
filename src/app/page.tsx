@@ -9,6 +9,14 @@ import { AiFillFileAdd, AiFillFolderAdd } from "react-icons/ai";
 import { TreeItem } from "./components/TreeItem";
 import { TreeItemCreation } from "./components/TreeItemCreation";
 import { useSession } from "next-auth/react";
+import Image from "next/image";
+import { signOut } from "next-auth/react"
+import { LuFiles, LuSearch, LuSettings } from "react-icons/lu";
+
+enum ActivityItem {
+  Explorer = "Explorer",
+  Search = "Search"
+}
 
 export default function Home() {
   const { data: session } = useSession();
@@ -27,6 +35,12 @@ export default function Home() {
   const [lastItemClicked, setLastItemClicked] = useState<Library | Snippet | null>(null);
   const [loadingParentSnippets, setLoadingParentSnippets] = useState<boolean>(false);
   const [parentSnippets, setParentSnippets] = useState<Snippet[]>([]);
+  const [activity, setActivity] = useState<ActivityItem>(ActivityItem.Explorer);
+
+  const [searchValue, setSearchValue] = useState<string>("");
+  const [foundLibraries, setFoundLibraries] = useState<Library[]>([]);
+  const [foundFiles, setFoundFiles] = useState<Snippet[]>([]);
+
 
   const handleAddFolderSubmit = async (title: string, parentId?: string) => {
     if (!title.trim()) return;
@@ -59,9 +73,43 @@ export default function Home() {
     setIsAddingFile(false);
   };
 
+  const findFiles = async (fileTitle: string) => {
+    if (!fileTitle) {
+      setFoundFiles([]);
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/snippets/search?fileTitle=${encodeURIComponent(fileTitle)}`);
+      if (!res.ok) throw new Error("Failed to find Snippets/files");
+
+      const data: Snippet[] = await res.json();
+      setFoundFiles(data);
+    } catch (error) {
+      console.error("Error finding snippets/files:", error)
+    }
+  }
+
+  const findLibraries = async (folderTitle: string) => {
+    if (!folderTitle) {
+      setFoundLibraries([]);
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/libraries/search?folderTitle=${encodeURIComponent(folderTitle)}`);
+      if (!res.ok) throw new Error("Failed to find libraries");
+
+      const data: Library[] = await res.json();
+      setFoundLibraries(data);
+    } catch (error) {
+      console.error("Error finding libraries:", error);
+    }
+  };
+
+
   const addFile = async (fileTitle: string, parentId?: string) => {
     try {
-      console.log( parentId + " the file id in the db" )
       const res = await fetch(`/api/snippets`, {
         method: "POST",
         headers: { 'Content-Type': 'application/json' },
@@ -150,7 +198,7 @@ export default function Home() {
     try {
       if (session) {
         setUser(session.user);
-       
+
       }
       console.log("---0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-   " + user?.email)
       //console.log("---------------------------------------------------"+session)
@@ -367,187 +415,308 @@ export default function Home() {
         </div>
         <div className="flex-none">
           <div className="dropdown dropdown-end">
-            <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar">
-              <div className="avatar placeholder border-1 border-amber-100">
-                <div className="bg-neutral text-neutral-content rounded w-10 p-2">
-                  <BiUser className="w-5 h-5" />
-                </div>
+            <div tabIndex={0} className="avatar">
+              <div className="w-10 h-10 flex items-center justify-center overflow-hidden border border-amber-100  bg-neutral text-neutral-content">
+                {user?.image ? (
+                  <Image
+                    src={user.image}
+                    alt="Profile image"
+                    width={40}
+                    height={40}
+                    className="object-cover w-full h-full"
+                  />
+                ) : (
+                  <BiUser className="w-6 h-6 text-base-content/70 block mx-auto my-auto mt-2" />
+                )}
               </div>
             </div>
-            <ul tabIndex={0} className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
-              <li className="menu-title">{user?.username}</li>
-              <li><span className="text-xs text-base-content/70">{user?.email}</span></li>
+
+            <ul
+              tabIndex={0}
+              className="menu menu-sm dropdown-content mt-3 z-[1] p-3 shadow-lg bg-base-100 rounded-xl w-56 space-y-2"
+            >
+              <li className="menu-title text-xs text-base-content/60">
+                Signed in as
+              </li>
+              <li>
+                <span className="truncate font-medium text-base-content">
+                  {user?.email || "Unknown User"}
+                </span>
+              </li>
+              <div className="divider my-1"></div>
+              <li>
+                <button
+                  onClick={() => signOut({ callbackUrl: "/landing" })}
+                  className="text-error hover:bg-error hover:text-error-content rounded-lg transition-colors"
+                >
+                  Sign out
+                </button>
+              </li>
             </ul>
           </div>
         </div>
       </div>
 
+
+
       <PanelGroup direction="horizontal" className="h-full">
+        {/* Activity bar*/}
+        <div className="h-full w-12 bg-base-100 border-r border-slate-200 flex flex-col justify-between place-items-center  text-2xl">
+          <div className="flex flex-col">
+            <div className={`p-3 ${activity === ActivityItem.Explorer ? "text-blue-300 border-l-2 border-blue-300" : " border-l-2 border-base-100 hover:text-blue-300"}`}
+              onClick={() => { setActivity(ActivityItem.Explorer) }}>
+              <LuFiles />
+            </div>
+            <div className={`p-3 ${activity === ActivityItem.Search ? "text-blue-300 border-l-2 border-blue-300" : " border-l-2 border-base-100 hover:text-blue-300"}`}
+              onClick={() => { setActivity(ActivityItem.Search) }}>
+              <LuSearch />
+            </div>
+          </div>
+          <div className="p-3 hover:text-blue-300">
+            <LuSettings />
+          </div>
+
+        </div>
         {/* Sidebar */}
         <Panel
           defaultSize={30}
           minSize={20}
           maxSize={80}
-          className="w-80 bg-base-100 border-r border-slate-200 flex flex-col overflow-auto"
+          className="w-80 bg-base-100 border-r border-slate-200 flex flex-col overflow-auto justify-end"
         >
-          {/* User Info */}
-          <div className="p-6 border-b border-slate-200">
-            <div className="flex items-center gap-3">
-              <div className="flex-1 min-w-0">
-                <h2 className="font-semibold text-base-content truncate">{user?.username}</h2>
-                <p className="text-sm text-base-content/70 truncate">{user?.email}</p>
+          {activity === ActivityItem.Explorer && (
+            <>
+              {/* Explorer Header */}
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
+                <h3 className="font-medium text-base-content text-sm uppercase tracking-wide">Explorer</h3>
+                {loadingLibraries && (
+                  <span className="loading loading-spinner loading-sm text-primary"></span>
+                )}
+                <div className="flex ml-auto items-center gap-1">
+                  <button
+                    onClick={() => {
+                      setIsAddingFile(!isAddingFile);
+                      setIsAddingFolder(false);
+                      console.log(isAddingFile);
+                    }}
+                    className="p-1 rounded hover:bg-slate-200/60 transition-colors duration-150 group"
+                    title="New File"
+                  >
+                    <AiFillFileAdd className="w-4 h-4 text-slate-600 group-hover:text-slate-800" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsAddingFolder(!isAddingFolder);
+                      setIsAddingFile(false);
+                    }}
+                    className="p-1 rounded hover:bg-slate-200/60 transition-colors duration-150 group"
+                    title="New Folder"
+                  >
+                    <AiFillFolderAdd className="w-4 h-4 text-slate-600 group-hover:text-slate-800" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Libraries Section */}
+              <div className="flex-1 overflow-auto" onClick={handleSidebarClick}>
+                {/* Root level folder creation */}
+                {isAddingFolder && lastItemClicked === null && (
+                  <TreeItemCreation
+                    type={ExplorerItemType.Folder}
+                    onCancel={handleAddFolderCancel}
+                    onConfirm={handleAddFolderSubmit}
+                  />
+                )}
+
+                {/* Root level file creation */}
+                {isAddingFile && lastItemClicked === null && (
+                  <TreeItemCreation
+                    type={ExplorerItemType.File}
+                    onCancel={handleAddFileCancel}
+                    onConfirm={handleAddFileSubmit}
+                  />
+                )}
+
+                {/* Libraries */}
+                {loadingLibraries ? (
+                  <div className="space-y-1 p-2">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="flex items-center gap-2 py-1">
+                        <div className="w-4 h-4 bg-slate-300 rounded animate-pulse"></div>
+                        <div className="h-4 bg-slate-300 rounded flex-1 animate-pulse"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : libraries.length > 0 ? (
+                  <div>
+                    {libraries.map((lib) => (
+                      <div
+                        key={lib.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLastItemClicked(lib);
+                        }}
+                      >
+                        <TreeItem
+                          item={lib}
+                          type={ExplorerItemType.Folder}
+                          selectedItem={lastItemClicked}
+                          creatingFolder={setIsAddingFolder}
+                          isCreatingFolder={isAddingFolder}
+                          creatingFile={setIsAddingFile}
+                          isCreatingFile={isAddingFile}
+                          onSelect={handleItemSelect}
+                          onCreateFolder={handleAddFolderSubmit}
+                          onCancelFolderCreation={handleAddFolderCancel}
+                          onCreateFile={handleAddFileSubmit}
+                          onCancelFileCreation={handleAddFileCancel}
+                          onDeleteLibrary={deleteLibrary}
+                          onDeleteFile={deleteFile}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+
+                {/* Parent Snippets */}
+                {loadingParentSnippets ? (
+                  <div className="space-y-1 p-2">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="flex items-center gap-2 py-1">
+                        <div className="w-4 h-4 bg-slate-300 rounded animate-pulse"></div>
+                        <div className="h-4 bg-slate-300 rounded flex-1 animate-pulse"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : parentSnippets.length > 0 ? (
+                  <div>
+                    {parentSnippets.map((snip) => (
+                      <div
+                        key={snip.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLastItemClicked(snip);
+                          setSelectedSnippet(snip);
+                        }}
+                      >
+                        <TreeItem
+                          item={snip}
+                          type={ExplorerItemType.File}
+                          selectedItem={lastItemClicked}
+                          creatingFile={setIsAddingFile}
+                          isCreatingFile={isAddingFile}
+                          onSelect={handleItemSelect}
+                          onCreateFile={handleAddFileSubmit}
+                          onCancelFileCreation={handleAddFileCancel}
+                          onDeleteFile={deleteFile}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+
+                {/* Empty state */}
+                {!loadingLibraries && !loadingParentSnippets && libraries.length === 0 && parentSnippets.length === 0 && (
+                  <div className="text-center py-8 px-4">
+                    <p className="text-slate-500 text-sm">No files or folders yet</p>
+                    <p className="text-slate-400 text-xs mt-1">Click the icons above to create your first item</p>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {activity === ActivityItem.Search && (
+            <div className="flex flex-col h-full w-full">
+              <div className="relative w-full p-2 pt-2.5">
+                <input
+                  type="text"
+                  value={searchValue}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSearchValue(value);
+                    findLibraries(value);
+                    findFiles(value);
+                  }}
+                  className="w-full p-1 border border-gray-300 bg-base-200 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  placeholder="Search"
+                />
+              </div>
+
+              <div className="mt-2 flex flex-col gap-1">
+                {foundLibraries.length > 0 ? (
+                  foundLibraries.map((lib: Library) => (
+                    <div
+                      key={lib.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLastItemClicked(lib);
+                      }}
+                    >
+                      <TreeItem
+                        item={lib}
+                        type={ExplorerItemType.Folder}
+                        selectedItem={lastItemClicked}
+                        creatingFolder={setIsAddingFolder}
+                        isCreatingFolder={isAddingFolder}
+                        creatingFile={setIsAddingFile}
+                        isCreatingFile={isAddingFile}
+                        onSelect={handleItemSelect}
+                        onCreateFolder={handleAddFolderSubmit}
+                        onCancelFolderCreation={handleAddFolderCancel}
+                        onCreateFile={handleAddFileSubmit}
+                        onCancelFileCreation={handleAddFileCancel}
+                        onDeleteLibrary={deleteLibrary}
+                        onDeleteFile={deleteFile}
+                      />
+                    </div>
+                  ))
+                ) : (
+                  <></>
+                )}
+
+                {foundFiles.length > 0 ? (
+                  foundFiles.map((snip: Snippet) => (
+                    <div
+                      key={snip.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLastItemClicked(snip);
+                      }}
+                    >
+                      <TreeItem
+                        item={snip}
+                        type={ExplorerItemType.File}
+                        selectedItem={lastItemClicked}
+                        creatingFile={setIsAddingFile}
+                        isCreatingFile={isAddingFile}
+                        onSelect={handleItemSelect}
+                        onCreateFile={handleAddFileSubmit}
+                        onCancelFileCreation={handleAddFileCancel}
+                        onDeleteFile={deleteFile}
+                      />
+                    </div>
+                  ))
+                ) : (
+                  <></>
+                )}
+
+
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Explorer Header */}
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
-            <h3 className="font-medium text-base-content text-sm uppercase tracking-wide">Explorer</h3>
-            {loadingLibraries && (
-              <span className="loading loading-spinner loading-sm text-primary"></span>
-            )}
-            <div className="flex ml-auto items-center gap-1">
-              <button
-                onClick={() => {
-                  setIsAddingFile(!isAddingFile);
-                  setIsAddingFolder(false);
-                  console.log(isAddingFile);
-                }}
-                className="p-1 rounded hover:bg-slate-200/60 transition-colors duration-150 group"
-                title="New File"
-              >
-                <AiFillFileAdd className="w-4 h-4 text-slate-600 group-hover:text-slate-800" />
-              </button>
-              <button
-                onClick={() => {
-                  setIsAddingFolder(!isAddingFolder);
-                  setIsAddingFile(false);
-                }}
-                className="p-1 rounded hover:bg-slate-200/60 transition-colors duration-150 group"
-                title="New Folder"
-              >
-                <AiFillFolderAdd className="w-4 h-4 text-slate-600 group-hover:text-slate-800" />
-              </button>
-            </div>
-          </div>
-
-          {/* Libraries Section */}
-          <div className="flex-1 overflow-auto" onClick={handleSidebarClick}>
-            {/* Root level folder creation */}
-            {isAddingFolder && lastItemClicked === null && (
-              <TreeItemCreation
-                type={ExplorerItemType.Folder}
-                onCancel={handleAddFolderCancel}
-                onConfirm={handleAddFolderSubmit}
-              />
-            )}
-
-            {/* Root level file creation */}
-            {isAddingFile && lastItemClicked === null && (
-              <TreeItemCreation
-                type={ExplorerItemType.File}
-                onCancel={handleAddFileCancel}
-                onConfirm={handleAddFileSubmit}
-              />
-            )}
-
-            {/* Libraries */}
-            {loadingLibraries ? (
-              <div className="space-y-1 p-2">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="flex items-center gap-2 py-1">
-                    <div className="w-4 h-4 bg-slate-300 rounded animate-pulse"></div>
-                    <div className="h-4 bg-slate-300 rounded flex-1 animate-pulse"></div>
-                  </div>
-                ))}
-              </div>
-            ) : libraries.length > 0 ? (
-              <div>
-                {libraries.map((lib) => (
-                  <div
-                    key={lib.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setLastItemClicked(lib);
-                    }}
-                  >
-                    <TreeItem
-                      item={lib}
-                      type={ExplorerItemType.Folder}
-                      selectedItem={lastItemClicked}
-                      creatingFolder={setIsAddingFolder}
-                      isCreatingFolder={isAddingFolder}
-                      creatingFile={setIsAddingFile}
-                      isCreatingFile={isAddingFile}
-                      onSelect={handleItemSelect}
-                      onCreateFolder={handleAddFolderSubmit}
-                      onCancelFolderCreation={handleAddFolderCancel}
-                      onCreateFile={handleAddFileSubmit}
-                      onCancelFileCreation={handleAddFileCancel}
-                      onDeleteLibrary={deleteLibrary}
-                      onDeleteFile={deleteFile}
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : null}
-
-            {/* Parent Snippets */}
-            {loadingParentSnippets ? (
-              <div className="space-y-1 p-2">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="flex items-center gap-2 py-1">
-                    <div className="w-4 h-4 bg-slate-300 rounded animate-pulse"></div>
-                    <div className="h-4 bg-slate-300 rounded flex-1 animate-pulse"></div>
-                  </div>
-                ))}
-              </div>
-            ) : parentSnippets.length > 0 ? (
-              <div>
-                {parentSnippets.map((snip) => (
-                  <div
-                    key={snip.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setLastItemClicked(snip);
-                      setSelectedSnippet(snip);
-                    }}
-                  >
-                    <TreeItem
-                      item={snip}
-                      type={ExplorerItemType.File}
-                      selectedItem={lastItemClicked}
-                      creatingFile={setIsAddingFile}
-                      isCreatingFile={isAddingFile}
-                      onSelect={handleItemSelect}
-                      onCreateFile={handleAddFileSubmit}
-                      onCancelFileCreation={handleAddFileCancel}
-                      onDeleteFile={deleteFile}
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : null}
-
-            {/* Empty state */}
-            {!loadingLibraries && !loadingParentSnippets && libraries.length === 0 && parentSnippets.length === 0 && (
-              <div className="text-center py-8 px-4">
-                <p className="text-slate-500 text-sm">No files or folders yet</p>
-                <p className="text-slate-400 text-xs mt-1">Click the icons above to create your first item</p>
-              </div>
-            )}
-          </div>
 
           {/* Stats */}
           <div className="p-4 border-t border-slate-200">
             <div className="stats stats-vertical shadow-sm bg-base-200 w-full">
               <div className="stat py-3">
                 <div className="stat-title text-xs">Total Libraries</div>
-                <div className="stat-value text-sm">{allLibraries.length}</div>
+                <div className="stat-value text-sm">{activity === ActivityItem.Explorer ? allLibraries.length : (foundLibraries.length)}</div>
               </div>
               <div className="stat py-3">
                 <div className="stat-title text-xs">Total Snippets</div>
-                <div className="stat-value text-sm">{allSnippets.length}</div>
+                <div className="stat-value text-sm">{activity === ActivityItem.Explorer ? allSnippets.length : (foundFiles.length)}</div>
               </div>
             </div>
           </div>
@@ -595,6 +764,6 @@ export default function Home() {
           )}
         </Panel>
       </PanelGroup>
-    </div>
+    </div >
   );
 }
