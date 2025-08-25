@@ -487,7 +487,7 @@ export default function Home() {
           {activity === ActivityItem.Explorer && (
             <>
               {/* Explorer Header */}
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
+              <div className="flex items-center gap-2 px-4 py-[15px] border-b border-slate-100">
                 <h3 className="font-medium text-base-content text-sm uppercase tracking-wide">Explorer</h3>
                 {loadingLibraries && (
                   <span className="loading loading-spinner loading-sm text-primary"></span>
@@ -628,7 +628,7 @@ export default function Home() {
 
           {activity === ActivityItem.Search && (
             <div className="flex flex-col h-full w-full">
-              <div className="relative w-full p-2 pt-2.5">
+              <div className="relative w-full p-2 pt-2.5 pb-2.5 border-b-1">
                 <input
                   type="text"
                   value={searchValue}
@@ -643,7 +643,7 @@ export default function Home() {
                 />
               </div>
 
-              <div className="mt-2 flex flex-col gap-1">
+              <div className=" flex flex-col ">
                 {foundLibraries.length > 0 ? (
                   foundLibraries.map((lib: Library) => (
                     <div
