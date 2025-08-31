@@ -12,6 +12,7 @@ import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { signOut } from "next-auth/react"
 import { LuFiles, LuSearch, LuSettings } from "react-icons/lu";
+import { useSSE } from "./lib/useSSE";
 
 enum ActivityItem {
   Explorer = "Explorer",
@@ -20,10 +21,9 @@ enum ActivityItem {
 
 export default function Home() {
   const { data: session } = useSession();
-  const [user, setUser] = useState<User | null>();
+  const [user, setUser] = useState<User | null>(session?.user ? session.user : null);
   const [allSnippets, setAllSnippets] = useState<Snippet[]>([]);
   const [libraries, setLibraries] = useState<Library[]>([]);
-  const [loadingUser, setLoadingUser] = useState<boolean>(true);
   const [loadingAllSnippets, setLoadingAllSnippets] = useState<boolean>(false);
   const [loadingLibraries, setLoadingLibraries] = useState<boolean>(false);
   const [selectedSnippet, setSelectedSnippet] = useState<Snippet>();
@@ -48,9 +48,6 @@ export default function Home() {
     await addFolder(title.trim(), parentId);
     setIsAddingFolder(false);
 
-    if (user) {
-      await fetchLibraries(user.id);
-    }
   };
 
   const handleAddFolderCancel = () => {
@@ -63,10 +60,6 @@ export default function Home() {
     await addFile(title.trim(), parentId);
     setIsAddingFile(false);
 
-    if (user) {
-      await fetchAllFiles(user.id);
-      await fetchParentFiles(user.id);
-    }
   };
 
   const handleAddFileCancel = () => {
@@ -140,11 +133,6 @@ export default function Home() {
         throw new Error("Failed to delete folder");
       }
 
-      // Refresh libraries after deletion
-      if (user) {
-        await fetchLibraries(user.id);
-        await fetchAllLibraries(user.id);
-      }
     } catch (error) {
       console.error("Error deleting library:", error);
     }
@@ -162,133 +150,41 @@ export default function Home() {
         throw new Error("Failed to delete file");
       }
 
-      // Refresh files after deletion
-      if (user) {
-        await fetchAllFiles(user.id);
-        await fetchParentFiles(user.id);
-      }
     } catch (error) {
       console.error("Error deleting file:", error);
     }
   };
 
-  const fetchAllLibraries = async (userId: string) => {
-    try {
-      const res = await fetch(`/api/libraries`, {
-        method: "GET",
-        headers: {
-          "x-user-id": userId
-        }
-      });
+  // Libraries
+  useSSE<Library>({
+    endpoint: "/api/libraries/subscribe",
+    setState: setAllLibraries,
+    topLevelKey: "libraries"
+  });
 
-      if (!res.ok) {
-        throw new Error("Failed to fetch libraries");
-      }
+  // Snippets
+  useSSE<Snippet>({
+    endpoint: "/api/snippets/subscribe",
+    setState: setAllSnippets,
+    topLevelKey: "snippets"
+  });
 
-      const data: Library[] = await res.json();
-      setAllLibraries(data);
-    } catch (error) {
-      console.error("Failed to fetch all libraries:", error);
-      setAllLibraries([]);
-    }
-  };
+  // Parent Libraries
+  useSSE<Library>({
+    endpoint: "/api/libraries/parents/subscribe",
+    setState: setLibraries,
+    topLevelKey: "libraries"
 
-  const fetchUser = async () => {
-    setLoadingUser(true);
-    try {
-      if (session) {
-        setUser(session.user);
+  });
 
-      }
-      console.log("---0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-   " + user?.email)
-      //console.log("---------------------------------------------------"+session)
-      // const res = await fetch('/api/user');
+  // Parent snippets/files
+  useSSE<Snippet>({
+    endpoint: "/api/snippets/parents/subscribe",
+    setState: setParentSnippets,
+    topLevelKey: "snippets"
 
-      // if (!res.ok) {
-      //   throw new Error('Failed to fetch user');
-      // }
+  })
 
-      // const data: User = await res.json();
-      // setUser(data);
-    } catch (error) {
-      console.error("Failed to fetch user:", error);
-      setUser(null);
-    } finally {
-      setLoadingUser(false);
-    }
-  };
-
-  const fetchAllFiles = async (userId: string) => {
-    setLoadingAllSnippets(true);
-    try {
-      const res = await fetch(`/api/snippets`, {
-        method: "GET",
-        headers: {
-          "x-user-id": userId
-        }
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to fetch snippets");
-      }
-
-      const data: Snippet[] = await res.json();
-      setAllSnippets(data);
-    } catch (error) {
-      console.error("Failed to fetch all files:", error);
-      setAllSnippets([]);
-    } finally {
-      setLoadingAllSnippets(false);
-    }
-  };
-
-  const fetchParentFiles = async (userId: string) => {
-    setLoadingParentSnippets(true);
-    try {
-      const res = await fetch(`/api/snippets/parents`, {
-        method: "GET",
-        headers: {
-          "x-user-id": userId
-        }
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to fetch parent snippets");
-      }
-
-      const data: Snippet[] = await res.json();
-      setParentSnippets(data);
-    } catch (error) {
-      console.error("Failed to fetch parent files:", error);
-      setParentSnippets([]);
-    } finally {
-      setLoadingParentSnippets(false);
-    }
-  };
-
-  const fetchLibraries = async (userId: string) => {
-    setLoadingLibraries(true);
-    try {
-      const res = await fetch(`/api/libraries/parents`, {
-        method: "GET",
-        headers: {
-          "x-user-id": userId
-        }
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to fetch libraries");
-      }
-
-      const data: Library[] = await res.json();
-      setLibraries(data);
-    } catch (error) {
-      console.error("Failed to fetch libraries:", error);
-      setLibraries([]);
-    } finally {
-      setLoadingLibraries(false);
-    }
-  };
 
   const addFolder = async (folderName: string, parentId?: string) => {
     try {
@@ -347,23 +243,8 @@ export default function Home() {
     setIsAddingFile(false);
   };
 
-  useEffect(() => {
-    if (user === undefined) {
-      fetchUser();
-    } else if (user) {
-      Promise.all([
-        fetchAllLibraries(user.id),
-        fetchAllFiles(user.id),
-        fetchLibraries(user.id),
-        fetchParentFiles(user.id)
-      ]).catch(error => {
-        console.error("Error fetching initial data:", error);
-      });
-    }
-  }, [user]);
-
   // Loading state
-  if (loadingUser) {
+  if (user == null) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="card w-96 bg-base-100 shadow-xl">
@@ -730,10 +611,11 @@ export default function Home() {
           onMouseEnter={() => setHoveringResizer(true)}
           onMouseLeave={() => setHoveringResizer(false)}
           onDragging={(isDragging) => setIsDragging(isDragging)}
+
         />
 
         {/* Main Content */}
-        <Panel className="flex-1 flex flex-col">
+        <Panel className="flex-1 flex flex-col" defaultSize={100}>
           {selectedSnippet ? (
             <div className="flex-1 bg-base-100">
               <CodeDisplay snippet={selectedSnippet} onSave={saveSnippet} />
