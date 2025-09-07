@@ -13,4 +13,12 @@ global.pgPool = pool
 
 console.log('Postgres pool initialized with connection string:', process.env.DATABASE_URL)
 
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
+});
+
+pool.on('connect', (client) => {
+  console.log('New client connected');
+});
+
 export default pool

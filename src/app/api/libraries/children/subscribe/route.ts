@@ -1,4 +1,3 @@
-// api/library/parents/route.ts
 import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { createSSEStream } from "@/app/lib/sse";
@@ -9,14 +8,22 @@ export async function GET(req: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
+  const url = new URL(req.url);
+  const libId = url.searchParams.get("libraryId");
 
+  if (!libId) {
+    return NextResponse.json(
+      { message: "Missing Library ID in query" },
+      { status: 400 }
+    );
+  }
   const stream = await createSSEStream({
     userId: session.user.id,
-    initialQuery: `SELECT * FROM "Snippet" WHERE userid = $1`,
-    queryParams: [session.user.id],
-    channel: "snippet_changes",
+    initialQuery: `SELECT l.* FROM "Library" l LEFT JOIN "LibraryJunction" lj ON l.id = lj.childlibrary WHERE lj.parentlibrary = $1`,
+    queryParams: [libId],
+    channel: "library_changes",
     req,
-    topLevelKey: "snippets",
+    topLevelKey: "libraries",
   });
 
   return new Response(stream, {

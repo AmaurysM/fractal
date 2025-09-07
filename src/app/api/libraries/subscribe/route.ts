@@ -13,16 +13,16 @@ export async function GET(req: NextRequest) {
   const stream = await createSSEStream({
     userId: session.user.id,
     initialQuery: `SELECT * FROM "Library" WHERE userid = $1`,
+    queryParams: [session.user.id],
     channel: "library_changes",
     req,
-    topLevelKey: "libraries"
+    topLevelKey: "libraries",
   });
 
   return new Response(stream, {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
     },
   });
 }

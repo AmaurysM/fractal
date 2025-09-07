@@ -7,7 +7,8 @@ class SSEBus {
 
   subscribe(endpoint: string, cb: Callback) {
     // create subscriber set if it doesn't exist
-    if (!this.subscribers.has(endpoint)) this.subscribers.set(endpoint, new Set());
+    if (!this.subscribers.has(endpoint))
+      this.subscribers.set(endpoint, new Set());
     this.subscribers.get(endpoint)!.add(cb);
 
     // create EventSource if not exists
@@ -23,7 +24,14 @@ class SSEBus {
         console.error(`[SSE] Error on ${endpoint}, reconnecting...`);
         es.close();
         this.sources.delete(endpoint);
-        setTimeout(() => this.subscribe(endpoint, () => {}), 5000); // auto reconnect
+
+        // Only reconnect if there are still subscribers
+        if (this.subscribers.get(endpoint)?.size! > 0) {
+          setTimeout(() => {
+            // Recreate the EventSource without adding a dummy callback
+            this.subscribers.set(endpoint, new Set());
+          }, 5000);
+        }
       };
 
       this.sources.set(endpoint, es);

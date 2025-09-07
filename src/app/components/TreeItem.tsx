@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Library, Snippet, ExplorerItemType } from "../../../types/types";
 import { BiChevronRight, BiFolder, BiFile, BiPlus, BiTrash } from "react-icons/bi";
 import { TreeItemCreation } from "./TreeItemCreation";
+import { useSSE } from "../lib/useSSE";
 
 export const TreeItem = (
     {
@@ -43,59 +44,75 @@ export const TreeItem = (
 
     const [isExpanded, setIsExpanded] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
-    const [childFolders, setChildFolders] = useState<Library[]>();
-    const [childFiles, setChildFiles] = useState<Snippet[]>();
+    const [childFolders, setChildFolders] = useState<Library[]>([]);
+    const [childFiles, setChildFiles] = useState<Snippet[]>([]);
 
     const [loadingChildren, setLoadingChildren] = useState(false);
 
     const isSelected = selectedItem?.id == item.id;
 
-    const fetchLibrarys = async (libraryId: string) => {
-        setLoadingChildren(true);
-        try {
-            const res = await fetch(`api/libraries/children`, {
-                method: "GET",
-                headers: {
-                    "x-library-id": libraryId
-                }
-            });
-            if (!res.ok) throw new Error("Failed to fetch child librarys");
-            const data: Library[] = await res.json();
-            setChildFolders(data);
-        } catch (error) {
-            console.log("Failed To Fetch Libraries: " + (error as Error).message);
-            setChildFolders([]);
-        } finally {
-            setLoadingChildren(false);
-        }
-    }
+    // // const fetchLibrarys = async (libraryId: string) => {
+    // //     setLoadingChildren(true);
+    // //     try {
+    // //         const res = await fetch(`api/libraries/children`, {
+    // //             method: "GET",
+    // //             headers: {
+    // //                 "x-library-id": libraryId
+    // //             }
+    // //         });
+    // //         if (!res.ok) throw new Error("Failed to fetch child librarys");
+    // //         const data: Library[] = await res.json();
+    // //         setChildFolders(data);
+    // //     } catch (error) {
+    // //         console.log("Failed To Fetch Libraries: " + (error as Error).message);
+    // //         setChildFolders([]);
+    // //     } finally {
+    // //         setLoadingChildren(false);
+    // //     }
+    // // }
 
-    const fetchFiles = async (libraryId: string) => {
-        setLoadingChildren(true);
-        try {
-            const res = await fetch(`api/snippets/library`, {
-                method: "GET",
-                headers: {
-                    "x-library-id": libraryId
-                }
-            });
-            if (!res.ok) throw new Error("Failed to fetch child files");
-            const data: Snippet[] = await res.json();
-            setChildFiles(data);
-        } catch (error) {
-            console.log("Failed To Fetch Libraries: " + (error as Error).message);
-            setChildFiles([]);
-        } finally {
-            setLoadingChildren(false);
-        }
-    }
+    // useSSE<Library>({
+    //     endpoint: isExpanded && type === ExplorerItemType.Folder
+    //         ? `/api/libraries/children/subscribe?libraryId=${item.id}`
+    //         : "",
+    //     setState: setChildFolders,
+    //     topLevelKey: "libraries"
+    // });
 
-    useEffect(() => {
-        if (isExpanded == true) {
-            fetchLibrarys(item.id);
-            fetchFiles(item.id);
-        }
-    }, [isExpanded]);
+    // // const fetchFiles = async (libraryId: string) => {
+    // //     setLoadingChildren(true);
+    // //     try {
+    // //         const res = await fetch(`api/snippets/library`, {
+    // //             method: "GET",
+    // //             headers: {
+    // //                 "x-library-id": libraryId
+    // //             }
+    // //         });
+    // //         if (!res.ok) throw new Error("Failed to fetch child files");
+    // //         const data: Snippet[] = await res.json();
+    // //         setChildFiles(data);
+    // //     } catch (error) {
+    // //         console.log("Failed To Fetch Libraries: " + (error as Error).message);
+    // //         setChildFiles([]);
+    // //     } finally {
+    // //         setLoadingChildren(false);
+    // //     }
+    // // }
+
+    // useSSE<Snippet>({
+    //     endpoint: isExpanded && type === ExplorerItemType.Folder
+    //         ? `/api/snippets/children/subscribe?libraryId=${item.id}`
+    //         : "",
+    //     setState: setChildFiles,
+    //     topLevelKey: "snippets"
+    // });
+
+    // useEffect(() => {
+    //     if (isExpanded == true) {
+    //         //fetchLibrarys(item.id);
+    //         fetchFiles(item.id);
+    //     }
+    // }, [isExpanded]);
 
     const paddingLeft = level * 16 + 12;
 
@@ -145,7 +162,7 @@ export const TreeItem = (
                     }
                 </span>
 
-                
+
 
                 {isHovered && (
                     <div className="flex items-center gap-1 ml-2">

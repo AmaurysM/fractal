@@ -13,16 +13,16 @@ export async function GET(req: NextRequest) {
   const stream = await createSSEStream({
     userId: session.user.id,
     initialQuery: `SELECT l.* FROM "Snippet" l LEFT JOIN "SnippetJunction" lj ON l.id = lj.snippetid WHERE l.userid = $1 AND lj.id IS NULL ORDER BY l.title ASC`,
+    queryParams: [session.user.id],
     channel: "snippet_changes",
     req,
-    topLevelKey: "snippets"
+    topLevelKey: "snippets",
   });
 
   return new Response(stream, {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
     },
   });
 }

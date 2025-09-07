@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
                      LEFT JOIN "LibraryJunction" lj ON l.id = lj.childlibrary 
                      WHERE l.userid = $1 AND lj.id IS NULL 
                      ORDER BY l.libraryname ASC`,
+    queryParams: [session.user.id],
     channel: "library_changes",
     req,
     topLevelKey: "libraries"
@@ -26,7 +27,6 @@ export async function GET(req: NextRequest) {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
     },
   });
 }

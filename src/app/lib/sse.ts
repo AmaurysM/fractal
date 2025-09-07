@@ -8,7 +8,7 @@ interface SSEOptions {
   queryParams?: any[];
   channel: string;
   req: NextRequest;
-  topLevelKey: string; 
+  topLevelKey: string;
 }
 
 export async function createSSEStream({
@@ -17,7 +17,7 @@ export async function createSSEStream({
   queryParams = [],
   channel,
   req,
-  topLevelKey
+  topLevelKey,
 }: SSEOptions) {
   const encoder = new TextEncoder();
   let isControllerActive = true;
@@ -30,7 +30,6 @@ export async function createSSEStream({
         client = await db.connect();
 
         const { rows: initialRows } = await client.query(initialQuery, [
-          userId,
           ...queryParams,
         ]);
 
@@ -43,6 +42,7 @@ export async function createSSEStream({
               })}\n\n`
             )
           );
+          
         }
 
         await client.query(`LISTEN ${channel}`);
@@ -68,6 +68,7 @@ export async function createSSEStream({
                 )
               );
             }
+            console.log({initialRows})
           } catch (err) {
             console.error("Failed to handle notification:", err);
           }
@@ -103,7 +104,12 @@ export async function createSSEStream({
           }
 
           client.removeListener("notification", handleNotification);
-          client.release();
+
+          try {
+            client.release();
+          } catch (err) {
+            console.error("Failed to release client:", err);
+          }
 
           try {
             controller.close();
