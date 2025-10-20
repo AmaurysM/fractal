@@ -39,13 +39,21 @@ interface AppState {
   fetchLibraries: (userId: string) => Promise<void>;
   fetchSnippets: (userId: string) => Promise<void>;
 
-  addFolder: (title: string, parentId?: string, onSuccess?: () => void) => Promise<void>;
+  addFolder: (
+    title: string,
+    parentId?: string,
+    onSuccess?: () => void
+  ) => Promise<void>;
   cancelAddFolder: () => void;
   deleteFolder: (libraryId: string) => void;
   setIsAddingLibrary: (isAddingLibrary: boolean) => void;
   fetchParentLibraries: (userId: string) => void;
 
-  addSnippet: (title: string, parentId?: string, onSuccess?: () => void) => Promise<void>;
+  addSnippet: (
+    title: string,
+    parentId?: string,
+    onSuccess?: () => void
+  ) => Promise<void>;
   cancelAddSnippet: () => void;
   deleteSnippet: (fileId: string) => void;
   setIsAddingSnippet: (isAddingSnippet: boolean) => void;
@@ -179,8 +187,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
 
       if (!res.ok) throw new Error("Failed to add folder");
-
-      
     } catch (e: any) {
       if (e.name === "AbortError") {
         console.log("Add folder cancelled");
@@ -188,9 +194,8 @@ export const useAppStore = create<AppState>((set, get) => ({
         console.error("Error adding folder:", e);
       }
     } finally {
-      
       set({ isAddingLibrary: false, addFolderController: undefined });
-      if (onSuccess) onSuccess(); 
+      if (onSuccess) onSuccess();
     }
   },
 
@@ -216,8 +221,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
 
       if (!res.ok) throw new Error("Failed to add snippet");
-
-      
     } catch (e: any) {
       if (e.name === "AbortError") {
         console.log("Add snippet cancelled");
@@ -292,25 +295,37 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  saveSnippet: async (newSnippet: Snippet) => {
+  saveSnippet: async (updatedSnippet: Snippet) => {
     try {
       const res = await fetch(`/api/snippets`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          Id: newSnippet.id,
-          UserId: newSnippet.userId,
-          Language: newSnippet.language,
-          Title: newSnippet.title,
-          Description: newSnippet.description,
-          Text: newSnippet.text,
+          id: updatedSnippet.id,
+          userId: updatedSnippet.userId,
+          title: updatedSnippet.title,
+          description: updatedSnippet.description,
+          language: updatedSnippet.language,
+          text: updatedSnippet.text,
         }),
       });
-      if (!res.ok) {
-        throw new Error("Failed to patch file/snippet");
-      }
+
+      if (!res.ok) throw new Error("Failed to update snippet");
+
+      set((state) => ({
+        snippets: state.snippets.map((s) =>
+          s.id === updatedSnippet.id ? updatedSnippet : s
+        ),
+        parentSnippets: state.parentSnippets.map((s) =>
+          s.id === updatedSnippet.id ? updatedSnippet : s
+        ),
+        selectedSnippet:
+          state.selectedSnippet?.id === updatedSnippet.id
+            ? updatedSnippet
+            : state.selectedSnippet,
+      }));
     } catch (error) {
-      console.error("Error patching file/snippet: ", error);
+      console.error("Error updating snippet:", error);
     }
   },
 
@@ -372,7 +387,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ isFindingSnippets: true });
 
     try {
-      const res = await fetch(`/api/snippets/search?fileTitle=${encodeURIComponent(title)}`);
+      const res = await fetch(
+        `/api/snippets/search?fileTitle=${encodeURIComponent(title)}`
+      );
       if (!res.ok) throw new Error("Failed to find Snippets/files");
       const data: Snippet[] = await res.json();
       set({ foundSnippets: data });
@@ -386,33 +403,34 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   findLibraries: async (title: string) => {
     if (!title) {
-        set ({foundLibraries: []});
-        return;
-    } 
+      set({ foundLibraries: [] });
+      return;
+    }
 
-    set ({ isFindingLibraries: true});
+    set({ isFindingLibraries: true });
 
     try {
-        const res = await fetch(`/api/libraries/search?folderTitle=${encodeURIComponent(title)}`);
+      const res = await fetch(
+        `/api/libraries/search?folderTitle=${encodeURIComponent(title)}`
+      );
       if (!res.ok) throw new Error("Failed to find libraries");
 
       const data: Library[] = await res.json();
-      set({ foundLibraries: data})
+      set({ foundLibraries: data });
     } catch (error) {
       console.error("Error finding libraries:", error);
-      set ({foundLibraries: []});
+      set({ foundLibraries: [] });
     } finally {
-        set({ isFindingLibraries: false });
+      set({ isFindingLibraries: false });
     }
   },
 
   handleTreeItemSelect: (item: Library | Snippet) => {
     if ("text" in item) {
-        set({selectedSnippet: item})
+      set({ selectedSnippet: item });
     }
-    set({lastSelectedItem: item})
-    set({isAddingLibrary: false})
-    set({isAddingSnippet: false})
+    set({ lastSelectedItem: item });
+    set({ isAddingLibrary: false });
+    set({ isAddingSnippet: false });
   },
-
 }));
