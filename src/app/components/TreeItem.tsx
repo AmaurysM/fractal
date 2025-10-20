@@ -347,25 +347,25 @@ export const TreeItem = (
 
     const isSelected = lastSelectedItem?.id == item.id;
 
-    const fetchLibrarys = async (libraryId: string) => {
-        setLoadingChildren(true);
-        try {
-            const res = await fetch(`api/libraries/children`, {
-                method: "GET",
-                headers: {
-                    "x-library-id": libraryId
-                }
-            });
-            if (!res.ok) throw new Error("Failed to fetch child librarys");
-            const data: Library[] = await res.json();
-            setChildFolders(data);
-        } catch (error) {
-            console.log("Failed To Fetch Libraries: " + (error as Error).message);
-            setChildFolders([]);
-        } finally {
-            setLoadingChildren(false);
-        }
-    }
+    // // const fetchLibrarys = async (libraryId: string) => {
+    // //     setLoadingChildren(true);
+    // //     try {
+    // //         const res = await fetch(`api/libraries/children`, {
+    // //             method: "GET",
+    // //             headers: {
+    // //                 "x-library-id": libraryId
+    // //             }
+    // //         });
+    // //         if (!res.ok) throw new Error("Failed to fetch child librarys");
+    // //         const data: Library[] = await res.json();
+    // //         setChildFolders(data);
+    // //     } catch (error) {
+    // //         console.log("Failed To Fetch Libraries: " + (error as Error).message);
+    // //         setChildFolders([]);
+    // //     } finally {
+    // //         setLoadingChildren(false);
+    // //     }
+    // // }
 
     const fetchSnippets = async (libraryId: string) => {
         setLoadingChildren(true);

@@ -94,7 +94,7 @@ export default function Home() {
   }, [user]);
 
   // Loading state
-  if (loadingUser) {
+  if (user == null) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="card w-96 bg-base-100 shadow-xl">
@@ -395,10 +395,11 @@ export default function Home() {
           onMouseEnter={() => setHoveringResizer(true)}
           onMouseLeave={() => setHoveringResizer(false)}
           onDragging={(isDragging) => setIsDragging(isDragging)}
+
         />
 
         {/* Main Content */}
-        <Panel className="flex-1 flex flex-col">
+        <Panel className="flex-1 flex flex-col" defaultSize={100}>
           {selectedSnippet ? (
             <div className="flex-1 bg-base-100">
               <CodeDisplay snippet={selectedSnippet} onSave={saveSnippet} />
