@@ -1,231 +1,3 @@
-// "use client"
-
-// import { useEffect, useState } from "react";
-// import { Library, Snippet, ExplorerItemType } from "../../../types/types";
-// import { BiChevronRight, BiFolder, BiFile, BiPlus, BiTrash } from "react-icons/bi";
-// import { TreeItemCreation } from "./TreeItemCreation";
-// import { useAppStore } from "../store/useAppStore";
-
-// export const TreeItem = (
-//     {
-//         item,
-//         type,
-//         level = 0,
-//     }: {
-//         item: Library | Snippet;
-//         type: ExplorerItemType;
-//         level?: number;
-//     }
-// ) => {
-
-//     const { user, deleteFolder, deleteSnippet, setIsAddingLibrary, isAddingLibrary, setIsAddingSnippet, isAddingSnippet, handleTreeItemSelect, lastSelectedItem, fetchParentLibraries, fetchParentSnippets } = useAppStore();
-
-//     const [isExpanded, setIsExpanded] = useState(false);
-//     const [isHovered, setIsHovered] = useState(false);
-//     const [childFolders, setChildFolders] = useState<Library[]>();
-//     const [childFiles, setChildFiles] = useState<Snippet[]>();
-
-//     const [loadingChildren, setLoadingChildren] = useState(false);
-
-//     const isSelected = lastSelectedItem?.id == item.id;
-
-//     const fetchLibrarys = async (libraryId: string) => {
-//         setLoadingChildren(true);
-//         try {
-//             const res = await fetch(`api/libraries/children`, {
-//                 method: "GET",
-//                 headers: {
-//                     "x-library-id": libraryId
-//                 }
-//             });
-//             if (!res.ok) throw new Error("Failed to fetch child librarys");
-//             const data: Library[] = await res.json();
-//             setChildFolders(data);
-//         } catch (error) {
-//             console.log("Failed To Fetch Libraries: " + (error as Error).message);
-//             setChildFolders([]);
-//         } finally {
-//             setLoadingChildren(false);
-//         }
-//     }
-
-//     const fetchSnippets = async (libraryId: string) => {
-//         setLoadingChildren(true);
-//         try {
-//             const res = await fetch(`api/snippets/library`, {
-//                 method: "GET",
-//                 headers: {
-//                     "x-library-id": libraryId
-//                 }
-//             });
-//             if (!res.ok) throw new Error("Failed to fetch child files");
-//             const data: Snippet[] = await res.json();
-//             setChildFiles(data);
-//         } catch (error) {
-//             console.log("Failed To Fetch Libraries: " + (error as Error).message);
-//             setChildFiles([]);
-//         } finally {
-//             setLoadingChildren(false);
-//         }
-//     }
-
-//     useEffect(() => {
-//         if (!user) return;
-//         if (isExpanded == true) {
-//             fetchLibrarys(item.id)
-//             fetchSnippets(item.id)
-//         }
-//     }, [isExpanded]);
-
-//     const paddingLeft = level * 16 + 12;
-
-//     if (!user) return;
-
-//     return (
-//         <div>
-//             <div
-//                 className={`flex items-center py-1 px-2 cursor-pointer transition-colors ${isSelected
-//                     ? 'bg-gray-700 border-l-2 px-1 py-0 border-blue-500'
-//                     : isHovered
-//                         ? 'bg-gray-700'
-//                         : ''
-//                     }`}
-//                 style={{ paddingLeft }}
-//                 onClick={
-//                     () => {
-//                         if (type === ExplorerItemType.Folder) {
-//                             setIsExpanded(!isExpanded);
-//                             setIsAddingLibrary(false);
-//                         }
-
-//                         handleTreeItemSelect(item);
-//                     }
-//                 }
-
-//                 onMouseEnter={() => setIsHovered(true)}
-//                 onMouseLeave={() => setIsHovered(false)}
-//             >
-//                 {type === ExplorerItemType.Folder && (
-//                     <BiChevronRight
-//                         className={`w-3 h-3 text-gray-400 transition-transform mr-1 ${isExpanded ? 'rotate-90' : ''
-//                             }`}
-
-//                     />
-//                 )}
-
-//                 {type === ExplorerItemType.Folder ? (
-//                     <BiFolder className="w-4 h-4 text-blue-500 mr-2" />
-//                 ) : (
-//                     <BiFile className="w-4 h-4 text-gray-500 mr-2" />
-//                 )}
-
-//                 <span className="flex-1 text-sm truncate">
-//                     {type === ExplorerItemType.Folder
-//                         ? (item as Library).title
-//                         : (item as Snippet).title
-//                     }
-//                 </span>
-
-
-
-//                 {isHovered && (
-//                     <div className="flex items-center gap-1 ml-2">
-//                         {type === ExplorerItemType.Folder && (
-//                             <button
-//                                 onClick={(e) => {
-//                                     e.stopPropagation();
-//                                     setIsAddingLibrary(true);
-//                                     setIsExpanded(true);
-
-//                                 }}
-//                                 className="p-1 hover:bg-blue-200 rounded"
-//                                 title="New folder"
-//                             >
-//                                 <BiFolder className="w-3 h-3" />
-//                             </button>
-//                         )}
-
-//                         {type === ExplorerItemType.Folder && (
-//                             <button
-//                                 onClick={(e) => {
-//                                     e.stopPropagation();
-//                                     deleteFolder(item.id);
-//                                 }}
-//                                 className="p-1 hover:bg-red-200 rounded"
-//                                 title="Delete"
-//                             >
-//                                 <BiTrash className="w-3 h-3 text-red-500" />
-//                             </button>
-//                         )}
-
-//                         {type === ExplorerItemType.File && (
-//                             <button
-//                                 onClick={(e) => {
-//                                     e.stopPropagation();
-//                                     deleteSnippet(item.id);
-//                                 }}
-//                                 className="p-1 hover:bg-red-200 rounded"
-//                                 title="Delete"
-//                             >
-//                                 <BiTrash className="w-3 h-3 text-red-500" />
-//                             </button>
-//                         )}
-//                     </div>
-//                 )}
-//             </div>
-
-//             {type === ExplorerItemType.Folder && isExpanded && (
-//                 <div>
-
-//                     {isAddingLibrary && isSelected &&
-//                         <TreeItemCreation
-//                             level={level + 1}
-//                             type={ExplorerItemType.Folder}
-//                             parentId={item.id}
-//                             onSuccess={() => fetchLibrarys(item.id)}
-//                         />
-//                     }
-
-//                     {isAddingSnippet && isSelected &&
-//                         <TreeItemCreation
-//                             level={level + 1}
-//                             type={ExplorerItemType.File}
-//                             parentId={item.id}
-//                             onSuccess={() => fetchSnippets(item.id)}
-//                         />
-//                     }
-
-//                     {childFolders && childFolders.map((lib) => (
-//                         <div key={lib.id} onClick={(e) => {
-//                             e.stopPropagation();
-//                             handleTreeItemSelect(lib);
-//                         }}>
-//                             <TreeItem
-//                                 item={lib}
-//                                 type={ExplorerItemType.Folder}
-//                                 level={level + 1}
-//                             />
-//                         </div>
-//                     ))}
-
-//                     {childFiles && childFiles.map((file) => (
-//                         <div key={file.id} onClick={(e) => {
-//                             e.stopPropagation();
-//                             handleTreeItemSelect(file);
-//                         }}>
-//                             <TreeItem
-//                                 item={file}
-//                                 type={ExplorerItemType.File}
-//                                 level={level + 1}
-//                             />
-//                         </div>
-//                     ))}
-//                 </div>
-//             )}
-//         </div>
-//     );
-// }
-
 "use client"
 
 import { useEffect, useState, useRef } from "react";
@@ -334,7 +106,7 @@ export const TreeItem = (
         handleTreeItemSelect, 
         lastSelectedItem, 
         fetchParentLibraries, 
-        fetchParentSnippets 
+        fetchParentSnippets,
     } = useAppStore();
 
     const [isExpanded, setIsExpanded] = useState(false);
@@ -347,25 +119,25 @@ export const TreeItem = (
 
     const isSelected = lastSelectedItem?.id == item.id;
 
-    // // const fetchLibrarys = async (libraryId: string) => {
-    // //     setLoadingChildren(true);
-    // //     try {
-    // //         const res = await fetch(`api/libraries/children`, {
-    // //             method: "GET",
-    // //             headers: {
-    // //                 "x-library-id": libraryId
-    // //             }
-    // //         });
-    // //         if (!res.ok) throw new Error("Failed to fetch child librarys");
-    // //         const data: Library[] = await res.json();
-    // //         setChildFolders(data);
-    // //     } catch (error) {
-    // //         console.log("Failed To Fetch Libraries: " + (error as Error).message);
-    // //         setChildFolders([]);
-    // //     } finally {
-    // //         setLoadingChildren(false);
-    // //     }
-    // // }
+    const fetchLibraries = async (libraryId: string) => {
+        setLoadingChildren(true);
+        try {
+            const res = await fetch(`api/libraries/children`, {
+                method: "GET",
+                headers: {
+                    "x-library-id": libraryId
+                }
+            });
+            if (!res.ok) throw new Error("Failed to fetch child librarys");
+            const data: Library[] = await res.json();
+            setChildFolders(data);
+        } catch (error) {
+            console.log("Failed To Fetch Libraries: " + (error as Error).message);
+            setChildFolders([]);
+        } finally {
+            setLoadingChildren(false);
+        }
+    }
 
     const fetchSnippets = async (libraryId: string) => {
         setLoadingChildren(true);
@@ -390,7 +162,7 @@ export const TreeItem = (
     useEffect(() => {
         if (!user) return;
         if (isExpanded == true) {
-            fetchLibrarys(item.id)
+            fetchLibraries(item.id)
             fetchSnippets(item.id)
         }
     }, [isExpanded]);
@@ -517,7 +289,7 @@ export const TreeItem = (
                             level={level + 1}
                             type={ExplorerItemType.Folder}
                             parentId={item.id}
-                            onSuccess={() => fetchLibrarys(item.id)}
+                            onSuccess={() => fetchLibraries(item.id)}
                         />
                     }
 
