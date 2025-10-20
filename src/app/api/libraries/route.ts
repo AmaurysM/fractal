@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const result = await db.query(
-      `INSERT INTO "Library" (userid, libraryname) 
+      `INSERT INTO "Library" (userid, title) 
        VALUES ($1, $2) 
        RETURNING id`,
       [userId, title]
