@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const result = await db.query('SELECT l.* FROM "Library" l LEFT JOIN "LibraryJunction" lj ON l.id = lj.childlibrary WHERE l.userid = $1 AND lj.id IS NULL ORDER BY l.libraryname ASC',[userId]
+    const result = await db.query('SELECT l.* FROM "Library" l LEFT JOIN "LibraryJunction" lj ON l.id = lj.childlibrary WHERE l.userid = $1 AND lj.id IS NULL ORDER BY l.title ASC',[userId]
     );
     const libraries = result.rows;
     return NextResponse.json(libraries);

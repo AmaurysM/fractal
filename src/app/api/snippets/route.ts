@@ -38,7 +38,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { fileTitle, parentId } = body;
+  const { title, parentId } = body;
+
+  console.log("Creating a file/snippet")
 
   const session = await getServerSession(authOptions);
 
@@ -54,7 +56,7 @@ export async function POST(req: NextRequest) {
   try {
     const result = await db.query(
       'INSERT INTO "Snippet" (userid, title ) VALUES ($1, $2) RETURNING id',
-      [userId, fileTitle]
+      [userId, title]
     );
     const newFileId = result.rows[0].id;
     if (parentId) {

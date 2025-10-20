@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const result = await db.query(
-      'SELECT l.* FROM "Library" l WHERE l.libraryname ILIKE $1 AND l.userid = $2',
+      'SELECT l.* FROM "Library" l WHERE l.title ILIKE $1 AND l.userid = $2',
       [`%${libTitle}%`, userId]
     );
     return NextResponse.json(result.rows);

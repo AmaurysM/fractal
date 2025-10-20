@@ -47,7 +47,7 @@ export type Snippet = {
 export type Library = {
   id: string;
   userid: string;
-  libraryname: string;
+  title: string;
 };
 
 export type LibraryJunction = {
