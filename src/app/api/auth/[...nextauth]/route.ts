@@ -3,8 +3,5 @@ import { authOptions } from "../authOptions";
 
 const handler = NextAuth(authOptions);
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 export { handler as GET, handler as POST };
-
-// import { authOptions } from "@/app/api/auth/authOptions";
-
