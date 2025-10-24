@@ -140,7 +140,7 @@ export const FileTile = ({
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-base-content truncate text-sm">
-                  {library.libraryName}
+                  {library.title}
                 </h3>
                 {totalItems > 0 && (
                   <p className="text-xs text-base-content/60 mt-0.5">
