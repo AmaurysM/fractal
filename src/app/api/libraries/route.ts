@@ -1,7 +1,7 @@
 import db from "@/app/lib/db";
 import { Library } from "../../../../types/types";
 import { NextRequest, NextResponse } from "next/server";
-import { authOptions } from "../auth/[...nextauth]/route";
+import { authOptions } from "@/app/api/auth/authOptions";
 import { getServerSession } from "next-auth";
 
 export async function GET(req: NextRequest) {
