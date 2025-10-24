@@ -1,13 +1,15 @@
-import NextAuth, { NextAuthOptions } from "next-auth";
+import NextAuth from "next-auth";
 import GithubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
 import DiscordProvider from "next-auth/providers/discord";
 import { Pool } from "pg";
 
+// Initialize PostgreSQL pool
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
+// Helper function to get or create user in DB
 async function getOrCreateUser(user: any) {
   const res = await pool.query(
     'SELECT id, username FROM "User" WHERE email = $1 LIMIT 1',
@@ -24,7 +26,8 @@ async function getOrCreateUser(user: any) {
   return insert.rows[0];
 }
 
-export const authOptions: NextAuthOptions = {
+// NextAuth configuration (only used inside handler)
+const handler = NextAuth({
   providers: [
     GithubProvider({
       clientId: process.env.GITHUB_ID ?? "",
@@ -57,9 +60,9 @@ export const authOptions: NextAuthOptions = {
     },
   },
   pages: {
-    signIn: "/signin", 
+    signIn: "/signin",
   },
-};
+});
 
-const handler = NextAuth(authOptions);
+export const runtime = "edge"; // optional but recommended for App Router
 export { handler as GET, handler as POST };
