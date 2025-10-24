@@ -1,7 +1,7 @@
 // api/library/route.ts
 import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
-import { authOptions } from "../../auth/[...nextauth]/route";
+import { authOptions } from "@/app/api/auth/authOptions";
 import { createSSEStream } from "@/app/lib/sse";
 
 export async function GET(req: NextRequest) {
