@@ -29,9 +29,6 @@ export const ExplorerProvider = ({ children }: { children: React.ReactNode }) =>
     topLevelKey: "snippets",
   });
 
-  return (
-<div> </div>
-  );
 };
 
 // Custom hook for consumers
