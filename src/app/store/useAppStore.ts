@@ -42,7 +42,7 @@ interface AppState {
   addFolder: (
     title: string,
     parentId?: string,
-    onSuccess?: () => void
+    onSuccess?: () => void,
   ) => Promise<void>;
   cancelAddFolder: () => void;
   deleteFolder: (libraryId: string) => void;
@@ -52,7 +52,7 @@ interface AppState {
   addSnippet: (
     title: string,
     parentId?: string,
-    onSuccess?: () => void
+    onSuccess?: () => void,
   ) => Promise<void>;
   cancelAddSnippet: () => void;
   deleteSnippet: (fileId: string) => void;
@@ -68,6 +68,10 @@ interface AppState {
 
   setSelectedSnippet: (selectedSnippet: Snippet | null) => void;
   setLastSelectedItem: (lastSelectedItem: Snippet | Library | null) => void;
+
+  // New methods to fetch parent IDs
+  getLibraryParentId: (libraryId: string) => Promise<string | null>;
+  getSnippetParentId: (snippetId: string) => Promise<string | null>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -103,6 +107,40 @@ export const useAppStore = create<AppState>((set, get) => ({
   setLastSelectedItem: (lastSelectedItem) => set({ lastSelectedItem }),
 
   setUser: (user) => set({ user }),
+
+  getLibraryParentId: async (libraryId: string) => {
+    try {
+      const res = await fetch(`/api/libraries/parent`, {
+        method: "GET",
+        headers: { "x-library-id": libraryId },
+      });
+
+      if (!res.ok) throw new Error("Failed to fetch parent library");
+
+      const data = await res.json();
+      return data.parentId;
+    } catch (error) {
+      console.error("Error fetching library parent:", error);
+      return null;
+    }
+  },
+
+  getSnippetParentId: async (snippetId: string) => {
+    try {
+      const res = await fetch(`/api/snippets/parent`, {
+        method: "GET",
+        headers: { "x-snippet-id": snippetId },
+      });
+
+      if (!res.ok) throw new Error("Failed to fetch snippet parent");
+
+      const data = await res.json();
+      return data.parentId;
+    } catch (error) {
+      console.error("Error fetching snippet parent:", error);
+      return null;
+    }
+  },
 
   fetchLibraries: async (userId) => {
     const prevController = get().libraryController;
@@ -252,9 +290,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   deleteFolder: async (libraryId: string) => {
-    // const { user, fetchLibraries } = get();
-    // if (!user) return;
-
     try {
       const res = await fetch(`/api/libraries`, {
         method: "DELETE",
@@ -266,10 +301,29 @@ export const useAppStore = create<AppState>((set, get) => ({
         throw new Error("Failed to delete folder");
       }
 
-      //await fetchLibraries(user.id);
-      //await fetchAllLibraries(user.id);
+      // Update state after successful deletion
+      set((state) => {
+        // Clear selection if deleted library was selected
+        const newState: Partial<AppState> = {
+          libraries: state.libraries.filter((lib) => lib.id !== libraryId),
+          parentLibraries: state.parentLibraries.filter(
+            (lib) => lib.id !== libraryId,
+          ),
+          foundLibraries: state.foundLibraries.filter(
+            (lib) => lib.id !== libraryId,
+          ),
+        };
+
+        // Clear selection if the deleted item was selected
+        if (state.lastSelectedItem?.id === libraryId) {
+          newState.lastSelectedItem = null;
+        }
+
+        return newState;
+      });
     } catch (error) {
       console.error("Error deleting library:", error);
+      throw error; // Re-throw so TreeItem can handle it
     }
   },
 
@@ -285,13 +339,29 @@ export const useAppStore = create<AppState>((set, get) => ({
         throw new Error("Failed to delete file");
       }
 
-      // Refresh files after deletion
-      //   if (user) {
-      //     await fetchAllFiles(user.id);
-      //     await fetchParentFiles(user.id);
-      //   }
+      set((state) => {
+        const newState: Partial<AppState> = {
+          snippets: state.snippets.filter((snip) => snip.id !== fileId),
+          parentSnippets: state.parentSnippets.filter(
+            (snip) => snip.id !== fileId,
+          ),
+          foundSnippets: state.foundSnippets.filter(
+            (snip) => snip.id !== fileId,
+          ),
+        };
+
+        if (state.selectedSnippet?.id === fileId) {
+          newState.selectedSnippet = null;
+        }
+        if (state.lastSelectedItem?.id === fileId) {
+          newState.lastSelectedItem = null;
+        }
+
+        return newState;
+      });
     } catch (error) {
       console.error("Error deleting file:", error);
+      throw error;
     }
   },
 
@@ -314,10 +384,10 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       set((state) => ({
         snippets: state.snippets.map((s) =>
-          s.id === updatedSnippet.id ? updatedSnippet : s
+          s.id === updatedSnippet.id ? updatedSnippet : s,
         ),
         parentSnippets: state.parentSnippets.map((s) =>
-          s.id === updatedSnippet.id ? updatedSnippet : s
+          s.id === updatedSnippet.id ? updatedSnippet : s,
         ),
         selectedSnippet:
           state.selectedSnippet?.id === updatedSnippet.id
@@ -331,7 +401,6 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   fetchParentSnippets: async (userId: string) => {
     set({ isFetchingParentSnippets: true });
-    //setLoadingParentSnippets(true);
     try {
       const res = await fetch(`/api/snippets/parents`, {
         method: "GET",
@@ -388,7 +457,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     try {
       const res = await fetch(
-        `/api/snippets/search?fileTitle=${encodeURIComponent(title)}`
+        `/api/snippets/search?fileTitle=${encodeURIComponent(title)}`,
       );
       if (!res.ok) throw new Error("Failed to find Snippets/files");
       const data: Snippet[] = await res.json();
@@ -411,7 +480,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     try {
       const res = await fetch(
-        `/api/libraries/search?folderTitle=${encodeURIComponent(title)}`
+        `/api/libraries/search?folderTitle=${encodeURIComponent(title)}`,
       );
       if (!res.ok) throw new Error("Failed to find libraries");
 

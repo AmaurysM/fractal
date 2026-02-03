@@ -3,6 +3,7 @@ import { Snippet } from "../../../types/types";
 import { useState, useEffect, useRef } from "react";
 import Editor, { Monaco } from "@monaco-editor/react";
 import * as monaco from "monaco-editor";
+import { useAppStore } from "../store/useAppStore";
 
 const LANGUAGES = [
   { value: "", label: "Select Language", color: "badge-ghost", monaco: "plaintext" },
@@ -33,10 +34,8 @@ const THEMES = [
 
 export const CodeDisplay = ({
   snippet: initialSnippet,
-  onSave,
 }: {
   snippet?: Snippet;
-  onSave?: (updated: Snippet) => void;
 }) => {
   const [copied, setCopied] = useState(false);
   const [snippet, setSnippet] = useState<Snippet | undefined>(initialSnippet);
@@ -51,6 +50,9 @@ export const CodeDisplay = ({
     lineNumbers: 'on' as const,
   });
 
+  const {saveSnippet
+    } = useAppStore();
+
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
 
@@ -64,8 +66,8 @@ export const CodeDisplay = ({
     setSaveStatus('saving');
     if (saveTimeout.current) window.clearTimeout(saveTimeout.current);
     saveTimeout.current = window.setTimeout(() => {
-      if (onSave) {
-        onSave(updatedSnippet);
+      if (saveSnippet) {
+        saveSnippet(updatedSnippet);
         setSaveStatus('saved');
       }
     }, 800);
@@ -107,7 +109,7 @@ export const CodeDisplay = ({
 
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       if (snippet) {
-        onSave?.(snippet);
+        saveSnippet?.(snippet);
         setSaveStatus('saved');
       }
     });

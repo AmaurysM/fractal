@@ -21,16 +21,16 @@ export const TreeItemCreation = ({
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  
   const { 
     addSnippet, 
     addFolder, 
     cancelAddFolder, 
     cancelAddSnippet, 
-    isAddingLibrary, 
-    isAddingSnippet, 
-    setIsAddingLibrary, 
-    setIsAddingSnippet 
   } = useAppStore();
+
+  const isFolder = type === ExplorerItemType.Folder;
+  const paddingLeft = level * 16 + 12;
 
   const add = async (title: string): Promise<void> => {
     if (!title.trim()) {
@@ -42,7 +42,7 @@ export const TreeItemCreation = ({
     setError(null);
 
     try {
-      if (type === ExplorerItemType.Folder) {
+      if (isFolder) {
         await addFolder(title, parentId, onSuccess);
       } else {
         await addSnippet(title, parentId, onSuccess);
@@ -56,14 +56,28 @@ export const TreeItemCreation = ({
   const cancel = (): void => {
     if (isCreating) return; 
     
-    if (type === ExplorerItemType.Folder) {
+    if (isFolder) {
       cancelAddFolder();
     } else {
       cancelAddSnippet();
     }
   };
 
-  const paddingLeft = level * 16 + 12;
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (isCreating) return;
+
+    if (e.key === "Enter" && title.trim()) {
+      add(title);
+    } else if (e.key === "Escape") {
+      cancel();
+    }
+  };
+
+  const handleBlur = () => {
+    if (title.trim() && !isCreating && !error) {
+      add(title);
+    }
+  };
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -76,40 +90,16 @@ export const TreeItemCreation = ({
     }
   }, [error]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (isCreating) return;
-
-    if (e.key === "Enter" && title.trim() !== "") {
-      add(title);
-    } else if (e.key === "Escape") {
-      cancel();
-    }
-  };
-
-  const handleBlur = () => {
-    // Auto-save on blur if there's content and not already creating
-    if (title.trim() && !isCreating && !error) {
-      add(title);
-    }
-  };
-
   return (
     <div>
       <div
-        className={`flex items-center py-1 px-2 transition-colors ${
-          isHovered ? "bg-gray-700" : ""
-        } ${isCreating ? "opacity-75" : ""}`}
+        className={`flex items-center border-l-2 px-1 py-0 border-[#1D232A] transition-colors ${isHovered ? "bg-gray-700 border-gray-700" : ""} ${isCreating ? "opacity-75" : ""}`}
         style={{ paddingLeft }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {type === ExplorerItemType.Folder && (
-          <BiChevronRight
-            className={`w-3 h-3 text-gray-400 transition-transform mr-1`}
-          />
-        )}
 
-        {type === ExplorerItemType.Folder ? (
+        {isFolder ? (
           <BiFolder className="w-4 h-4 text-blue-500 mr-2" />
         ) : (
           <BiFile className="w-4 h-4 text-gray-500 mr-2" />
@@ -126,26 +116,17 @@ export const TreeItemCreation = ({
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
           disabled={isCreating}
-          className={`flex-1 text-sm bg-transparent border-b focus:outline-none text-white placeholder-gray-400 ${
-            error 
-              ? "border-red-500" 
-              : "border-gray-500 focus:border-blue-500"
-          } ${isCreating ? "cursor-not-allowed" : ""}`}
-          placeholder={type === ExplorerItemType.Folder ? "New folder" : "New file"}
+          className={`flex-1 text-sm bg-transparent border-b text-white placeholder-gray-400 focus:outline-none ${error ? "border-red-500" : "border-gray-500 focus:border-blue-500"} ${isCreating ? "cursor-not-allowed" : ""}`}
+          placeholder={isFolder ? "New folder" : "New file"}
         />
 
-        {isCreating ?? (
-          <div className="ml-2">
-            <div className="w-4 h-4 border-2 border-gray-500 border-t-blue-500 rounded-full animate-spin" />
-          </div>
+        {isCreating && (
+          <div className="w-3 h-3 border-2 border-gray-500 border-t-blue-500 rounded-full animate-spin" />
         )}
       </div>
       
       {error && (
-        <div
-          className="text-xs text-red-400 py-1 px-2 animate-fade-in"
-          style={{ paddingLeft: paddingLeft + 24 }}
-        >
+        <div className="text-xs text-red-400 py-1 px-2" style={{ paddingLeft: paddingLeft + 24 }}>
           {error}
         </div>
       )}

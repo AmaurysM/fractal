@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
   }
   try {
     const result = await db.query(
-      'SELECT s.* FROM "Snippet" s WHERE s.userid = $1 ',
+      'SELECT s.* FROM "Snippet" s WHERE s."userId" = $1 ',
       [userId]
     );
 
@@ -40,8 +40,6 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { title, parentId } = body;
 
-  console.log("Creating a file/snippet")
-
   const session = await getServerSession(authOptions);
 
   if (!session) {
@@ -55,7 +53,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const result = await db.query(
-      'INSERT INTO "Snippet" (userid, title ) VALUES ($1, $2) RETURNING id',
+      'INSERT INTO "Snippet" ("userId", title ) VALUES ($1, $2) RETURNING id',
       [userId, title]
     );
     const newFileId = result.rows[0].id;
@@ -96,7 +94,7 @@ export async function DELETE(req: NextRequest) {
 }
 export async function PATCH(req: NextRequest) {
   const body = await req.json();
-  const { Id, Language, Title, Description, Text } = body;
+  const { id, language, title, description, text } = body;
   const session = await getServerSession(authOptions);
 
   if (!session) {
@@ -110,13 +108,13 @@ export async function PATCH(req: NextRequest) {
   try {
     const result = await db.query(
       `UPDATE "Snippet"
-       SET userid = $1,
+       SET "userId" = $1,
            language = $2,
            title = $3,
            description = $4,
            text = $5
        WHERE id = $6`,
-      [UserId, Language, Title, Description, Text, Id]
+      [UserId, language, title, description, text, id]
     );
 
     return NextResponse.json(

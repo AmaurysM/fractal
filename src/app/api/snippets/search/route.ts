@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
       SELECT s.* 
       FROM "Snippet" s 
       WHERE (s.title ILIKE $1 OR s.language ILIKE $1 OR s.description ILIKE $1) 
-      AND s.userid = $2
+      AND s."userId" = $2
       `,
       [`%${fileTitle}%`, userId]
     );

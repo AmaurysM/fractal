@@ -68,7 +68,7 @@ export async function createSSEStream({
                 )
               );
             }
-            console.log({initialRows})
+            // console.log({initialRows})
           } catch (err) {
             console.error("Failed to handle notification:", err);
           }

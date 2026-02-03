@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const result = await db.query(
-      'SELECT l.* FROM "Snippet" l LEFT JOIN "SnippetJunction" lj ON l.id = lj.snippetid WHERE l.userid = $1 AND lj.id IS NULL ORDER BY l.title ASC',
+      'SELECT l.* FROM "Snippet" l LEFT JOIN "SnippetJunction" lj ON l.id = lj.snippetid WHERE l."userId" = $1 AND lj.id IS NULL ORDER BY l.title ASC',
       [userId]
     );
     const Snippets = result.rows;

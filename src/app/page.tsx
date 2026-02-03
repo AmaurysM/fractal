@@ -45,7 +45,8 @@ export default function Home() {
     isAddingLibrary,
     isFetchingParentLibraries,
     isFetchingParentSnippets,
-    isFetchingSnippets, findLibraries,
+    isFetchingSnippets,
+    findLibraries,
     findSnippets,
     foundLibraries,
     foundSnippets,
@@ -164,13 +165,13 @@ export default function Home() {
 
             <ul
               tabIndex={0}
-              className="menu menu-sm dropdown-content mt-3 z-[1] p-3 shadow-lg bg-base-100 rounded-xl w-56 space-y-2"
+              className="menu menu-sm dropdown-content z-[1] shadow-lg bg-base-100 rounded-xs w-56 space-y-2 border-1 border-gray-500"
             >
               <li className="menu-title text-xs text-base-content/60">
                 Signed in as
               </li>
               <li>
-                <span className="truncate font-medium text-base-content">
+                <span className="truncate font-medium text-base-content rounded-xs">
                   {user?.email || "Unknown User"}
                 </span>
               </li>
@@ -178,7 +179,7 @@ export default function Home() {
               <li>
                 <button
                   onClick={() => signOut({ callbackUrl: "/landing" })}
-                  className="text-error hover:bg-error hover:text-error-content rounded-lg transition-colors"
+                  className="text-error hover:bg-error hover:text-error-content rounded-xs transition-colors"
                 >
                   Sign out
                 </button>
@@ -219,14 +220,14 @@ export default function Home() {
             <>
               {/* Explorer Header */}
               <div className="flex items-center gap-2 px-4 py-[15px] border-b border-slate-100">
-                <h3 className="font-medium text-base-content text-sm uppercase tracking-wide">Explorer</h3>
+                <h3 className="font-medium text-base-content text-sm tracking-wide">EXPLORER</h3>
                 {/* {isFetchingLibraries && (
                   <span className="loading loading-spinner loading-sm text-primary"></span>
                 )} */}
                 <div className="flex ml-auto items-center gap-1">
                   <button
                     onClick={() => {
-                      setIsAddingSnippet(!isAddingSnippet);
+                      setIsAddingSnippet(true);
                       setIsAddingLibrary(false);
                     }}
                     className="p-1 rounded hover:bg-slate-200/60 transition-colors duration-150 group"
@@ -236,7 +237,7 @@ export default function Home() {
                   </button>
                   <button
                     onClick={() => {
-                      setIsAddingLibrary(!isAddingLibrary);
+                      setIsAddingLibrary(true);
                       setIsAddingSnippet(false);
                     }}
                     className="p-1 rounded hover:bg-slate-200/60 transition-colors duration-150 group"
@@ -248,21 +249,18 @@ export default function Home() {
               </div>
 
               {/* Libraries Section */}
-              <div className="flex-1 overflow-auto" onClick={handleSidebarClick}>
+              <div className="flex-1 py-1 overflow-auto" onClick={handleSidebarClick}>
                 {/* Root level folder creation */}
-                {isAddingLibrary && lastSelectedItem === null && (
-                  <TreeItemCreation
-                    type={ExplorerItemType.Folder}
-                    onSuccess={() => fetchParentLibraries(user.id)}
-                  />
-                )}
-
-                {/* Root level file creation */}
-                {isAddingSnippet && lastSelectedItem === null && (
-                  <TreeItemCreation
-                    type={ExplorerItemType.File}
-                    onSuccess={() => fetchParentSnippets(user.id)}
-                  />
+                {isAddingLibrary && (
+                  (lastSelectedItem === null ||
+                    (selectedSnippet !== null && parentSnippets.some(snip => snip.id === selectedSnippet.id))
+                  ) &&
+                  !(lastSelectedItem && 'title' in lastSelectedItem && !('text' in lastSelectedItem)) && (
+                    <TreeItemCreation
+                      type={ExplorerItemType.Folder}
+                      onSuccess={() => fetchParentLibraries(user.id)}
+                    />
+                  )
                 )}
 
                 {/* Libraries */}
@@ -282,6 +280,18 @@ export default function Home() {
                   </div>
                 ) : null}
 
+                {/* Root level file creation */}
+                {isAddingSnippet && (
+                  (lastSelectedItem === null ||
+                    (selectedSnippet !== null && parentSnippets.some(snip => snip.id === selectedSnippet.id))
+                  ) &&
+                  !(lastSelectedItem && 'title' in lastSelectedItem && !('text' in lastSelectedItem)) && (
+                    <TreeItemCreation
+                      type={ExplorerItemType.File}
+                      onSuccess={() => fetchParentSnippets(user.id)}
+                    />
+                  )
+                )}
 
                 {/* Parent Snippets */}
                 {parentSnippets.map((snip) => (
@@ -373,8 +383,8 @@ export default function Home() {
           )}
 
           {/* Stats */}
-          <div className="p-4 border-t border-slate-200">
-            <div className="stats stats-vertical shadow-sm bg-base-200 w-full">
+          <div className="border-t">
+            <div className="stats stats-vertical bg-base-200 w-full rounded-xs">
               <div className="stat py-3">
                 <div className="stat-title text-xs">Total Libraries</div>
                 <div className="stat-value text-sm">{activity === ActivityItem.Explorer ? libraries.length : (foundLibraries.length)}</div>
@@ -402,7 +412,7 @@ export default function Home() {
         <Panel className="flex-1 flex flex-col" defaultSize={100}>
           {selectedSnippet ? (
             <div className="flex-1 bg-base-100">
-              <CodeDisplay snippet={selectedSnippet} onSave={saveSnippet} />
+              <CodeDisplay snippet={selectedSnippet} />
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center bg-base-100">
