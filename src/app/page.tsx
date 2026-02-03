@@ -1,18 +1,18 @@
 "use client"
 
 import { useEffect, useState } from "react";
-import { ExplorerItemType, Library, Snippet, User } from "../../types/types";
-import { BiUser, BiFolder, BiCode } from "react-icons/bi";
+import { ExplorerItemType, Library, Snippet } from "../../types/types";
+import { BiUser, BiCode } from "react-icons/bi";
+import { VscNewFile, VscNewFolder, VscFiles, VscSearch } from "react-icons/vsc";
 import { CodeDisplay } from "./components/CodeDisplay";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
-import { AiFillFileAdd, AiFillFolderAdd } from "react-icons/ai";
 import { TreeItem } from "./components/TreeItem";
 import { TreeItemCreation } from "./components/TreeItemCreation";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { signOut } from "next-auth/react"
-import { LuFiles, LuSearch, LuSettings } from "react-icons/lu";
 import { useAppStore } from "./store/useAppStore";
+import { StatsFooterSkeleton, TreeSkeleton } from "./components/SkeletonLoading";
 
 enum ActivityItem {
   Explorer = "Explorer",
@@ -21,56 +21,57 @@ enum ActivityItem {
 
 export default function Home() {
   const { data: session } = useSession();
-  const [loadingUser, setLoadingUser] = useState<boolean>(true);
   const [hoveringResizer, setHoveringResizer] = useState<boolean>(false);
   const [isDragging, setIsDragging] = useState(false);
   const [activity, setActivity] = useState<ActivityItem>(ActivityItem.Explorer);
   const [searchValue, setSearchValue] = useState<string>("");
 
-  const { user,
+  const {
+    user,
     setUser,
-    saveSnippet,
+    isHydrated,
     fetchLibraries,
     fetchSnippets,
-    libraries,
-    parentLibraries,
-    snippets,
-    parentSnippets,
+    uiLibraries: libraries,
+    uiParentLibraries: parentLibraries,
+    uiSnippets: snippets,
+    uiParentSnippets: parentSnippets,
     fetchParentSnippets,
     fetchParentLibraries,
     setIsAddingLibrary,
     setIsAddingSnippet,
-    isFetchingLibraries,
+    isFetchingParentLibraries,
     isAddingSnippet,
     isAddingLibrary,
-    isFetchingParentLibraries,
     isFetchingParentSnippets,
-    isFetchingSnippets,
+    isFindingLibraries,
+    isFindingSnippets,
     findLibraries,
     findSnippets,
     foundLibraries,
     foundSnippets,
-    handleTreeItemSelect,
     selectedSnippet,
     lastSelectedItem,
     setSelectedSnippet,
     setLastSelectedItem
   } = useAppStore();
 
-  const fetchUser = async () => {
-    setLoadingUser(true);
-    try {
-      if (session?.user) {
-        setUser(session.user);
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        if (session?.user) {
+          setUser(session.user);
+        }
+      } catch (error) {
+        console.error("Failed to fetch user:", error);
+        setUser(null);
       }
-    } catch (error) {
-      console.error("Failed to fetch user:", error);
-      setUser(null);
-    } finally {
-      setLoadingUser(false);
-    }
-  };
+    };
 
+    if (user === null && session?.user) {
+      fetchUser();
+    }
+  }, [session, user, setUser]);
 
   const handleSidebarClick = () => {
     setLastSelectedItem(null);
@@ -79,194 +80,270 @@ export default function Home() {
   };
 
   useEffect(() => {
-    if (user === null) {
-      fetchUser();
-    } else if (user) {
+    if (user && isHydrated) {
       Promise.all([
         fetchLibraries(user.id),
         fetchSnippets(user.id),
-
         fetchParentLibraries(user.id),
         fetchParentSnippets(user.id),
       ]).catch(error => {
         console.error("Error fetching initial data:", error);
       });
     }
-  }, [user]);
+  }, [user, isHydrated, fetchLibraries, fetchSnippets, fetchParentLibraries, fetchParentSnippets]);
 
-  // Loading state
-  if (user == null) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="card w-96 bg-base-100 shadow-xl">
-          <div className="card-body items-center text-center">
-            <span className="loading loading-spinner loading-lg text-primary"></span>
-            <h2 className="card-title mt-4">Loading your workspace...</h2>
-            <p className="text-base-content/70">Please wait while we set up your environment</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const isInitialLoading = !user || !isHydrated;
 
-  // User not found state
-  if (user === null) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="card w-96 bg-base-100 shadow-xl">
-          <div className="card-body items-center text-center">
-            <h2 className="card-title text-error">User Not Found</h2>
-            <p className="text-base-content/70">
-              We couldn&apos;t find your user account. Please try refreshing the page or contact support.
-            </p>
-            <div className="card-actions justify-end mt-4">
-              <button
-                className="btn btn-primary"
-                onClick={() => window.location.reload()}
-              >
-                Refresh Page
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const isDataLoading = isHydrated && user &&
+    (isFetchingParentLibraries || isFetchingParentSnippets) &&
+    parentLibraries.length === 0 &&
+    parentSnippets.length === 0;
 
   return (
-    <div className="h-screen flex flex-col bg-slate-50">
+    <div className="h-screen flex flex-col bg-[#1e1e1e]">
       {/* Header */}
-      <div className="navbar bg-base-100 shadow-sm border-b border-slate-200">
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <div>
-              <div className="text-xl font-bold text-base-content">Fractal</div>
-              <div className="text-sm text-base-content/70">Manage your code library</div>
-            </div>
-          </div>
+      <div className="h-[35px] bg-[#323233] border-b border-[#3e3e42] flex items-center justify-between px-4">
+        <div className="flex items-center gap-3">
+          <div className="text-[13px] font-medium text-[#cccccc] tracking-tight">Voronoi</div>
+          <div className="text-[11px] text-[#858585]">Code Library Manager</div>
         </div>
-        <div className="flex-none">
-          <div className="dropdown dropdown-end">
-            <div tabIndex={0} className="avatar">
-              <div className="w-10 h-10 flex items-center justify-center overflow-hidden border border-amber-100  bg-neutral text-neutral-content">
-                {user?.image ? (
-                  <Image
-                    src={user.image}
-                    alt="Profile image"
-                    width={40}
-                    height={40}
-                    className="object-cover w-full h-full"
-                  />
-                ) : (
-                  <BiUser className="w-6 h-6 text-base-content/70 block mx-auto my-auto mt-2" />
-                )}
-              </div>
+        <div className="flex items-center">
+          {isInitialLoading ? (
+            <div className="flex items-center gap-2 px-2 py-1">
+              <div className="w-5 h-5 rounded-full bg-[#505050] animate-pulse"></div>
+              <div className="h-3 w-24 bg-[#505050] rounded animate-pulse"></div>
             </div>
+          ) : (
+            <div className="relative group">
+              <button className="flex items-center gap-2 px-2 py-1 hover:bg-[#2a2d2e] rounded-sm transition-colors">
+                <div className="w-5 h-5 rounded-full overflow-hidden bg-[#505050] flex items-center justify-center">
+                  {user?.image ? (
+                    <Image
+                      src={user.image}
+                      alt="Profile"
+                      width={20}
+                      height={20}
+                      className="object-cover"
+                    />
+                  ) : (
+                    <BiUser className="w-3 h-3 text-[#cccccc]" />
+                  )}
+                </div>
+                <span className="text-[11px] text-[#cccccc] max-w-[150px] truncate">{user?.email}</span>
+              </button>
 
-            <ul
-              tabIndex={0}
-              className="menu menu-sm dropdown-content z-[1] shadow-lg bg-base-100 rounded-xs w-56 space-y-2 border-1 border-gray-500"
-            >
-              <li className="menu-title text-xs text-base-content/60">
-                Signed in as
-              </li>
-              <li>
-                <span className="truncate font-medium text-base-content rounded-xs">
-                  {user?.email || "Unknown User"}
-                </span>
-              </li>
-              <div className="divider my-1"></div>
-              <li>
+              <div className="absolute right-0 top-full mt-1 w-48 bg-[#252526] border border-[#454545] rounded-sm shadow-2xl py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                <div className="px-3 py-1.5 text-[10px] text-[#858585] uppercase tracking-wider">Account</div>
+                <div className="px-3 py-1.5 text-[12px] text-[#cccccc] truncate border-b border-[#3e3e42]">
+                  {user?.email}
+                </div>
                 <button
                   onClick={() => signOut({ callbackUrl: "/landing" })}
-                  className="text-error hover:bg-error hover:text-error-content rounded-xs transition-colors"
+                  className="w-full px-3 py-1.5 text-[12px] text-left text-[#f48771] hover:bg-[#f48771]/20 transition-colors"
                 >
-                  Sign out
+                  Sign Out
                 </button>
-              </li>
-            </ul>
-          </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-
-
-      <PanelGroup direction="horizontal" className="h-full">
-        {/* Activity bar*/}
-        <div className="h-full w-12 bg-base-100 border-r border-slate-200 flex flex-col justify-between place-items-center  text-2xl">
-          <div className="flex flex-col">
-            <div className={`p-3 ${activity === ActivityItem.Explorer ? "text-blue-300 border-l-2 border-blue-300" : " border-l-2 border-base-100 hover:text-blue-300"}`}
-              onClick={() => { setActivity(ActivityItem.Explorer) }}>
-              <LuFiles />
-            </div>
-            <div className={`p-3 ${activity === ActivityItem.Search ? "text-blue-300 border-l-2 border-blue-300" : " border-l-2 border-base-100 hover:text-blue-300"}`}
-              onClick={() => { setActivity(ActivityItem.Search) }}>
-              <LuSearch />
-            </div>
+      <PanelGroup direction="horizontal" className="flex-1">
+        {/* Activity Bar */}
+        <div className="w-12 bg-[#333333] border-r border-[#3e3e42] flex flex-col items-center py-2">
+          <div className="flex flex-col gap-0.5 flex-1">
+            <button
+              onClick={() => setActivity(ActivityItem.Explorer)}
+              className={`w-12 h-12 flex items-center justify-center transition-colors relative ${activity === ActivityItem.Explorer
+                  ? 'text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-white'
+                  : 'text-[#858585] hover:text-white'
+                }`}
+              title="Explorer"
+              disabled={isInitialLoading}
+            >
+              <VscFiles className="w-6 h-6" />
+            </button>
+            <button
+              onClick={() => setActivity(ActivityItem.Search)}
+              className={`w-12 h-12 flex items-center justify-center transition-colors relative ${activity === ActivityItem.Search
+                  ? 'text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-white'
+                  : 'text-[#858585] hover:text-white'
+                }`}
+              title="Search"
+              disabled={isInitialLoading}
+            >
+              <VscSearch className="w-6 h-6" />
+            </button>
           </div>
-          <div className="p-3 hover:text-blue-300">
-            <LuSettings />
-          </div>
-
         </div>
+
         {/* Sidebar */}
-        <Panel
-          defaultSize={30}
-          minSize={20}
-          maxSize={80}
-          className="w-80 bg-base-100 border-r border-slate-200 flex flex-col overflow-auto justify-end"
-        >
-          {activity === ActivityItem.Explorer && (
+        <Panel defaultSize={20} minSize={15} maxSize={40} className="bg-[#252526] border-r border-[#3e3e42] flex flex-col">
+          {isInitialLoading ? (
+            // Initial loading skeleton (before hydration)
+            <>
+              <div className="h-[35px] flex items-center justify-between px-3 border-b border-[#3e3e42]">
+                <div className="h-3 w-16 bg-[#3e3e42] rounded animate-pulse"></div>
+                <div className="flex items-center gap-1">
+                  <div className="w-7 h-7 bg-[#3e3e42] rounded animate-pulse"></div>
+                  <div className="w-7 h-7 bg-[#3e3e42] rounded animate-pulse"></div>
+                </div>
+              </div>
+              <div className="flex-1 overflow-auto p-2">
+                <TreeSkeleton count={6} />
+              </div>
+              <StatsFooterSkeleton />
+            </>
+          ) : activity === ActivityItem.Explorer ? (
             <>
               {/* Explorer Header */}
-              <div className="flex items-center gap-2 px-4 py-[15px] border-b border-slate-100">
-                <h3 className="font-medium text-base-content text-sm tracking-wide">EXPLORER</h3>
-                {/* {isFetchingLibraries && (
-                  <span className="loading loading-spinner loading-sm text-primary"></span>
-                )} */}
-                <div className="flex ml-auto items-center gap-1">
+              <div className="h-[35px] flex items-center justify-between px-3 border-b border-[#3e3e42]">
+                <h3 className="text-[11px] font-medium text-[#cccccc] uppercase tracking-wider">Explorer</h3>
+                <div className="flex items-center gap-1">
                   <button
                     onClick={() => {
                       setIsAddingSnippet(true);
                       setIsAddingLibrary(false);
                     }}
-                    className="p-1 rounded hover:bg-slate-200/60 transition-colors duration-150 group"
+                    className="p-1.5 rounded-sm hover:bg-[#2a2d2e] transition-colors text-[#cccccc]"
                     title="New File"
                   >
-                    <AiFillFileAdd className="w-4 h-4 text-slate-600 group-hover:text-slate-800" />
+                    <VscNewFile className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => {
                       setIsAddingLibrary(true);
                       setIsAddingSnippet(false);
                     }}
-                    className="p-1 rounded hover:bg-slate-200/60 transition-colors duration-150 group"
+                    className="p-1.5 rounded-sm hover:bg-[#2a2d2e] transition-colors text-[#cccccc]"
                     title="New Folder"
                   >
-                    <AiFillFolderAdd className="w-4 h-4 text-slate-600 group-hover:text-slate-800" />
+                    <VscNewFolder className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
-              {/* Libraries Section */}
-              <div className="flex-1 py-1 overflow-auto" onClick={handleSidebarClick}>
-                {/* Root level folder creation */}
-                {isAddingLibrary && (
-                  (lastSelectedItem === null ||
-                    (selectedSnippet !== null && parentSnippets.some(snip => snip.id === selectedSnippet.id))
-                  ) &&
-                  !(lastSelectedItem && 'title' in lastSelectedItem && !('text' in lastSelectedItem)) && (
-                    <TreeItemCreation
-                      type={ExplorerItemType.Folder}
-                      onSuccess={() => fetchParentLibraries(user.id)}
-                    />
-                  )
-                )}
+              {/* File Tree */}
+              <div className="flex-1 overflow-auto" onClick={handleSidebarClick}>
+                {isDataLoading ? (
+                  // Show skeleton only when initially loading with no cached data
+                  <div className="p-2">
+                    <TreeSkeleton count={6} />
+                  </div>
+                ) : (
+                  <>
+                    {isAddingLibrary && (
+                      (lastSelectedItem === null ||
+                        (selectedSnippet !== null && parentSnippets.some(snip => snip.id === selectedSnippet.id))
+                      ) &&
+                      !(lastSelectedItem && 'title' in lastSelectedItem && !('text' in lastSelectedItem)) && (
+                        <TreeItemCreation
+                          type={ExplorerItemType.Folder}
+                          onSuccess={() => fetchParentLibraries(user.id)}
+                        />
+                      )
+                    )}
 
-                {/* Libraries */}
-                {parentLibraries.length > 0 ? (
-                  <div>
-                    {parentLibraries.map((lib) => (
+                    {parentLibraries.length > 0 && (
+                      <div>
+                        {parentLibraries.map((lib) => (
+                          <div
+                            key={lib.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setLastSelectedItem(lib);
+                            }}
+                          >
+                            <TreeItem item={lib} type={ExplorerItemType.Folder} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {isAddingSnippet && (
+                      (lastSelectedItem === null ||
+                        (selectedSnippet !== null && parentSnippets.some(snip => snip.id === selectedSnippet.id))
+                      ) &&
+                      !(lastSelectedItem && 'title' in lastSelectedItem && !('text' in lastSelectedItem)) && (
+                        <TreeItemCreation
+                          type={ExplorerItemType.File}
+                          onSuccess={() => fetchParentSnippets(user.id)}
+                        />
+                      )
+                    )}
+
+                    {parentSnippets.map((snip) => (
+                      <div
+                        key={snip.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLastSelectedItem(snip);
+                          setSelectedSnippet(snip);
+                        }}
+                      >
+                        <TreeItem item={snip} type={ExplorerItemType.File} />
+                      </div>
+                    ))}
+
+                    {!isDataLoading && libraries.length === 0 && parentSnippets.length === 0 && (
+                      <div className="text-center py-12 px-4">
+                        <p className="text-[#858585] text-[13px]">No files or folders</p>
+                        <p className="text-[#6e6e6e] text-[11px] mt-1">Click the icons above to get started</p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Stats Footer */}
+              {isDataLoading ? (
+                <StatsFooterSkeleton />
+              ) : (
+                <div className="border-t border-[#3e3e42] bg-[#2d2d30]">
+                  <div className="grid grid-cols-2 divide-x divide-[#3e3e42]">
+                    <div className="px-3 py-2">
+                      <div className="text-[10px] text-[#858585] uppercase tracking-wider mb-0.5">Libraries</div>
+                      <div className="text-[13px] text-[#cccccc] font-medium">{libraries.length}</div>
+                    </div>
+                    <div className="px-3 py-2">
+                      <div className="text-[10px] text-[#858585] uppercase tracking-wider mb-0.5">Snippets</div>
+                      <div className="text-[13px] text-[#cccccc] font-medium">{snippets.length}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            // Search View
+            <div className="flex flex-col h-full">
+              <div className="h-[35px] flex items-center px-3 border-b border-[#3e3e42]">
+                <h3 className="text-[11px] font-medium text-[#cccccc] uppercase tracking-wider">Search</h3>
+              </div>
+
+              <div className="p-3">
+                <input
+                  type="text"
+                  value={searchValue}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSearchValue(value);
+                    findLibraries(value);
+                    findSnippets(value);
+                  }}
+                  className="w-full px-2 py-1.5 bg-[#3c3c3c] border border-[#3e3e42] text-[#cccccc] text-[13px] rounded-sm focus:outline-none focus:border-[#007acc] placeholder-[#6e6e6e]"
+                  placeholder="Search files and folders..."
+                />
+              </div>
+
+              <div className="flex-1 overflow-auto">
+                {isFindingLibraries || isFindingSnippets ? (
+                  <div className="p-2">
+                    <TreeSkeleton count={4} />
+                  </div>
+                ) : (
+                  <>
+                    {foundLibraries.map((lib: Library) => (
                       <div
                         key={lib.id}
                         onClick={(e) => {
@@ -277,161 +354,81 @@ export default function Home() {
                         <TreeItem item={lib} type={ExplorerItemType.Folder} />
                       </div>
                     ))}
-                  </div>
-                ) : null}
 
-                {/* Root level file creation */}
-                {isAddingSnippet && (
-                  (lastSelectedItem === null ||
-                    (selectedSnippet !== null && parentSnippets.some(snip => snip.id === selectedSnippet.id))
-                  ) &&
-                  !(lastSelectedItem && 'title' in lastSelectedItem && !('text' in lastSelectedItem)) && (
-                    <TreeItemCreation
-                      type={ExplorerItemType.File}
-                      onSuccess={() => fetchParentSnippets(user.id)}
-                    />
-                  )
-                )}
+                    {foundSnippets.map((snip: Snippet) => (
+                      <div
+                        key={snip.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLastSelectedItem(snip);
+                          setSelectedSnippet(snip);
+                        }}
+                      >
+                        <TreeItem item={snip} type={ExplorerItemType.File} />
+                      </div>
+                    ))}
 
-                {/* Parent Snippets */}
-                {parentSnippets.map((snip) => (
-                  <div
-                    key={snip.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setLastSelectedItem(snip);
-                      setSelectedSnippet(snip);
-                    }}
-                  >
-                    <TreeItem
-                      item={snip}
-                      type={ExplorerItemType.File}
-                    />
-                  </div>
-                ))}
-
-                {/* Empty state */}
-                {!isFetchingLibraries && !isFetchingSnippets && libraries.length === 0 && parentSnippets.length === 0 && (
-                  <div className="text-center py-8 px-4">
-                    <p className="text-slate-500 text-sm">No files or folders yet</p>
-                    <p className="text-slate-400 text-xs mt-1">Click the icons above to create your first item</p>
-                  </div>
+                    {searchValue && foundLibraries.length === 0 && foundSnippets.length === 0 && (
+                      <div className="text-center py-12 px-4">
+                        <p className="text-[#858585] text-[13px]">No results found</p>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
-            </>
-          )}
 
-          {activity === ActivityItem.Search && (
-            <div className="flex flex-col h-full w-full">
-              <div className="relative w-full p-2 pt-2.5 pb-2.5 border-b-1">
-                <input
-                  type="text"
-                  value={searchValue}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setSearchValue(value);
-                    findLibraries(value);
-                    findSnippets(value);
-                  }}
-                  className="w-full p-1 border border-gray-300 bg-base-200 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                  placeholder="Search"
-                />
-              </div>
-
-              <div className=" flex flex-col ">
-                {foundLibraries.length > 0 ? (
-                  foundLibraries.map((lib: Library) => (
-                    <div
-                      key={lib.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setLastSelectedItem(lib);
-                      }}
-                    >
-                      <TreeItem
-                        item={lib}
-                        type={ExplorerItemType.Folder}
-                      />
-                    </div>
-                  ))
-                ) : (
-                  <></>
-                )}
-
-                {foundSnippets.length > 0 ? (
-                  foundSnippets.map((snip: Snippet) => (
-                    <div
-                      key={snip.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setLastSelectedItem(snip);
-                      }}
-                    >
-                      <TreeItem
-                        item={snip}
-                        type={ExplorerItemType.File}
-                      />
-                    </div>
-                  ))
-                ) : (
-                  <></>
-                )}
-
-
+              <div className="border-t border-[#3e3e42] bg-[#2d2d30]">
+                <div className="grid grid-cols-2 divide-x divide-[#3e3e42]">
+                  <div className="px-3 py-2">
+                    <div className="text-[10px] text-[#858585] uppercase tracking-wider mb-0.5">Libraries</div>
+                    <div className="text-[13px] text-[#cccccc] font-medium">{foundLibraries.length}</div>
+                  </div>
+                  <div className="px-3 py-2">
+                    <div className="text-[10px] text-[#858585] uppercase tracking-wider mb-0.5">Snippets</div>
+                    <div className="text-[13px] text-[#cccccc] font-medium">{foundSnippets.length}</div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
-
-          {/* Stats */}
-          <div className="border-t">
-            <div className="stats stats-vertical bg-base-200 w-full rounded-xs">
-              <div className="stat py-3">
-                <div className="stat-title text-xs">Total Libraries</div>
-                <div className="stat-value text-sm">{activity === ActivityItem.Explorer ? libraries.length : (foundLibraries.length)}</div>
-              </div>
-              <div className="stat py-3">
-                <div className="stat-title text-xs">Total Snippets</div>
-                <div className="stat-value text-sm">{activity === ActivityItem.Explorer ? snippets.length : (foundSnippets.length)}</div>
-              </div>
-            </div>
-          </div>
         </Panel>
 
         <PanelResizeHandle
-          className={`transition-all duration-200 ease-in-out rounded ${(hoveringResizer || isDragging)
-            ? 'w-1.5 bg-slate-400 shadow'
-            : 'w-0.5 bg-slate-300'
+          className={`transition-all duration-150 ${hoveringResizer || isDragging
+              ? 'w-1 bg-[#007acc]'
+              : 'w-px bg-[#3e3e42]'
             } cursor-col-resize`}
           onMouseEnter={() => setHoveringResizer(true)}
           onMouseLeave={() => setHoveringResizer(false)}
           onDragging={(isDragging) => setIsDragging(isDragging)}
-
         />
 
         {/* Main Content */}
-        <Panel className="flex-1 flex flex-col" defaultSize={100}>
+        <Panel defaultSize={80} minSize={15} className="flex-1 flex flex-col bg-[#1e1e1e]">
           {selectedSnippet ? (
-            <div className="flex-1 bg-base-100">
-              <CodeDisplay snippet={selectedSnippet} />
-            </div>
+            <CodeDisplay />
           ) : (
-            <div className="flex-1 flex items-center justify-center bg-base-100">
-              <div className="text-center max-w-md">
-                <BiCode className="w-24 h-24 text-base-content/20 mx-auto mb-6" />
-                <h2 className="text-2xl font-bold text-base-content mb-3">
-                  Welcome to Your Code Library
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center max-w-md px-8">
+                <BiCode className="w-20 h-20 text-[#3e3e42] mx-auto mb-6" />
+                <h2 className="text-xl font-medium text-[#cccccc] mb-3">
+                  Welcome to Fractal
                 </h2>
-                <p className="text-base-content/70 mb-6">
-                  Select a snippet from the sidebar to view and edit your code.
-                  Organize your snippets into libraries for better management.
+                <p className="text-[#858585] text-sm leading-relaxed mb-6">
+                  Your personal code library manager. Select a snippet from the sidebar to view and edit,
+                  or organize your code into libraries for better management.
                 </p>
-                <div className="flex flex-col gap-2 max-w-xs mx-auto">
-                  <div className="flex items-center gap-2 text-sm text-base-content/60">
-                    <BiFolder className="w-4 h-4" />
-                    <span>Browse libraries on the left</span>
+                <div className="space-y-2 text-left max-w-xs mx-auto">
+                  <div className="flex items-center gap-3 text-[#858585] text-sm">
+                    <VscFiles className="w-4 h-4 flex-shrink-0" />
+                    <span>Browse your libraries in the explorer</span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-base-content/60">
-                    <BiCode className="w-4 h-4" />
+                  <div className="flex items-center gap-3 text-[#858585] text-sm">
+                    <VscSearch className="w-4 h-4 flex-shrink-0" />
+                    <span>Search across all your snippets</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-[#858585] text-sm">
+                    <BiCode className="w-4 h-4 flex-shrink-0" />
                     <span>Click any snippet to view it here</span>
                   </div>
                 </div>
@@ -440,6 +437,6 @@ export default function Home() {
           )}
         </Panel>
       </PanelGroup>
-    </div >
+    </div>
   );
 }

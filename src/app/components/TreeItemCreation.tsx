@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { BiFolder, BiFile, BiChevronRight } from "react-icons/bi";
+import { BiFolder, BiFile } from "react-icons/bi";
 import { ExplorerItemType } from "../../../types/types";
 import { useAppStore } from "../store/useAppStore";
 

@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "@/app/api/auth/authOptions";
 import { getServerSession } from "next-auth";
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const session = await getServerSession(authOptions);
 
   if (!session) {
@@ -79,7 +79,7 @@ export async function DELETE(req: NextRequest) {
   const { fileId } = body;
 
   try {
-    const result = await db.query('DELETE FROM "Snippet" WHERE id = ($1)', [
+    await db.query('DELETE FROM "Snippet" WHERE id = ($1)', [
       fileId,
     ]);
 
@@ -106,7 +106,7 @@ export async function PATCH(req: NextRequest) {
 
   const UserId = session.user.id;
   try {
-    const result = await db.query(
+    await db.query(
       `UPDATE "Snippet"
        SET "userId" = $1,
            language = $2,

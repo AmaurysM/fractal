@@ -7,36 +7,24 @@ type Pt = [number, number];
 
 interface VoronoiPoint {
   x: number;
-  y: number; 
+  y: number;
 }
 
 export default function EnhancedVoronoiBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number | null>(null);
-  const mouseRef = useRef({ x: 0, y: 0, isMoving: false });
-  const lastMouseMoveRef = useRef(0);
 
-  // Persistent world + points
   const worldW = useRef(0);
   const worldH = useRef(0);
   const pointsRef = useRef<VoronoiPoint[]>([]);
   const densityRef = useRef(0);
-  const rafRef = useRef<number | null>(null);
 
   const createPoint = useCallback((x: number, y: number): VoronoiPoint => {
-    const angle = Math.random() * Math.PI * 2;
-    const speed = 0.2 + Math.random() * 0.3;
     return {
       x,
       y,
-
     };
   }, []);
-
-  const innerPointsRef = useRef<{ [cellIndex: number]: { x: number, y: number }[] }>({});
-
-
-
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -57,31 +45,11 @@ export default function EnhancedVoronoiBackground() {
     pointsRef.current = Array.from({ length: initialCount }, () =>
       createPoint(Math.random() * initW, Math.random() * initH)
     );
-    function generateInnerPoints(cell: [number, number][], count = 5) {
-      const xs = cell.map(p => p[0]);
-      const ys = cell.map(p => p[1]);
-      const minX = Math.min(...xs), maxX = Math.max(...xs);
-      const minY = Math.min(...ys), maxY = Math.max(...ys);
 
-      const pts: { x: number, y: number }[] = [];
-      while (pts.length < count) {
-        const x = minX + Math.random() * (maxX - minX);
-        const y = minY + Math.random() * (maxY - minY);
-
-        // Test if inside polygon
-        const inside = ctx?.isPointInPath(new Path2D(
-          `M${cell.map((p, i) => `${i === 0 ? '' : 'L'}${p[0]} ${p[1]}`).join(' ')}Z`
-        ), x, y);
-
-        if (inside) pts.push({ x, y });
-      }
-      return pts;
-    }
     const draw = () => {
       const w = (canvas.width = window.innerWidth);
       const h = (canvas.height = window.innerHeight);
 
-      // Map world to viewport
       const sx = w / worldW.current;
       const sy = h / worldH.current;
 
@@ -92,13 +60,11 @@ export default function EnhancedVoronoiBackground() {
 
       if (pointsRef.current.length === 0) return;
 
-      // Build Voronoi
       const points2D: Pt[] = pointsRef.current.map(p => [p.x, p.y]);
       const delaunay = Delaunay.from(points2D);
       const voronoi = delaunay.voronoi([0, 0, worldW.current, worldH.current]);
 
       for (let i = 0; i < pointsRef.current.length; i++) {
-        //const point = pointsRef.current[i];
         const cell = voronoi.cellPolygon(i);
         if (!cell) continue;
 
@@ -130,7 +96,6 @@ export default function EnhancedVoronoiBackground() {
     };
 
     const animate = () => {
-      //updatePoints();
       draw();
       animationRef.current = requestAnimationFrame(animate);
     };
@@ -161,7 +126,6 @@ export default function EnhancedVoronoiBackground() {
       const shrankLeft = newW < oldW;
       const shrankUp = newH < oldH;
 
-      // Add points when growing
       if (grewRight) {
         addRandomPointsInRect(oldW, 0, newW, oldH);
       }
@@ -208,7 +172,6 @@ export default function EnhancedVoronoiBackground() {
       window.removeEventListener("resize", handleResize);
       canvas.removeEventListener("click", handleClick);
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, [createPoint]);
 

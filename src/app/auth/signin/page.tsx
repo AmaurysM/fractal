@@ -1,9 +1,9 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { BiCode } from "react-icons/bi";
-import { FaGithub, FaGoogle, FaDiscord } from "react-icons/fa";
+import { FaGithub, FaGoogle } from "react-icons/fa";
 import VoronoiBackground from "../../components/VoronoiBackground";
+import Image from "next/image";
 
 const providers = [
   {
@@ -27,11 +27,20 @@ export default function SignInPage() {
 
       {/* Main content */}
       <div className="flex-1 flex items-center justify-center p-6">
-        <div className="card w-full max-w-md bg-base-100/90 backdrop-blur-md shadow-xl border border-base-300">
+        <div className="card w-full max-w-md bg-base-100/90 backdrop-blur-md shadow-xl border border-base-300 rounded-xs">
           <div className="card-body items-center text-center">
-            <BiCode className="w-16 h-16 text-primary mb-4 drop-shadow" />
+
+            <Image
+              src="/logo.svg"
+              alt="Fractal logo"
+              width={64}
+              height={64}
+              className="mb-4 drop-shadow"
+              priority
+            />
+
             <h2 className="card-title text-3xl font-bold mb-2">
-              Welcome to Fractal
+              Welcome to Voronoi
             </h2>
             <p className="text-base-content/70 mb-6">
               Sign in to continue to your snippets and libraries
@@ -49,18 +58,6 @@ export default function SignInPage() {
                 </button>
               ))}
             </div>
-
-            {/* <p className="mt-6 text-xs text-base-content/60">
-              By signing in, you agree to our{" "}
-              <a href="/terms" className="underline hover:text-primary">
-                Terms
-              </a>{" "}
-              &{" "}
-              <a href="/privacy" className="underline hover:text-primary">
-                Privacy Policy
-              </a>
-              .
-            </p> */}
           </div>
         </div>
       </div>

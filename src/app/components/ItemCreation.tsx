@@ -7,7 +7,7 @@ export const ItemCreation = (
     }:{
         addingItemName: string;
         setAddingItemName: (name: string) => void;
-        handleAddItemSumit: () => {};
+        handleAddItemSumit: () => void;
         handleAddItemCancel: () => void;
     }
 ) => {

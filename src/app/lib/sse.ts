@@ -1,4 +1,7 @@
 // lib/sse.ts
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import db from "@/app/lib/db";
 import { NextRequest } from "next/server";
 

@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Voronoi',
     description: 'Manage your code snippets efficiently',
-    url: 'https://www.voronoi.space/', 
+    url: 'https://www.voronoi.notes/', 
     siteName: 'Voronoi',
     images: [
       {

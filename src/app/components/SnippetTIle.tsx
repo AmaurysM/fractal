@@ -1,4 +1,4 @@
-import { BiCode, BiSolidFileDoc } from "react-icons/bi";
+import { BiSolidFileDoc } from "react-icons/bi";
 import { Snippet } from "../../../types/types";
 
 export const SnippetTile = ({
@@ -40,16 +40,6 @@ export const SnippetTile = ({
             onClick={() => onSnippetSelect(snippet)}
         >
             <div className="flex items-center gap-3 p-3" style={{ paddingLeft: `${stepLevel * 16 + 16}px` }}>
-                {/* Icon */}
-                {/* <div className="avatar placeholder">
-                    <div className={`w-8 h-8 rounded-lg p-2 ${isSelected
-                        ? "bg-primary text-primary-content"
-                        : "bg-base-200 text-base-content group-hover:bg-base-300"
-                        }`}>
-                        <BiCode className="w-4 h-4" />
-                    </div>
-                </div> */}
-
                 {/* Content */}
                 <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">

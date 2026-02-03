@@ -1,4 +1,8 @@
 // lib/sseBus.ts
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-non-null-asserted-optional-chain */
+
 type Callback = (data: any) => void;
 
 class SSEBus {

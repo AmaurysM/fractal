@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { FaChevronRight } from "react-icons/fa";
 import { Library, Snippet } from "../../../types/types";
-import { SnippetTile } from "./SnippetTIle";
 import { ItemCreation } from "./ItemCreation";
+import { SnippetTile } from "./SnippetTile";
 
 export const FileTile = ({
   library,

@@ -1,505 +1,797 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import { Library, Snippet, User } from "../../../types/types";
 
 interface AppState {
   user: User | null;
 
-  libraries: Library[];
-  parentLibraries: Library[];
-  foundLibraries: Library[];
+  // UI State (local, optimistic)
+  uiLibraries: Library[];
+  uiParentLibraries: Library[];
+  uiSnippets: Snippet[];
+  uiParentSnippets: Snippet[];
 
-  snippets: Snippet[];
-  parentSnippets: Snippet[];
+  // DB State (source of truth, updated after server responses)
+  dbLibraries: Library[];
+  dbParentLibraries: Library[];
+  dbSnippets: Snippet[];
+  dbParentSnippets: Snippet[];
+
+  // Search results (always fresh from server)
+  foundLibraries: Library[];
   foundSnippets: Snippet[];
 
+  // Loading states
   loading: boolean;
-
   isFetchingLibraries: boolean;
   isFetchingParentLibraries: boolean;
   isAddingLibrary: boolean;
-
   isFetchingSnippets: boolean;
   isFetchingParentSnippets: boolean;
   isAddingSnippet: boolean;
+  isFindingSnippets: boolean;
+  isFindingLibraries: boolean;
 
+  // Abort controllers
   libraryController?: AbortController;
   snippetController?: AbortController;
   addFolderController?: AbortController;
   addSnippetController?: AbortController;
 
-  isFindingSnippets: boolean;
-  isFindingLibraries: boolean;
-
+  // Selection state
   selectedSnippet: Snippet | null;
   lastSelectedItem: Snippet | Library | null;
 
+  // Tab management
+  openTabs: Snippet[];
+  activeTabId: string | null;
+
+  // Hydration flag
+  isHydrated: boolean;
+
+  //////////////
+  // Actions
   //////////////
 
   setUser: (user: User | null) => void;
-  fetchLibraries: (userId: string) => Promise<void>;
-  fetchSnippets: (userId: string) => Promise<void>;
+  setIsHydrated: (isHydrated: boolean) => void;
 
+  // Library actions
+  fetchLibraries: (userId: string) => Promise<void>;
+  fetchParentLibraries: (userId: string) => Promise<void>;
   addFolder: (
     title: string,
     parentId?: string,
     onSuccess?: () => void,
   ) => Promise<void>;
-  cancelAddFolder: () => void;
-  deleteFolder: (libraryId: string) => void;
+  deleteFolder: (libraryId: string) => Promise<void>;
   setIsAddingLibrary: (isAddingLibrary: boolean) => void;
-  fetchParentLibraries: (userId: string) => void;
+  cancelAddFolder: () => void;
 
+  // Snippet actions
+  fetchSnippets: (userId: string) => Promise<void>;
+  fetchParentSnippets: (userId: string) => Promise<void>;
   addSnippet: (
     title: string,
     parentId?: string,
     onSuccess?: () => void,
   ) => Promise<void>;
-  cancelAddSnippet: () => void;
-  deleteSnippet: (fileId: string) => void;
+  deleteSnippet: (fileId: string) => Promise<void>;
+  saveSnippet: (snippet: Snippet) => Promise<void>;
   setIsAddingSnippet: (isAddingSnippet: boolean) => void;
-  fetchParentSnippets: (userId: string) => void;
+  cancelAddSnippet: () => void;
 
-  saveSnippet: (snippet: Snippet) => void;
+  // Search actions
+  findSnippets: (title: string) => Promise<void>;
+  findLibraries: (title: string) => Promise<void>;
 
-  findSnippets: (title: string) => void;
-  findLibraries: (title: string) => void;
-
+  // Selection actions
   handleTreeItemSelect: (item: Library | Snippet) => void;
-
   setSelectedSnippet: (selectedSnippet: Snippet | null) => void;
   setLastSelectedItem: (lastSelectedItem: Snippet | Library | null) => void;
 
-  // New methods to fetch parent IDs
+  // Tab management methods
+  openTab: (snippet: Snippet) => void;
+  closeTab: (snippetId: string) => void;
+  setActiveTab: (snippetId: string) => void;
+  closeAllTabs: () => void;
+  closeOtherTabs: (snippetId: string) => void;
+
+  // Utility methods
   getLibraryParentId: (libraryId: string) => Promise<string | null>;
   getSnippetParentId: (snippetId: string) => Promise<string | null>;
 }
 
-export const useAppStore = create<AppState>((set, get) => ({
-  user: null,
-  libraries: [],
-  parentLibraries: [],
-  foundLibraries: [],
+export const useAppStore = create<AppState>()(
+  persist(
+    (set, get) => ({
+      user: null,
+      
+      // UI State
+      uiLibraries: [],
+      uiParentLibraries: [],
+      uiSnippets: [],
+      uiParentSnippets: [],
 
-  snippets: [],
-  parentSnippets: [],
-  foundSnippets: [],
+      // DB State
+      dbLibraries: [],
+      dbParentLibraries: [],
+      dbSnippets: [],
+      dbParentSnippets: [],
 
-  loading: false,
+      foundLibraries: [],
+      foundSnippets: [],
 
-  isFetchingLibraries: false,
-  isFetchingParentLibraries: false,
-  isAddingLibrary: false,
+      loading: false,
+      isFetchingLibraries: false,
+      isFetchingParentLibraries: false,
+      isAddingLibrary: false,
+      isFetchingSnippets: false,
+      isFetchingParentSnippets: false,
+      isAddingSnippet: false,
+      isFindingLibraries: false,
+      isFindingSnippets: false,
 
-  isFetchingSnippets: false,
-  isFetchingParentSnippets: false,
-  isAddingSnippet: false,
+      selectedSnippet: null,
+      lastSelectedItem: null,
 
-  isFindingLibraries: false,
-  isFindingSnippets: false,
+      openTabs: [],
+      activeTabId: null,
 
-  selectedSnippet: null,
-  lastSelectedItem: null,
+      isHydrated: false,
 
-  setIsAddingLibrary: (isAddingLibrary) => set({ isAddingLibrary }),
-  setIsAddingSnippet: (isAddingSnippet) => set({ isAddingSnippet }),
+      setIsHydrated: (isHydrated) => set({ isHydrated }),
+      setIsAddingLibrary: (isAddingLibrary) => set({ isAddingLibrary }),
+      setIsAddingSnippet: (isAddingSnippet) => set({ isAddingSnippet }),
+      setSelectedSnippet: (selectedSnippet) => set({ selectedSnippet }),
+      setLastSelectedItem: (lastSelectedItem) => set({ lastSelectedItem }),
+      setUser: (user) => set({ user }),
 
-  setSelectedSnippet: (selectedSnippet) => set({ selectedSnippet }),
-  setLastSelectedItem: (lastSelectedItem) => set({ lastSelectedItem }),
+      // Tab management methods
+      openTab: (snippet: Snippet) => {
+        const { openTabs } = get();
+        const existingTab = openTabs.find((tab) => tab.id === snippet.id);
 
-  setUser: (user) => set({ user }),
+        if (existingTab) {
+          set({
+            activeTabId: snippet.id,
+            selectedSnippet: snippet,
+          });
+        } else {
+          set({
+            openTabs: [...openTabs, snippet],
+            activeTabId: snippet.id,
+            selectedSnippet: snippet,
+          });
+        }
+      },
 
-  getLibraryParentId: async (libraryId: string) => {
-    try {
-      const res = await fetch(`/api/libraries/parent`, {
-        method: "GET",
-        headers: { "x-library-id": libraryId },
-      });
+      closeTab: (snippetId: string) => {
+        const { openTabs, activeTabId } = get();
+        const tabIndex = openTabs.findIndex((tab) => tab.id === snippetId);
 
-      if (!res.ok) throw new Error("Failed to fetch parent library");
+        if (tabIndex === -1) return;
 
-      const data = await res.json();
-      return data.parentId;
-    } catch (error) {
-      console.error("Error fetching library parent:", error);
-      return null;
-    }
-  },
+        const newTabs = openTabs.filter((tab) => tab.id !== snippetId);
 
-  getSnippetParentId: async (snippetId: string) => {
-    try {
-      const res = await fetch(`/api/snippets/parent`, {
-        method: "GET",
-        headers: { "x-snippet-id": snippetId },
-      });
+        if (activeTabId === snippetId) {
+          if (newTabs.length === 0) {
+            set({
+              openTabs: newTabs,
+              activeTabId: null,
+              selectedSnippet: null,
+            });
+          } else {
+            const newActiveIndex = tabIndex > 0 ? tabIndex - 1 : 0;
+            const newActiveTab = newTabs[newActiveIndex];
+            set({
+              openTabs: newTabs,
+              activeTabId: newActiveTab.id,
+              selectedSnippet: newActiveTab,
+            });
+          }
+        } else {
+          set({ openTabs: newTabs });
+        }
+      },
 
-      if (!res.ok) throw new Error("Failed to fetch snippet parent");
+      setActiveTab: (snippetId: string) => {
+        const { openTabs } = get();
+        const tab = openTabs.find((t) => t.id === snippetId);
 
-      const data = await res.json();
-      return data.parentId;
-    } catch (error) {
-      console.error("Error fetching snippet parent:", error);
-      return null;
-    }
-  },
+        if (tab) {
+          set({
+            activeTabId: snippetId,
+            selectedSnippet: tab,
+          });
+        }
+      },
 
-  fetchLibraries: async (userId) => {
-    const prevController = get().libraryController;
-    if (prevController) prevController.abort();
+      closeAllTabs: () => {
+        set({
+          openTabs: [],
+          activeTabId: null,
+          selectedSnippet: null,
+        });
+      },
 
-    const controller = new AbortController();
-    set({ libraryController: controller, isFetchingLibraries: true });
+      closeOtherTabs: (snippetId: string) => {
+        const { openTabs } = get();
+        const keepTab = openTabs.find((tab) => tab.id === snippetId);
 
-    try {
-      const res = await fetch(`/api/libraries`, {
-        method: "GET",
-        headers: { "x-user-id": userId },
-        signal: controller.signal,
-      });
+        if (keepTab) {
+          set({
+            openTabs: [keepTab],
+            activeTabId: snippetId,
+            selectedSnippet: keepTab,
+          });
+        }
+      },
 
-      if (!res.ok) throw new Error("Failed to fetch libraries");
+      getLibraryParentId: async (libraryId: string) => {
+        try {
+          const res = await fetch(`/api/libraries/parent`, {
+            method: "GET",
+            headers: { "x-library-id": libraryId },
+          });
 
-      const data: Library[] = await res.json();
-      set({ libraries: data });
-    } catch (e: any) {
-      if (e.name === "AbortError") {
-        console.log("Fetch libraries cancelled");
-      } else {
-        console.error("Failed to fetch libraries:", e);
-        set({ libraries: [] });
-      }
-    } finally {
-      set({ isFetchingLibraries: false, libraryController: undefined });
-    }
-  },
+          if (!res.ok) throw new Error("Failed to fetch parent library");
 
-  fetchSnippets: async (userId) => {
-    const prevController = get().snippetController;
-    if (prevController) prevController.abort();
+          const data = await res.json();
+          return data.parentId;
+        } catch (error) {
+          console.error("Error fetching library parent:", error);
+          return null;
+        }
+      },
 
-    const controller = new AbortController();
-    set({ snippetController: controller, isFetchingSnippets: true });
+      getSnippetParentId: async (snippetId: string) => {
+        try {
+          const res = await fetch(`/api/snippets/parent`, {
+            method: "GET",
+            headers: { "x-snippet-id": snippetId },
+          });
 
-    try {
-      const res = await fetch(`/api/snippets`, {
-        method: "GET",
-        headers: { "x-user-id": userId },
-        signal: controller.signal,
-      });
+          if (!res.ok) throw new Error("Failed to fetch snippet parent");
 
-      if (!res.ok) throw new Error("Failed to fetch snippets");
+          const data = await res.json();
+          return data.parentId;
+        } catch (error) {
+          console.error("Error fetching snippet parent:", error);
+          return null;
+        }
+      },
 
-      const data: Snippet[] = await res.json();
-      set({ snippets: data });
-    } catch (e: any) {
-      if (e.name === "AbortError") {
-        console.log("Fetch snippets cancelled");
-      } else {
-        console.error("Failed to fetch snippets:", e);
-        set({ snippets: [] });
-      }
-    } finally {
-      set({ isFetchingSnippets: false, snippetController: undefined });
-    }
-  },
+      fetchLibraries: async (userId) => {
+        const prevController = get().libraryController;
+        if (prevController) prevController.abort();
 
-  addFolder: async (title, parentId, onSuccess) => {
-    const { user } = get();
-    if (!user) return;
+        const controller = new AbortController();
+        set({ libraryController: controller, isFetchingLibraries: true });
 
-    const prevController = get().addFolderController;
-    if (prevController) prevController.abort();
+        try {
+          const res = await fetch(`/api/libraries`, {
+            method: "GET",
+            headers: { "x-user-id": userId },
+            signal: controller.signal,
+          });
 
-    const controller = new AbortController();
-    set({ addFolderController: controller, isAddingLibrary: true });
+          if (!res.ok) throw new Error("Failed to fetch libraries");
 
-    try {
-      const res = await fetch(`/api/libraries`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        signal: controller.signal,
-        body: JSON.stringify({
+          const data: Library[] = await res.json();
+          
+          // Update both DB state and UI state
+          set({ 
+            dbLibraries: data,
+            uiLibraries: data 
+          });
+        } catch (e: any) {
+          if (e.name === "AbortError") {
+            console.log("Fetch libraries cancelled");
+          } else {
+            console.error("Failed to fetch libraries:", e);
+          }
+        } finally {
+          set({ isFetchingLibraries: false, libraryController: undefined });
+        }
+      },
+
+      fetchSnippets: async (userId) => {
+        const prevController = get().snippetController;
+        if (prevController) prevController.abort();
+
+        const controller = new AbortController();
+        set({ snippetController: controller, isFetchingSnippets: true });
+
+        try {
+          const res = await fetch(`/api/snippets`, {
+            method: "GET",
+            headers: { "x-user-id": userId },
+            signal: controller.signal,
+          });
+
+          if (!res.ok) throw new Error("Failed to fetch snippets");
+
+          const data: Snippet[] = await res.json();
+          
+          // Update both DB state and UI state
+          set({ 
+            dbSnippets: data,
+            uiSnippets: data 
+          });
+        } catch (e: any) {
+          if (e.name === "AbortError") {
+            console.log("Fetch snippets cancelled");
+          } else {
+            console.error("Failed to fetch snippets:", e);
+          }
+        } finally {
+          set({ isFetchingSnippets: false, snippetController: undefined });
+        }
+      },
+
+      addFolder: async (title, parentId, onSuccess) => {
+        const { user } = get();
+        if (!user) return;
+
+        // Optimistic UI update
+        const tempId = `temp-${Date.now()}`;
+        const optimisticLibrary: Library = {
+          id: tempId,
+          userid: user.id,
+          title,
+        };
+
+        set((state) => ({
+          uiLibraries: [...state.uiLibraries, optimisticLibrary],
+          uiParentLibraries: parentId 
+            ? state.uiParentLibraries 
+            : [...state.uiParentLibraries, optimisticLibrary],
+        }));
+
+        const prevController = get().addFolderController;
+        if (prevController) prevController.abort();
+
+        const controller = new AbortController();
+        set({ addFolderController: controller, isAddingLibrary: true });
+
+        try {
+          const res = await fetch(`/api/libraries`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: controller.signal,
+            body: JSON.stringify({
+              userId: user.id,
+              parentId,
+              title,
+            }),
+          });
+
+          if (!res.ok) throw new Error("Failed to add folder");
+
+          const newLibrary: Library = await res.json();
+
+          // Replace optimistic item with real data
+          set((state) => ({
+            uiLibraries: state.uiLibraries.map(lib => 
+              lib.id === tempId ? newLibrary : lib
+            ),
+            uiParentLibraries: state.uiParentLibraries.map(lib => 
+              lib.id === tempId ? newLibrary : lib
+            ),
+            dbLibraries: [...state.dbLibraries, newLibrary],
+            dbParentLibraries: parentId 
+              ? state.dbParentLibraries 
+              : [...state.dbParentLibraries, newLibrary],
+          }));
+
+          if (onSuccess) onSuccess();
+        } catch (e: any) {
+          if (e.name === "AbortError") {
+            console.log("Add folder cancelled");
+          } else {
+            console.error("Error adding folder:", e);
+            
+            // Rollback optimistic update on error
+            set((state) => ({
+              uiLibraries: state.uiLibraries.filter(lib => lib.id !== tempId),
+              uiParentLibraries: state.uiParentLibraries.filter(lib => lib.id !== tempId),
+            }));
+          }
+        } finally {
+          set({ isAddingLibrary: false, addFolderController: undefined });
+        }
+      },
+
+      addSnippet: async (title, parentId, onSuccess) => {
+        const { user } = get();
+        if (!user) return;
+
+        // Optimistic UI update
+        const tempId = `temp-${Date.now()}`;
+        const optimisticSnippet: Snippet = {
+          id: tempId,
           userId: user.id,
-          parentId,
           title,
-        }),
-      });
-
-      if (!res.ok) throw new Error("Failed to add folder");
-    } catch (e: any) {
-      if (e.name === "AbortError") {
-        console.log("Add folder cancelled");
-      } else {
-        console.error("Error adding folder:", e);
-      }
-    } finally {
-      set({ isAddingLibrary: false, addFolderController: undefined });
-      if (onSuccess) onSuccess();
-    }
-  },
-
-  addSnippet: async (title, parentId, onSuccess) => {
-    const { user } = get();
-    if (!user) return;
-
-    const prevController = get().addSnippetController;
-    if (prevController) prevController.abort();
-
-    const controller = new AbortController();
-    set({ addSnippetController: controller, isAddingSnippet: true });
-
-    try {
-      const res = await fetch(`/api/snippets`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        signal: controller.signal,
-        body: JSON.stringify({
-          title,
-          parentId,
-        }),
-      });
-
-      if (!res.ok) throw new Error("Failed to add snippet");
-    } catch (e: any) {
-      if (e.name === "AbortError") {
-        console.log("Add snippet cancelled");
-      } else {
-        console.error("Error adding snippet:", e);
-      }
-    } finally {
-      set({ isAddingSnippet: false, addSnippetController: undefined });
-      if (onSuccess) onSuccess();
-    }
-  },
-
-  cancelAddFolder: () => {
-    const controller = get().addFolderController;
-    if (controller) {
-      controller.abort();
-      set({ isAddingLibrary: false, addFolderController: undefined });
-      console.log("Add folder job cancelled");
-    }
-  },
-
-  cancelAddSnippet: () => {
-    const controller = get().addSnippetController;
-    if (controller) {
-      controller.abort();
-      set({ isAddingSnippet: false, addSnippetController: undefined });
-      console.log("Add snippet job cancelled");
-    }
-  },
-
-  deleteFolder: async (libraryId: string) => {
-    try {
-      const res = await fetch(`/api/libraries`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ libraryId }),
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to delete folder");
-      }
-
-      // Update state after successful deletion
-      set((state) => {
-        // Clear selection if deleted library was selected
-        const newState: Partial<AppState> = {
-          libraries: state.libraries.filter((lib) => lib.id !== libraryId),
-          parentLibraries: state.parentLibraries.filter(
-            (lib) => lib.id !== libraryId,
-          ),
-          foundLibraries: state.foundLibraries.filter(
-            (lib) => lib.id !== libraryId,
-          ),
+          text: "",
         };
 
-        // Clear selection if the deleted item was selected
-        if (state.lastSelectedItem?.id === libraryId) {
-          newState.lastSelectedItem = null;
+        set((state) => ({
+          uiSnippets: [...state.uiSnippets, optimisticSnippet],
+          uiParentSnippets: parentId 
+            ? state.uiParentSnippets 
+            : [...state.uiParentSnippets, optimisticSnippet],
+        }));
+
+        const prevController = get().addSnippetController;
+        if (prevController) prevController.abort();
+
+        const controller = new AbortController();
+        set({ addSnippetController: controller, isAddingSnippet: true });
+
+        try {
+          const res = await fetch(`/api/snippets`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: controller.signal,
+            body: JSON.stringify({
+              title,
+              parentId,
+            }),
+          });
+
+          if (!res.ok) throw new Error("Failed to add snippet");
+
+          const newSnippet: Snippet = await res.json();
+
+          // Replace optimistic item with real data
+          set((state) => ({
+            uiSnippets: state.uiSnippets.map(snip => 
+              snip.id === tempId ? newSnippet : snip
+            ),
+            uiParentSnippets: state.uiParentSnippets.map(snip => 
+              snip.id === tempId ? newSnippet : snip
+            ),
+            dbSnippets: [...state.dbSnippets, newSnippet],
+            dbParentSnippets: parentId 
+              ? state.dbParentSnippets 
+              : [...state.dbParentSnippets, newSnippet],
+          }));
+
+          if (onSuccess) onSuccess();
+        } catch (e: any) {
+          if (e.name === "AbortError") {
+            console.log("Add snippet cancelled");
+          } else {
+            console.error("Error adding snippet:", e);
+            
+            // Rollback optimistic update on error
+            set((state) => ({
+              uiSnippets: state.uiSnippets.filter(snip => snip.id !== tempId),
+              uiParentSnippets: state.uiParentSnippets.filter(snip => snip.id !== tempId),
+            }));
+          }
+        } finally {
+          set({ isAddingSnippet: false, addSnippetController: undefined });
         }
+      },
 
-        return newState;
-      });
-    } catch (error) {
-      console.error("Error deleting library:", error);
-      throw error; // Re-throw so TreeItem can handle it
-    }
-  },
+      cancelAddFolder: () => {
+        const controller = get().addFolderController;
+        if (controller) {
+          controller.abort();
+          set({ isAddingLibrary: false, addFolderController: undefined });
+        }
+      },
 
-  deleteSnippet: async (fileId: string) => {
-    try {
-      const res = await fetch(`/api/snippets`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileId }),
-      });
+      cancelAddSnippet: () => {
+        const controller = get().addSnippetController;
+        if (controller) {
+          controller.abort();
+          set({ isAddingSnippet: false, addSnippetController: undefined });
+        }
+      },
 
-      if (!res.ok) {
-        throw new Error("Failed to delete file");
-      }
+      deleteFolder: async (libraryId: string) => {
+        // Optimistic UI update
+        set((state) => ({
+          uiLibraries: state.uiLibraries.filter((lib) => lib.id !== libraryId),
+          uiParentLibraries: state.uiParentLibraries.filter(
+            (lib) => lib.id !== libraryId,
+          ),
+        }));
 
-      set((state) => {
-        const newState: Partial<AppState> = {
-          snippets: state.snippets.filter((snip) => snip.id !== fileId),
-          parentSnippets: state.parentSnippets.filter(
+        try {
+          const res = await fetch(`/api/libraries`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ libraryId }),
+          });
+
+          if (!res.ok) {
+            throw new Error("Failed to delete folder");
+          }
+
+          // Update DB state and clear selections
+          set((state) => {
+            const newState: Partial<AppState> = {
+              dbLibraries: state.dbLibraries.filter((lib) => lib.id !== libraryId),
+              dbParentLibraries: state.dbParentLibraries.filter(
+                (lib) => lib.id !== libraryId,
+              ),
+              foundLibraries: state.foundLibraries.filter(
+                (lib) => lib.id !== libraryId,
+              ),
+            };
+
+            if (state.lastSelectedItem?.id === libraryId) {
+              newState.lastSelectedItem = null;
+            }
+
+            return newState;
+          });
+        } catch (error) {
+          console.error("Error deleting library:", error);
+          
+          // Rollback on error - restore from DB state
+          set((state) => ({
+            uiLibraries: [...state.dbLibraries],
+            uiParentLibraries: [...state.dbParentLibraries],
+          }));
+          
+          throw error;
+        }
+      },
+
+      deleteSnippet: async (fileId: string) => {
+        // Optimistic UI update
+        set((state) => ({
+          uiSnippets: state.uiSnippets.filter((snip) => snip.id !== fileId),
+          uiParentSnippets: state.uiParentSnippets.filter(
             (snip) => snip.id !== fileId,
           ),
-          foundSnippets: state.foundSnippets.filter(
-            (snip) => snip.id !== fileId,
+        }));
+
+        try {
+          const res = await fetch(`/api/snippets`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ fileId }),
+          });
+
+          if (!res.ok) {
+            throw new Error("Failed to delete file");
+          }
+
+          // Update DB state and manage tabs
+          set((state) => {
+            const newState: Partial<AppState> = {
+              dbSnippets: state.dbSnippets.filter((snip) => snip.id !== fileId),
+              dbParentSnippets: state.dbParentSnippets.filter(
+                (snip) => snip.id !== fileId,
+              ),
+              foundSnippets: state.foundSnippets.filter(
+                (snip) => snip.id !== fileId,
+              ),
+            };
+
+            const newTabs = state.openTabs.filter((tab) => tab.id !== fileId);
+            newState.openTabs = newTabs;
+
+            if (state.activeTabId === fileId) {
+              if (newTabs.length === 0) {
+                newState.activeTabId = null;
+                newState.selectedSnippet = null;
+              } else {
+                const newActiveTab = newTabs[0];
+                newState.activeTabId = newActiveTab.id;
+                newState.selectedSnippet = newActiveTab;
+              }
+            }
+
+            if (state.selectedSnippet?.id === fileId) {
+              newState.selectedSnippet = null;
+            }
+            if (state.lastSelectedItem?.id === fileId) {
+              newState.lastSelectedItem = null;
+            }
+
+            return newState;
+          });
+        } catch (error) {
+          console.error("Error deleting file:", error);
+          
+          // Rollback on error
+          set((state) => ({
+            uiSnippets: [...state.dbSnippets],
+            uiParentSnippets: [...state.dbParentSnippets],
+          }));
+          
+          throw error;
+        }
+      },
+
+      saveSnippet: async (updatedSnippet: Snippet) => {
+        // Optimistic UI update
+        set((state) => ({
+          uiSnippets: state.uiSnippets.map((s) =>
+            s.id === updatedSnippet.id ? updatedSnippet : s,
           ),
-        };
+          uiParentSnippets: state.uiParentSnippets.map((s) =>
+            s.id === updatedSnippet.id ? updatedSnippet : s,
+          ),
+          selectedSnippet:
+            state.selectedSnippet?.id === updatedSnippet.id
+              ? updatedSnippet
+              : state.selectedSnippet,
+          openTabs: state.openTabs.map((tab) =>
+            tab.id === updatedSnippet.id ? updatedSnippet : tab,
+          ),
+        }));
 
-        if (state.selectedSnippet?.id === fileId) {
-          newState.selectedSnippet = null;
+        try {
+          const res = await fetch(`/api/snippets`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: updatedSnippet.id,
+              userId: updatedSnippet.userId,
+              title: updatedSnippet.title,
+              description: updatedSnippet.description,
+              language: updatedSnippet.language,
+              text: updatedSnippet.text,
+            }),
+          });
+
+          if (!res.ok) throw new Error("Failed to update snippet");
+
+          // Update DB state
+          set((state) => ({
+            dbSnippets: state.dbSnippets.map((s) =>
+              s.id === updatedSnippet.id ? updatedSnippet : s,
+            ),
+            dbParentSnippets: state.dbParentSnippets.map((s) =>
+              s.id === updatedSnippet.id ? updatedSnippet : s,
+            ),
+          }));
+        } catch (error) {
+          console.error("Error updating snippet:", error);
+          
+          // Rollback on error
+          set((state) => ({
+            uiSnippets: [...state.dbSnippets],
+            uiParentSnippets: [...state.dbParentSnippets],
+          }));
         }
-        if (state.lastSelectedItem?.id === fileId) {
-          newState.lastSelectedItem = null;
+      },
+
+      fetchParentSnippets: async (userId: string) => {
+        set({ isFetchingParentSnippets: true });
+        try {
+          const res = await fetch(`/api/snippets/parents`, {
+            method: "GET",
+            headers: {
+              "x-user-id": userId,
+            },
+          });
+
+          if (!res.ok) {
+            throw new Error("Failed to fetch parent snippets");
+          }
+
+          const data: Snippet[] = await res.json();
+          set({ 
+            dbParentSnippets: data,
+            uiParentSnippets: data 
+          });
+        } catch (error) {
+          console.error("Failed to fetch parent files:", error);
+        } finally {
+          set({ isFetchingParentSnippets: false });
+        }
+      },
+
+      fetchParentLibraries: async (userId: string) => {
+        set({ isFetchingParentLibraries: true });
+        try {
+          const res = await fetch(`/api/libraries/parents`, {
+            method: "GET",
+            headers: {
+              "x-user-id": userId,
+            },
+          });
+
+          if (!res.ok) {
+            throw new Error("Failed to fetch libraries");
+          }
+
+          const data: Library[] = await res.json();
+          set({ 
+            dbParentLibraries: data,
+            uiParentLibraries: data 
+          });
+        } catch (error) {
+          console.error("Failed to fetch libraries:", error);
+        } finally {
+          set({ isFetchingParentLibraries: false });
+        }
+      },
+
+      findSnippets: async (title: string) => {
+        if (!title) {
+          set({ foundSnippets: [] });
+          return;
         }
 
-        return newState;
-      });
-    } catch (error) {
-      console.error("Error deleting file:", error);
-      throw error;
+        set({ isFindingSnippets: true });
+
+        try {
+          const res = await fetch(
+            `/api/snippets/search?fileTitle=${encodeURIComponent(title)}`,
+          );
+          if (!res.ok) throw new Error("Failed to find Snippets/files");
+          const data: Snippet[] = await res.json();
+          set({ foundSnippets: data });
+        } catch (error) {
+          console.error("Error finding snippets:", error);
+          set({ foundSnippets: [] });
+        } finally {
+          set({ isFindingSnippets: false });
+        }
+      },
+
+      findLibraries: async (title: string) => {
+        if (!title) {
+          set({ foundLibraries: [] });
+          return;
+        }
+
+        set({ isFindingLibraries: true });
+
+        try {
+          const res = await fetch(
+            `/api/libraries/search?folderTitle=${encodeURIComponent(title)}`,
+          );
+          if (!res.ok) throw new Error("Failed to find libraries");
+
+          const data: Library[] = await res.json();
+          set({ foundLibraries: data });
+        } catch (error) {
+          console.error("Error finding libraries:", error);
+          set({ foundLibraries: [] });
+        } finally {
+          set({ isFindingLibraries: false });
+        }
+      },
+
+      handleTreeItemSelect: (item: Library | Snippet) => {
+        if ("text" in item) {
+          get().openTab(item);
+        }
+        set({ lastSelectedItem: item });
+        set({ isAddingLibrary: false });
+        set({ isAddingSnippet: false });
+      },
+    }),
+    {
+      name: "fractal-storage",
+      partialize: (state) => ({
+        // Only persist UI state and tabs
+        uiLibraries: state.uiLibraries,
+        uiParentLibraries: state.uiParentLibraries,
+        uiSnippets: state.uiSnippets,
+        uiParentSnippets: state.uiParentSnippets,
+        openTabs: state.openTabs,
+        activeTabId: state.activeTabId,
+        selectedSnippet: state.selectedSnippet,
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.isHydrated = true;
+        }
+      },
     }
-  },
-
-  saveSnippet: async (updatedSnippet: Snippet) => {
-    try {
-      const res = await fetch(`/api/snippets`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: updatedSnippet.id,
-          userId: updatedSnippet.userId,
-          title: updatedSnippet.title,
-          description: updatedSnippet.description,
-          language: updatedSnippet.language,
-          text: updatedSnippet.text,
-        }),
-      });
-
-      if (!res.ok) throw new Error("Failed to update snippet");
-
-      set((state) => ({
-        snippets: state.snippets.map((s) =>
-          s.id === updatedSnippet.id ? updatedSnippet : s,
-        ),
-        parentSnippets: state.parentSnippets.map((s) =>
-          s.id === updatedSnippet.id ? updatedSnippet : s,
-        ),
-        selectedSnippet:
-          state.selectedSnippet?.id === updatedSnippet.id
-            ? updatedSnippet
-            : state.selectedSnippet,
-      }));
-    } catch (error) {
-      console.error("Error updating snippet:", error);
-    }
-  },
-
-  fetchParentSnippets: async (userId: string) => {
-    set({ isFetchingParentSnippets: true });
-    try {
-      const res = await fetch(`/api/snippets/parents`, {
-        method: "GET",
-        headers: {
-          "x-user-id": userId,
-        },
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to fetch parent snippets");
-      }
-
-      const data: Snippet[] = await res.json();
-      set({ parentSnippets: data });
-    } catch (error) {
-      console.error("Failed to fetch parent files:", error);
-      set({ parentSnippets: [] });
-    } finally {
-      set({ isFetchingParentSnippets: false });
-    }
-  },
-
-  fetchParentLibraries: async (userId: string) => {
-    set({ isFetchingParentLibraries: true });
-    try {
-      const res = await fetch(`/api/libraries/parents`, {
-        method: "GET",
-        headers: {
-          "x-user-id": userId,
-        },
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to fetch libraries");
-      }
-
-      const data: Library[] = await res.json();
-      set({ parentLibraries: data });
-    } catch (error) {
-      console.error("Failed to fetch libraries:", error);
-      set({ parentLibraries: [] });
-    } finally {
-      set({ isFetchingParentLibraries: false });
-    }
-  },
-
-  findSnippets: async (title: string) => {
-    if (!title) {
-      set({ foundSnippets: [] });
-      return;
-    }
-
-    set({ isFindingSnippets: true });
-
-    try {
-      const res = await fetch(
-        `/api/snippets/search?fileTitle=${encodeURIComponent(title)}`,
-      );
-      if (!res.ok) throw new Error("Failed to find Snippets/files");
-      const data: Snippet[] = await res.json();
-      set({ foundSnippets: data });
-    } catch (error) {
-      console.error("Error finding snippets:", error);
-      set({ foundSnippets: [] });
-    } finally {
-      set({ isFindingSnippets: false });
-    }
-  },
-
-  findLibraries: async (title: string) => {
-    if (!title) {
-      set({ foundLibraries: [] });
-      return;
-    }
-
-    set({ isFindingLibraries: true });
-
-    try {
-      const res = await fetch(
-        `/api/libraries/search?folderTitle=${encodeURIComponent(title)}`,
-      );
-      if (!res.ok) throw new Error("Failed to find libraries");
-
-      const data: Library[] = await res.json();
-      set({ foundLibraries: data });
-    } catch (error) {
-      console.error("Error finding libraries:", error);
-      set({ foundLibraries: [] });
-    } finally {
-      set({ isFindingLibraries: false });
-    }
-  },
-
-  handleTreeItemSelect: (item: Library | Snippet) => {
-    if ("text" in item) {
-      set({ selectedSnippet: item });
-    }
-    set({ lastSelectedItem: item });
-    set({ isAddingLibrary: false });
-    set({ isAddingSnippet: false });
-  },
-}));
+  )
+);
