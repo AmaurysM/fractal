@@ -1,7 +1,7 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { FaGithub, FaGoogle } from "react-icons/fa";
+import { FaGithub, FaGoogle, FaDiscord } from "react-icons/fa";
 import VoronoiBackground from "../../components/VoronoiBackground";
 import Image from "next/image";
 
@@ -17,7 +17,13 @@ const providers = [
     id: "google",
     icon: <FaGoogle className="w-5 h-5 mr-2" />,
     color: "btn-error",
-  }
+  },
+  {
+    name: "Discord",
+    id: "discord",
+    icon: <FaDiscord className="w-5 h-5 mr-2" />,
+    color: "btn-primary",
+  },
 ];
 
 export default function SignInPage() {
