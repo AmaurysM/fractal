@@ -74,6 +74,14 @@ export default function Home() {
     }
   }, [session, user, setUser]);
 
+  // Effect to detect user changes and clear persisted data
+  useEffect(() => {
+    if (session?.user && user && session.user.id !== user.id) {
+      // User changed, update the user which will trigger the clear logic
+      setUser(session.user);
+    }
+  }, [session?.user, user, setUser]);
+
   const handleSidebarClick = () => {
     setLastSelectedItem(null);
     setIsAddingLibrary(false);

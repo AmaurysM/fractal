@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { Library, Snippet, User } from "../../../types/types";
@@ -7,23 +5,19 @@ import { Library, Snippet, User } from "../../../types/types";
 interface AppState {
   user: User | null;
 
-  // UI State (local, optimistic)
   uiLibraries: Library[];
   uiParentLibraries: Library[];
   uiSnippets: Snippet[];
   uiParentSnippets: Snippet[];
 
-  // DB State (source of truth, updated after server responses)
   dbLibraries: Library[];
   dbParentLibraries: Library[];
   dbSnippets: Snippet[];
   dbParentSnippets: Snippet[];
 
-  // Search results (always fresh from server)
   foundLibraries: Library[];
   foundSnippets: Snippet[];
 
-  // Loading states
   loading: boolean;
   isFetchingLibraries: boolean;
   isFetchingParentLibraries: boolean;
@@ -34,31 +28,22 @@ interface AppState {
   isFindingSnippets: boolean;
   isFindingLibraries: boolean;
 
-  // Abort controllers
   libraryController?: AbortController;
   snippetController?: AbortController;
   addFolderController?: AbortController;
   addSnippetController?: AbortController;
 
-  // Selection state
   selectedSnippet: Snippet | null;
   lastSelectedItem: Snippet | Library | null;
 
-  // Tab management
   openTabs: Snippet[];
   activeTabId: string | null;
 
-  // Hydration flag
   isHydrated: boolean;
-
-  //////////////
-  // Actions
-  //////////////
 
   setUser: (user: User | null) => void;
   setIsHydrated: (isHydrated: boolean) => void;
 
-  // Library actions
   fetchLibraries: (userId: string) => Promise<void>;
   fetchParentLibraries: (userId: string) => Promise<void>;
   addFolder: (
@@ -70,7 +55,6 @@ interface AppState {
   setIsAddingLibrary: (isAddingLibrary: boolean) => void;
   cancelAddFolder: () => void;
 
-  // Snippet actions
   fetchSnippets: (userId: string) => Promise<void>;
   fetchParentSnippets: (userId: string) => Promise<void>;
   addSnippet: (
@@ -83,23 +67,19 @@ interface AppState {
   setIsAddingSnippet: (isAddingSnippet: boolean) => void;
   cancelAddSnippet: () => void;
 
-  // Search actions
   findSnippets: (title: string) => Promise<void>;
   findLibraries: (title: string) => Promise<void>;
 
-  // Selection actions
   handleTreeItemSelect: (item: Library | Snippet) => void;
   setSelectedSnippet: (selectedSnippet: Snippet | null) => void;
   setLastSelectedItem: (lastSelectedItem: Snippet | Library | null) => void;
 
-  // Tab management methods
   openTab: (snippet: Snippet) => void;
   closeTab: (snippetId: string) => void;
   setActiveTab: (snippetId: string) => void;
   closeAllTabs: () => void;
   closeOtherTabs: (snippetId: string) => void;
 
-  // Utility methods
   getLibraryParentId: (libraryId: string) => Promise<string | null>;
   getSnippetParentId: (snippetId: string) => Promise<string | null>;
 }
@@ -108,14 +88,12 @@ export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
       user: null,
-      
-      // UI State
+
       uiLibraries: [],
       uiParentLibraries: [],
       uiSnippets: [],
       uiParentSnippets: [],
 
-      // DB State
       dbLibraries: [],
       dbParentLibraries: [],
       dbSnippets: [],
@@ -148,12 +126,23 @@ export const useAppStore = create<AppState>()(
       setSelectedSnippet: (selectedSnippet) => set({ selectedSnippet }),
       setLastSelectedItem: (lastSelectedItem) => set({ lastSelectedItem }),
       setUser: (user) => {
-        const currentUser = get().user;
-        
-        // If user changed, clear tabs and selections
-        if (currentUser && user && currentUser.id !== user.id) {
+        const state = get();
+        const currentUserId = state.user?.id;
+        const newUserId = user?.id;
+
+        if (currentUserId !== newUserId) {
           set({
             user,
+            uiLibraries: [],
+            uiParentLibraries: [],
+            uiSnippets: [],
+            uiParentSnippets: [],
+            dbLibraries: [],
+            dbParentLibraries: [],
+            dbSnippets: [],
+            dbParentSnippets: [],
+            foundLibraries: [],
+            foundSnippets: [],
             openTabs: [],
             activeTabId: null,
             selectedSnippet: null,
@@ -164,22 +153,22 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      // Tab management methods
       openTab: (snippet: Snippet) => {
         const { openTabs, uiSnippets, uiParentSnippets } = get();
-        
-        // Get the latest version of the snippet from the store
-        const latestSnippet = uiSnippets.find(s => s.id === snippet.id) || 
-                              uiParentSnippets.find(s => s.id === snippet.id) || 
-                              snippet;
-        
-        const existingTabIndex = openTabs.findIndex((tab) => tab.id === latestSnippet.id);
+
+        const latestSnippet =
+          uiSnippets.find((s) => s.id === snippet.id) ||
+          uiParentSnippets.find((s) => s.id === snippet.id) ||
+          snippet;
+
+        const existingTabIndex = openTabs.findIndex(
+          (tab) => tab.id === latestSnippet.id,
+        );
 
         if (existingTabIndex !== -1) {
-          // Update the existing tab with latest data
           const updatedTabs = [...openTabs];
           updatedTabs[existingTabIndex] = latestSnippet;
-          
+
           set({
             openTabs: updatedTabs,
             activeTabId: latestSnippet.id,
@@ -228,16 +217,15 @@ export const useAppStore = create<AppState>()(
         const tab = openTabs.find((t) => t.id === snippetId);
 
         if (tab) {
-          // Get the latest version from the store
-          const latestSnippet = uiSnippets.find(s => s.id === snippetId) || 
-                                uiParentSnippets.find(s => s.id === snippetId) || 
-                                tab;
-          
-          // Update the tab with latest data
-          const updatedTabs = openTabs.map(t => 
-            t.id === snippetId ? latestSnippet : t
+          const latestSnippet =
+            uiSnippets.find((s) => s.id === snippetId) ||
+            uiParentSnippets.find((s) => s.id === snippetId) ||
+            tab;
+
+          const updatedTabs = openTabs.map((t) =>
+            t.id === snippetId ? latestSnippet : t,
           );
-          
+
           set({
             openTabs: updatedTabs,
             activeTabId: snippetId,
@@ -259,11 +247,11 @@ export const useAppStore = create<AppState>()(
         const keepTab = openTabs.find((tab) => tab.id === snippetId);
 
         if (keepTab) {
-          // Get latest version
-          const latestSnippet = uiSnippets.find(s => s.id === snippetId) || 
-                                uiParentSnippets.find(s => s.id === snippetId) || 
-                                keepTab;
-          
+          const latestSnippet =
+            uiSnippets.find((s) => s.id === snippetId) ||
+            uiParentSnippets.find((s) => s.id === snippetId) ||
+            keepTab;
+
           set({
             openTabs: [latestSnippet],
             activeTabId: snippetId,
@@ -323,14 +311,13 @@ export const useAppStore = create<AppState>()(
           if (!res.ok) throw new Error("Failed to fetch libraries");
 
           const data: Library[] = await res.json();
-          
-          // Update both DB state and UI state
-          set({ 
+
+          set({
             dbLibraries: data,
-            uiLibraries: data 
+            uiLibraries: data,
           });
-        } catch (e: any) {
-          if (e.name === "AbortError") {
+        } catch (e) {
+          if (e instanceof Error && e.name === "AbortError") {
             console.log("Fetch libraries cancelled");
           } else {
             console.error("Failed to fetch libraries:", e);
@@ -357,14 +344,13 @@ export const useAppStore = create<AppState>()(
           if (!res.ok) throw new Error("Failed to fetch snippets");
 
           const data: Snippet[] = await res.json();
-          
-          // Update both DB state and UI state
-          set({ 
+
+          set({
             dbSnippets: data,
-            uiSnippets: data 
+            uiSnippets: data,
           });
-        } catch (e: any) {
-          if (e.name === "AbortError") {
+        } catch (e) {
+          if (e instanceof Error && e.name === "AbortError") {
             console.log("Fetch snippets cancelled");
           } else {
             console.error("Failed to fetch snippets:", e);
@@ -378,7 +364,6 @@ export const useAppStore = create<AppState>()(
         const { user } = get();
         if (!user) return;
 
-        // Optimistic UI update
         const tempId = `temp-${Date.now()}`;
         const optimisticLibrary: Library = {
           id: tempId,
@@ -388,8 +373,8 @@ export const useAppStore = create<AppState>()(
 
         set((state) => ({
           uiLibraries: [...state.uiLibraries, optimisticLibrary],
-          uiParentLibraries: parentId 
-            ? state.uiParentLibraries 
+          uiParentLibraries: parentId
+            ? state.uiParentLibraries
             : [...state.uiParentLibraries, optimisticLibrary],
         }));
 
@@ -415,31 +400,31 @@ export const useAppStore = create<AppState>()(
 
           const newLibrary: Library = await res.json();
 
-          // Replace optimistic item with real data
           set((state) => ({
-            uiLibraries: state.uiLibraries.map(lib => 
-              lib.id === tempId ? newLibrary : lib
+            uiLibraries: state.uiLibraries.map((lib) =>
+              lib.id === tempId ? newLibrary : lib,
             ),
-            uiParentLibraries: state.uiParentLibraries.map(lib => 
-              lib.id === tempId ? newLibrary : lib
+            uiParentLibraries: state.uiParentLibraries.map((lib) =>
+              lib.id === tempId ? newLibrary : lib,
             ),
             dbLibraries: [...state.dbLibraries, newLibrary],
-            dbParentLibraries: parentId 
-              ? state.dbParentLibraries 
+            dbParentLibraries: parentId
+              ? state.dbParentLibraries
               : [...state.dbParentLibraries, newLibrary],
           }));
 
           if (onSuccess) onSuccess();
-        } catch (e: any) {
-          if (e.name === "AbortError") {
+        } catch (e) {
+          if (e instanceof Error && e.name === "AbortError") {
             console.log("Add folder cancelled");
           } else {
             console.error("Error adding folder:", e);
-            
-            // Rollback optimistic update on error
+
             set((state) => ({
-              uiLibraries: state.uiLibraries.filter(lib => lib.id !== tempId),
-              uiParentLibraries: state.uiParentLibraries.filter(lib => lib.id !== tempId),
+              uiLibraries: state.uiLibraries.filter((lib) => lib.id !== tempId),
+              uiParentLibraries: state.uiParentLibraries.filter(
+                (lib) => lib.id !== tempId,
+              ),
             }));
           }
         } finally {
@@ -451,7 +436,6 @@ export const useAppStore = create<AppState>()(
         const { user } = get();
         if (!user) return;
 
-        // Optimistic UI update
         const tempId = `temp-${Date.now()}`;
         const optimisticSnippet: Snippet = {
           id: tempId,
@@ -462,8 +446,8 @@ export const useAppStore = create<AppState>()(
 
         set((state) => ({
           uiSnippets: [...state.uiSnippets, optimisticSnippet],
-          uiParentSnippets: parentId 
-            ? state.uiParentSnippets 
+          uiParentSnippets: parentId
+            ? state.uiParentSnippets
             : [...state.uiParentSnippets, optimisticSnippet],
         }));
 
@@ -488,31 +472,31 @@ export const useAppStore = create<AppState>()(
 
           const newSnippet: Snippet = await res.json();
 
-          // Replace optimistic item with real data
           set((state) => ({
-            uiSnippets: state.uiSnippets.map(snip => 
-              snip.id === tempId ? newSnippet : snip
+            uiSnippets: state.uiSnippets.map((snip) =>
+              snip.id === tempId ? newSnippet : snip,
             ),
-            uiParentSnippets: state.uiParentSnippets.map(snip => 
-              snip.id === tempId ? newSnippet : snip
+            uiParentSnippets: state.uiParentSnippets.map((snip) =>
+              snip.id === tempId ? newSnippet : snip,
             ),
             dbSnippets: [...state.dbSnippets, newSnippet],
-            dbParentSnippets: parentId 
-              ? state.dbParentSnippets 
+            dbParentSnippets: parentId
+              ? state.dbParentSnippets
               : [...state.dbParentSnippets, newSnippet],
           }));
 
           if (onSuccess) onSuccess();
-        } catch (e: any) {
-          if (e.name === "AbortError") {
+        } catch (e) {
+          if (e instanceof Error && e.name === "AbortError") {
             console.log("Add snippet cancelled");
           } else {
             console.error("Error adding snippet:", e);
-            
-            // Rollback optimistic update on error
+
             set((state) => ({
-              uiSnippets: state.uiSnippets.filter(snip => snip.id !== tempId),
-              uiParentSnippets: state.uiParentSnippets.filter(snip => snip.id !== tempId),
+              uiSnippets: state.uiSnippets.filter((snip) => snip.id !== tempId),
+              uiParentSnippets: state.uiParentSnippets.filter(
+                (snip) => snip.id !== tempId,
+              ),
             }));
           }
         } finally {
@@ -537,7 +521,6 @@ export const useAppStore = create<AppState>()(
       },
 
       deleteFolder: async (libraryId: string) => {
-        // Optimistic UI update
         set((state) => ({
           uiLibraries: state.uiLibraries.filter((lib) => lib.id !== libraryId),
           uiParentLibraries: state.uiParentLibraries.filter(
@@ -556,10 +539,11 @@ export const useAppStore = create<AppState>()(
             throw new Error("Failed to delete folder");
           }
 
-          // Update DB state and clear selections
           set((state) => {
             const newState: Partial<AppState> = {
-              dbLibraries: state.dbLibraries.filter((lib) => lib.id !== libraryId),
+              dbLibraries: state.dbLibraries.filter(
+                (lib) => lib.id !== libraryId,
+              ),
               dbParentLibraries: state.dbParentLibraries.filter(
                 (lib) => lib.id !== libraryId,
               ),
@@ -576,19 +560,17 @@ export const useAppStore = create<AppState>()(
           });
         } catch (error) {
           console.error("Error deleting library:", error);
-          
-          // Rollback on error - restore from DB state
+
           set((state) => ({
             uiLibraries: [...state.dbLibraries],
             uiParentLibraries: [...state.dbParentLibraries],
           }));
-          
+
           throw error;
         }
       },
 
       deleteSnippet: async (fileId: string) => {
-        // Optimistic UI update
         set((state) => ({
           uiSnippets: state.uiSnippets.filter((snip) => snip.id !== fileId),
           uiParentSnippets: state.uiParentSnippets.filter(
@@ -607,7 +589,6 @@ export const useAppStore = create<AppState>()(
             throw new Error("Failed to delete file");
           }
 
-          // Update DB state and manage tabs
           set((state) => {
             const newState: Partial<AppState> = {
               dbSnippets: state.dbSnippets.filter((snip) => snip.id !== fileId),
@@ -644,19 +625,17 @@ export const useAppStore = create<AppState>()(
           });
         } catch (error) {
           console.error("Error deleting file:", error);
-          
-          // Rollback on error
+
           set((state) => ({
             uiSnippets: [...state.dbSnippets],
             uiParentSnippets: [...state.dbParentSnippets],
           }));
-          
+
           throw error;
         }
       },
 
       saveSnippet: async (updatedSnippet: Snippet) => {
-        // Optimistic UI update - update all references
         set((state) => ({
           uiSnippets: state.uiSnippets.map((s) =>
             s.id === updatedSnippet.id ? updatedSnippet : s,
@@ -692,7 +671,6 @@ export const useAppStore = create<AppState>()(
 
           if (!res.ok) throw new Error("Failed to update snippet");
 
-          // Update DB state
           set((state) => ({
             dbSnippets: state.dbSnippets.map((s) =>
               s.id === updatedSnippet.id ? updatedSnippet : s,
@@ -703,8 +681,7 @@ export const useAppStore = create<AppState>()(
           }));
         } catch (error) {
           console.error("Error updating snippet:", error);
-          
-          // Rollback on error
+
           set((state) => ({
             uiSnippets: [...state.dbSnippets],
             uiParentSnippets: [...state.dbParentSnippets],
@@ -727,9 +704,9 @@ export const useAppStore = create<AppState>()(
           }
 
           const data: Snippet[] = await res.json();
-          set({ 
+          set({
             dbParentSnippets: data,
-            uiParentSnippets: data 
+            uiParentSnippets: data,
           });
         } catch (error) {
           console.error("Failed to fetch parent files:", error);
@@ -753,9 +730,9 @@ export const useAppStore = create<AppState>()(
           }
 
           const data: Library[] = await res.json();
-          set({ 
+          set({
             dbParentLibraries: data,
-            uiParentLibraries: data 
+            uiParentLibraries: data,
           });
         } catch (error) {
           console.error("Failed to fetch libraries:", error);
@@ -822,23 +799,27 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: "fractal-storage",
-      partialize: (state) => ({
-        // Persist user ID to detect user changes
-        userId: state.user?.id,
-        // Only persist UI state and tabs
-        uiLibraries: state.uiLibraries,
-        uiParentLibraries: state.uiParentLibraries,
-        uiSnippets: state.uiSnippets,
-        uiParentSnippets: state.uiParentSnippets,
-        openTabs: state.openTabs,
-        activeTabId: state.activeTabId,
-        selectedSnippet: state.selectedSnippet,
-      }),
+      partialize: (state) => {
+        if (!state.user) {
+          return {};
+        }
+
+        return {
+          user: state.user,
+          uiLibraries: state.uiLibraries,
+          uiParentLibraries: state.uiParentLibraries,
+          uiSnippets: state.uiSnippets,
+          uiParentSnippets: state.uiParentSnippets,
+          openTabs: state.openTabs,
+          activeTabId: state.activeTabId,
+          selectedSnippet: state.selectedSnippet,
+        };
+      },
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.isHydrated = true;
         }
       },
-    }
-  )
+    },
+  ),
 );
