@@ -131,6 +131,9 @@ export const useAppStore = create<AppState>()(
         const newUserId = user?.id;
 
         if (currentUserId !== newUserId) {
+          // Clear persisted storage when user changes
+          localStorage.removeItem("fractal-storage");
+
           set({
             user,
             uiLibraries: [],
