@@ -1,5 +1,10 @@
 import { BiCopy, BiCheck, BiDownload, BiSave } from "react-icons/bi";
 import { VscCode, VscChevronDown, VscClose, VscChromeMaximize, VscChromeRestore } from "react-icons/vsc";
+import { SiJavascript, SiTypescript, SiPython, SiCplusplus, SiC, SiKotlin, SiHtml5, SiCss3, SiJson, SiPhp, SiGo, SiRust } from "react-icons/si";
+import { FaJava } from "react-icons/fa6";
+import { TbBrandCSharp } from "react-icons/tb";
+
+import { AiOutlineFileText } from "react-icons/ai";
 import { Snippet } from "../../../types/types";
 import { useState, useEffect, useRef } from "react";
 import Editor, { Monaco } from "@monaco-editor/react";
@@ -7,23 +12,23 @@ import * as monaco from "monaco-editor";
 import { useAppStore } from "../store/useAppStore";
 
 const LANGUAGES = [
-  { value: "", label: "Plain Text", monaco: "plaintext", ext: "txt" },
-  { value: "JavaScript", label: "JavaScript", monaco: "javascript", ext: "js" },
-  { value: "TypeScript", label: "TypeScript", monaco: "typescript", ext: "ts" },
-  { value: "Python", label: "Python", monaco: "python", ext: "py" },
-  { value: "Java", label: "Java", monaco: "java", ext: "java" },
-  { value: "C++", label: "C++", monaco: "cpp", ext: "cpp" },
-  { value: "C#", label: "C#", monaco: "csharp", ext: "cs" },
-  { value: "C", label: "C", monaco: "c", ext: "c" },
-  { value: "Kotlin", label: "Kotlin", monaco: "kotlin", ext: "kt" },
-  { value: "Node.js", label: "Node.js", monaco: "javascript", ext: "js" },
-  { value: "HTML", label: "HTML", monaco: "html", ext: "html" },
-  { value: "CSS", label: "CSS", monaco: "css", ext: "css" },
-  { value: "JSON", label: "JSON", monaco: "json", ext: "json" },
-  { value: "SQL", label: "SQL", monaco: "sql", ext: "sql" },
-  { value: "PHP", label: "PHP", monaco: "php", ext: "php" },
-  { value: "Go", label: "Go", monaco: "go", ext: "go" },
-  { value: "Rust", label: "Rust", monaco: "rust", ext: "rs" },
+  { value: "", label: "Plain Text", monaco: "plaintext", ext: "txt", icon: AiOutlineFileText, color: "#858585" },
+  { value: "JavaScript", label: "JavaScript", monaco: "javascript", ext: "js", icon: SiJavascript, color: "#f7df1e" },
+  { value: "TypeScript", label: "TypeScript", monaco: "typescript", ext: "ts", icon: SiTypescript, color: "#3178c6" },
+  { value: "Python", label: "Python", monaco: "python", ext: "py", icon: SiPython, color: "#3776ab" },
+  { value: "Java", label: "Java", monaco: "java", ext: "java", icon: FaJava, color: "#007396" },
+  { value: "C++", label: "C++", monaco: "cpp", ext: "cpp", icon: SiCplusplus, color: "#00599c" },
+  { value: "C#", label: "C#", monaco: "csharp", ext: "cs", icon: TbBrandCSharp, color: "#239120" },
+  { value: "C", label: "C", monaco: "c", ext: "c", icon: SiC, color: "#a8b9cc" },
+  { value: "Kotlin", label: "Kotlin", monaco: "kotlin", ext: "kt", icon: SiKotlin, color: "#7f52ff" },
+  { value: "Node.js", label: "Node.js", monaco: "javascript", ext: "js", icon: SiJavascript, color: "#339933" },
+  { value: "HTML", label: "HTML", monaco: "html", ext: "html", icon: SiHtml5, color: "#e34c26" },
+  { value: "CSS", label: "CSS", monaco: "css", ext: "css", icon: SiCss3, color: "#1572b6" },
+  { value: "JSON", label: "JSON", monaco: "json", ext: "json", icon: SiJson, color: "#000000" },
+  { value: "SQL", label: "SQL", monaco: "sql", ext: "sql", icon: AiOutlineFileText, color: "#e38c00" },
+  { value: "PHP", label: "PHP", monaco: "php", ext: "php", icon: SiPhp, color: "#777bb4" },
+  { value: "Go", label: "Go", monaco: "go", ext: "go", icon: SiGo, color: "#00add8" },
+  { value: "Rust", label: "Rust", monaco: "rust", ext: "rs", icon: SiRust, color: "#000000" },
 ];
 
 export const CodeDisplay = () => {
@@ -32,6 +37,8 @@ export const CodeDisplay = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [tabContextMenu, setTabContextMenu] = useState<{ x: number; y: number; snippetId: string } | null>(null);
+  const [isEditingFilename, setIsEditingFilename] = useState(false);
+  const [editingFilename, setEditingFilename] = useState("");
 
   const [uiText, setUiText] = useState("");
   const [uiDescription, setUiDescription] = useState("");
@@ -54,8 +61,8 @@ export const CodeDisplay = () => {
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const saveTimeout = useRef<number | null>(null);
   const tabContextMenuRef = useRef<HTMLDivElement>(null);
+  const filenameInputRef = useRef<HTMLInputElement>(null);
 
-  // Remove the user filtering - just use openTabs and selectedSnippet directly
   const userTabs = openTabs;
   const snippet = selectedSnippet;
 
@@ -81,6 +88,13 @@ export const CodeDisplay = () => {
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [tabContextMenu]);
+
+  useEffect(() => {
+    if (isEditingFilename && filenameInputRef.current) {
+      filenameInputRef.current.focus();
+      filenameInputRef.current.select();
+    }
+  }, [isEditingFilename]);
 
   const scheduleSave = (updatedSnippet: Snippet) => {
     setSaveStatus('saving');
@@ -187,6 +201,16 @@ export const CodeDisplay = () => {
     return lang?.monaco || "plaintext";
   };
 
+  const getLanguageIcon = (language?: string) => {
+    const lang = LANGUAGES.find(l => l.value === language);
+    return lang?.icon || AiOutlineFileText;
+  };
+
+  const getLanguageColor = (language?: string) => {
+    const lang = LANGUAGES.find(l => l.value === language);
+    return lang?.color || "#858585";
+  };
+
   const handleTabContextMenu = (e: React.MouseEvent, snippetId: string) => {
     e.preventDefault();
     e.stopPropagation();
@@ -210,6 +234,47 @@ export const CodeDisplay = () => {
       saveSnippet?.(updatedSnippet);
       setSaveStatus('saved');
     }
+  };
+
+  const handleFilenameEdit = () => {
+    const ext = getFileExtension(uiLanguage);
+    setEditingFilename(`${uiTitle}.${ext}`);
+    setIsEditingFilename(true);
+  };
+
+  const handleFilenameChange = (newFilename: string) => {
+    setEditingFilename(newFilename);
+    
+    // Detect language from extension
+    const match = newFilename.match(/\.([^.]+)$/);
+    if (match) {
+      const ext = match[1].toLowerCase();
+      const lang = LANGUAGES.find(l => l.ext === ext);
+      if (lang) {
+        // Extract title without extension
+        const title = newFilename.substring(0, newFilename.lastIndexOf('.'));
+        setUiTitle(title);
+        setUiLanguage(lang.value);
+        
+        if (selectedSnippet) {
+          const updated = { 
+            ...selectedSnippet, 
+            title, 
+            language: lang.value 
+          };
+          setSaveStatus('unsaved');
+          scheduleSave(updated);
+        }
+      }
+    }
+  };
+
+  const handleFilenameSubmit = () => {
+    setIsEditingFilename(false);
+  };
+
+  const handleFilenameBlur = () => {
+    setIsEditingFilename(false);
   };
 
   if (!isHydrated) {
@@ -255,6 +320,7 @@ export const CodeDisplay = () => {
   const lineCount = uiText ? uiText.split("\n").length : 0;
   const charCount = uiText.length;
   const wordCount = uiText ? uiText.trim().split(/\s+/).filter(Boolean).length : 0;
+  const Icon = getLanguageIcon(uiLanguage);
 
   const containerClasses = `${isFullscreen ? "fixed inset-0 z-50" : "h-full"
     } flex flex-col bg-[#1e1e1e]`;
@@ -266,6 +332,7 @@ export const CodeDisplay = () => {
         {userTabs.map((tab) => { 
           const isActive = tab.id === activeTabId;
           const hasUnsaved = isActive && saveStatus === 'unsaved';
+          const TabIcon = getLanguageIcon(tab.language);
 
           return (
             <div
@@ -277,7 +344,10 @@ export const CodeDisplay = () => {
               onClick={() => setActiveTab(tab.id)}
               onContextMenu={(e) => handleTabContextMenu(e, tab.id)}
             >
-              <VscCode className="w-4 h-4 shrink-0" />
+              <TabIcon 
+                className="w-4 h-4 shrink-0" 
+                style={{ color: getLanguageColor(tab.language) }}
+              />
               <span className="flex-1 text-[13px] truncate">{tab.title || "Untitled"}</span>
               {hasUnsaved && <span className="text-[#858585] text-xs">●</span>}
               <button
@@ -470,9 +540,28 @@ export const CodeDisplay = () => {
             )}
           </div>
 
-          <span className="opacity-80">
-            {uiTitle || "Untitled"}.{getFileExtension(uiLanguage)}
-          </span>
+          {isEditingFilename ? (
+            <input
+              ref={filenameInputRef}
+              type="text"
+              value={editingFilename}
+              onChange={(e) => handleFilenameChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleFilenameSubmit();
+                if (e.key === 'Escape') setIsEditingFilename(false);
+              }}
+              onBlur={handleFilenameBlur}
+              className="bg-[#0066a8] px-2 py-0.5 text-white text-[11px] border border-white/30 rounded-sm focus:outline-none focus:border-white/60"
+            />
+          ) : (
+            <span 
+              className="opacity-80 cursor-pointer hover:opacity-100 transition-opacity"
+              onClick={handleFilenameEdit}
+              title="Click to edit filename and extension"
+            >
+              {uiTitle || "Untitled"}.{getFileExtension(uiLanguage)}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-4 opacity-80">
