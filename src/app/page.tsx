@@ -88,8 +88,11 @@ export default function Home() {
     setIsAddingSnippet(false);
   };
 
+  const [hasLoadedInitialData, setHasLoadedInitialData] = useState(false);
+
   useEffect(() => {
-    if (user?.id && isHydrated) {
+    if (user?.id && isHydrated && !hasLoadedInitialData) {
+      setHasLoadedInitialData(true);
       Promise.all([
         fetchLibraries(user.id),
         fetchSnippets(user.id),
@@ -99,7 +102,12 @@ export default function Home() {
         console.error("Error fetching initial data:", error);
       });
     }
-  }, [user?.id, isHydrated, fetchLibraries, fetchSnippets, fetchParentLibraries, fetchParentSnippets]);
+  }, [user?.id, isHydrated, hasLoadedInitialData, fetchLibraries, fetchSnippets, fetchParentLibraries, fetchParentSnippets]);
+
+  // Reset the flag when user changes
+  useEffect(() => {
+    setHasLoadedInitialData(false);
+  }, [user?.id]);
 
   const isInitialLoading = !user?.id || !isHydrated;
 
