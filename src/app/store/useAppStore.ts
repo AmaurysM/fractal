@@ -803,7 +803,6 @@ export const useAppStore = create<AppState>()(
     {
       name: "fractal-storage",
       partialize: (state) => {
-        // ALWAYS return something, even when no user
         return {
           user: state.user,
           uiLibraries: state.user ? state.uiLibraries : [],
@@ -815,16 +814,13 @@ export const useAppStore = create<AppState>()(
           selectedSnippet: state.user ? state.selectedSnippet : null,
         };
       },
-      // Add merge function to handle rehydration
       merge: (persistedState, currentState) => {
         const persisted = persistedState as Partial<AppState>;
         
-        // If no user in persisted state, use current (empty) state
         if (!persisted.user) {
           return currentState;
         }
         
-        // Merge persisted state into current state
         return {
           ...currentState,
           ...persisted,
@@ -832,13 +828,11 @@ export const useAppStore = create<AppState>()(
       },
       onRehydrateStorage: () => (state) => {
         if (state) {
-          // Filter out tabs that don't belong to current user
           if (state.user && state.openTabs) {
             state.openTabs = state.openTabs.filter(
               tab => tab.userId === state.user?.id
             );
             
-            // If active tab was filtered out, clear it
             if (state.activeTabId && !state.openTabs.find(t => t.id === state.activeTabId)) {
               state.activeTabId = null;
               state.selectedSnippet = null;

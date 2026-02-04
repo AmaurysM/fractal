@@ -89,7 +89,7 @@ export default function Home() {
   };
 
   useEffect(() => {
-    if (user && isHydrated) {
+    if (user?.id && isHydrated) {
       Promise.all([
         fetchLibraries(user.id),
         fetchSnippets(user.id),
@@ -99,20 +99,20 @@ export default function Home() {
         console.error("Error fetching initial data:", error);
       });
     }
-  }, [user, isHydrated, fetchLibraries, fetchSnippets, fetchParentLibraries, fetchParentSnippets]);
+  }, [user?.id, isHydrated, fetchLibraries, fetchSnippets, fetchParentLibraries, fetchParentSnippets]);
 
-  const isInitialLoading = !user || !isHydrated;
+  const isInitialLoading = !user?.id || !isHydrated;
 
-  const isDataLoading = isHydrated && user &&
+  const isDataLoading = isHydrated && user?.id &&
     (isFetchingParentLibraries || isFetchingParentSnippets) &&
     parentLibraries.length === 0 &&
     parentSnippets.length === 0;
 
   // Helper function to get latest snippet data
   const getLatestSnippet = (snippet: Snippet): Snippet => {
-    return snippets.find(s => s.id === snippet.id) || 
-           parentSnippets.find(s => s.id === snippet.id) || 
-           snippet;
+    return snippets.find(s => s.id === snippet.id) ||
+      parentSnippets.find(s => s.id === snippet.id) ||
+      snippet;
   };
 
   return (
@@ -172,8 +172,8 @@ export default function Home() {
             <button
               onClick={() => setActivity(ActivityItem.Explorer)}
               className={`w-12 h-12 flex items-center justify-center transition-colors relative ${activity === ActivityItem.Explorer
-                  ? 'text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-white'
-                  : 'text-[#858585] hover:text-white'
+                ? 'text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-white'
+                : 'text-[#858585] hover:text-white'
                 }`}
               title="Explorer"
               disabled={isInitialLoading}
@@ -183,8 +183,8 @@ export default function Home() {
             <button
               onClick={() => setActivity(ActivityItem.Search)}
               className={`w-12 h-12 flex items-center justify-center transition-colors relative ${activity === ActivityItem.Search
-                  ? 'text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-white'
-                  : 'text-[#858585] hover:text-white'
+                ? 'text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-white'
+                : 'text-[#858585] hover:text-white'
                 }`}
               title="Search"
               disabled={isInitialLoading}
@@ -256,7 +256,7 @@ export default function Home() {
                       !(lastSelectedItem && 'title' in lastSelectedItem && !('text' in lastSelectedItem)) && (
                         <TreeItemCreation
                           type={ExplorerItemType.Folder}
-                          onSuccess={() => fetchParentLibraries(user.id)}
+                          onSuccess={() => user?.id && fetchParentLibraries(user.id)}
                         />
                       )
                     )}
@@ -284,7 +284,7 @@ export default function Home() {
                       !(lastSelectedItem && 'title' in lastSelectedItem && !('text' in lastSelectedItem)) && (
                         <TreeItemCreation
                           type={ExplorerItemType.File}
-                          onSuccess={() => fetchParentSnippets(user.id)}
+                          onSuccess={() => user?.id && fetchParentSnippets(user.id)}
                         />
                       )
                     )}
@@ -413,8 +413,8 @@ export default function Home() {
 
         <PanelResizeHandle
           className={`transition-all duration-150 ${hoveringResizer || isDragging
-              ? 'w-1 bg-[#007acc]'
-              : 'w-px bg-[#3e3e42]'
+            ? 'w-1 bg-[#007acc]'
+            : 'w-px bg-[#3e3e42]'
             } cursor-col-resize`}
           onMouseEnter={() => setHoveringResizer(true)}
           onMouseLeave={() => setHoveringResizer(false)}
