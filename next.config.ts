@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-const nextConfig = {
+const nextConfig: NextConfig = {
   reactStrictMode: false,
 
   eslint: {
@@ -13,6 +13,6 @@ const nextConfig = {
       "lh3.googleusercontent.com",
     ],
   },
-} satisfies NextConfig;
+};
 
 export default nextConfig;
