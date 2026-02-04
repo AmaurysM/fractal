@@ -115,6 +115,8 @@ export const TreeItem = ({
         isAddingSnippet,
         handleTreeItemSelect,
         lastSelectedItem,
+        uiSnippets,
+        uiLibraries,
     } = useAppStore();
 
     const [isExpanded, setIsExpanded] = useState(false);
@@ -128,9 +130,13 @@ export const TreeItem = ({
 
     const isSelected = lastSelectedItem?.id === item.id;
 
-    // Get language config for files
+    // Get language config for files - use latest data from store
+    const latestItem = type === ExplorerItemType.File 
+        ? (uiSnippets.find(s => s.id === item.id) || item)
+        : item;
+    
     const langConfig = type === ExplorerItemType.File 
-        ? getLanguageConfig((item as Snippet).language) 
+        ? getLanguageConfig((latestItem as Snippet).language) 
         : null;
     const FileIcon = langConfig?.icon || AiOutlineFileText;
 
@@ -173,6 +179,46 @@ export const TreeItem = ({
             setLoadingChildren(false);
         }
     };
+
+    // Sync child files with store data to get real-time updates
+    useEffect(() => {
+        if (childFiles && childFiles.length > 0) {
+            const updatedChildFiles = childFiles.map(childFile => {
+                const latestVersion = uiSnippets.find(s => s.id === childFile.id);
+                return latestVersion || childFile;
+            });
+            
+            // Only update if something actually changed
+            const hasChanges = updatedChildFiles.some((updated, idx) => {
+                const current = childFiles[idx];
+                return updated.title !== current.title || 
+                       updated.language !== current.language;
+            });
+            
+            if (hasChanges) {
+                setChildFiles(updatedChildFiles);
+            }
+        }
+    }, [uiSnippets]);
+
+    // Sync child folders with store data
+    useEffect(() => {
+        if (childFolders && childFolders.length > 0) {
+            const updatedChildFolders = childFolders.map(childFolder => {
+                const latestVersion = uiLibraries.find(l => l.id === childFolder.id);
+                return latestVersion || childFolder;
+            });
+            
+            const hasChanges = updatedChildFolders.some((updated, idx) => {
+                const current = childFolders[idx];
+                return updated.title !== current.title;
+            });
+            
+            if (hasChanges) {
+                setChildFolders(updatedChildFolders);
+            }
+        }
+    }, [uiLibraries]);
 
     useEffect(() => {
         if (!user) return;
@@ -354,8 +400,8 @@ export const TreeItem = ({
 
                 <span className="flex-1 text-[13px] truncate text-[#cccccc] font-normal">
                     {type === ExplorerItemType.Folder
-                        ? (item as Library).title
-                        : (item as Snippet).title}
+                        ? (latestItem as Library).title
+                        : (latestItem as Snippet).title}
                 </span>
 
                 {type === ExplorerItemType.File && (

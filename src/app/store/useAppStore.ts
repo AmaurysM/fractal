@@ -130,8 +130,10 @@ export const useAppStore = create<AppState>()(
         const currentUserId = state.user?.id;
         const newUserId = user?.id;
 
-        if (currentUserId !== newUserId) {
-          // Clear persisted storage when user changes
+        // Only clear storage if we're switching between different logged-in users
+        // Don't clear when: null -> user (initial login) or user -> null (logout handled elsewhere)
+        if (currentUserId && newUserId && currentUserId !== newUserId) {
+          // Different user logged in - clear everything
           localStorage.removeItem("fractal-storage");
 
           set({
@@ -152,6 +154,7 @@ export const useAppStore = create<AppState>()(
             lastSelectedItem: null,
           });
         } else {
+          // Same user or initial load - just update user, preserve tabs and other state
           set({ user });
         }
       },
@@ -639,25 +642,8 @@ export const useAppStore = create<AppState>()(
       },
 
       saveSnippet: async (updatedSnippet: Snippet) => {
-        set((state) => ({
-          uiSnippets: state.uiSnippets.map((s) =>
-            s.id === updatedSnippet.id ? updatedSnippet : s,
-          ),
-          uiParentSnippets: state.uiParentSnippets.map((s) =>
-            s.id === updatedSnippet.id ? updatedSnippet : s,
-          ),
-          selectedSnippet:
-            state.selectedSnippet?.id === updatedSnippet.id
-              ? updatedSnippet
-              : state.selectedSnippet,
-          openTabs: state.openTabs.map((tab) =>
-            tab.id === updatedSnippet.id ? updatedSnippet : tab,
-          ),
-          foundSnippets: state.foundSnippets.map((s) =>
-            s.id === updatedSnippet.id ? updatedSnippet : s,
-          ),
-        }));
-
+        // Don't update UI arrays here - they're already updated in real-time by CodeDisplay
+        // Just persist to database and update db arrays
         try {
           const res = await fetch(`/api/snippets`, {
             method: "PATCH",
@@ -674,6 +660,7 @@ export const useAppStore = create<AppState>()(
 
           if (!res.ok) throw new Error("Failed to update snippet");
 
+          // Only update the db arrays after successful save
           set((state) => ({
             dbSnippets: state.dbSnippets.map((s) =>
               s.id === updatedSnippet.id ? updatedSnippet : s,
@@ -684,10 +671,20 @@ export const useAppStore = create<AppState>()(
           }));
         } catch (error) {
           console.error("Error updating snippet:", error);
-
+          
+          // On error, revert UI to match database state
           set((state) => ({
             uiSnippets: [...state.dbSnippets],
             uiParentSnippets: [...state.dbParentSnippets],
+            openTabs: state.openTabs.map(tab => {
+              const dbSnippet = state.dbSnippets.find(s => s.id === tab.id) ||
+                               state.dbParentSnippets.find(s => s.id === tab.id);
+              return dbSnippet || tab;
+            }),
+            selectedSnippet: state.selectedSnippet ? 
+              (state.dbSnippets.find(s => s.id === state.selectedSnippet?.id) ||
+               state.dbParentSnippets.find(s => s.id === state.selectedSnippet?.id) ||
+               state.selectedSnippet) : null,
           }));
         }
       },
@@ -828,11 +825,13 @@ export const useAppStore = create<AppState>()(
       },
       onRehydrateStorage: () => (state) => {
         if (state) {
+          // Clean up tabs that don't belong to current user
           if (state.user && state.openTabs) {
             state.openTabs = state.openTabs.filter(
               tab => tab.userId === state.user?.id
             );
             
+            // If active tab was filtered out, clear it
             if (state.activeTabId && !state.openTabs.find(t => t.id === state.activeTabId)) {
               state.activeTabId = null;
               state.selectedSnippet = null;

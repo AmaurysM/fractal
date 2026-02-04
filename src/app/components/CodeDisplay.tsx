@@ -118,6 +118,19 @@ export const CodeDisplay = () => {
 
     // Create updated snippet with new value
     const updated = { ...selectedSnippet, [field]: value };
+    
+    // Immediately update the snippet in the store's UI arrays for real-time explorer updates
+    const { uiSnippets, uiParentSnippets, openTabs, foundSnippets } = useAppStore.getState();
+    
+    useAppStore.setState({
+      uiSnippets: uiSnippets.map(s => s.id === updated.id ? updated : s),
+      uiParentSnippets: uiParentSnippets.map(s => s.id === updated.id ? updated : s),
+      openTabs: openTabs.map(tab => tab.id === updated.id ? updated : tab),
+      foundSnippets: foundSnippets.map(s => s.id === updated.id ? updated : s),
+      selectedSnippet: updated,
+      lastSelectedItem: updated
+    });
+    
     setSaveStatus('unsaved');
     scheduleSave(updated);
   };
@@ -237,35 +250,95 @@ export const CodeDisplay = () => {
   };
 
   const handleFilenameEdit = () => {
-    const ext = getFileExtension(uiLanguage);
-    setEditingFilename(`${uiTitle}.${ext}`);
+    // Just show the title for editing, not the extension
+    setEditingFilename(uiTitle);
     setIsEditingFilename(true);
   };
 
   const handleFilenameChange = (newFilename: string) => {
     setEditingFilename(newFilename);
     
-    // Detect language from extension
+    if (!selectedSnippet) return;
+    
+    // Check if filename has an extension
     const match = newFilename.match(/\.([^.]+)$/);
+    
     if (match) {
+      // Has extension - update both title and language
       const ext = match[1].toLowerCase();
       const lang = LANGUAGES.find(l => l.ext === ext);
+      const title = newFilename.substring(0, newFilename.lastIndexOf('.'));
+      
       if (lang) {
-        // Extract title without extension
-        const title = newFilename.substring(0, newFilename.lastIndexOf('.'));
+        // Valid extension found
         setUiTitle(title);
         setUiLanguage(lang.value);
         
-        if (selectedSnippet) {
-          const updated = { 
-            ...selectedSnippet, 
-            title, 
-            language: lang.value 
-          };
-          setSaveStatus('unsaved');
-          scheduleSave(updated);
-        }
+        const updated = { 
+          ...selectedSnippet, 
+          title, 
+          language: lang.value 
+        };
+        
+        // Immediately update the snippet in the store's UI arrays for real-time explorer updates
+        const { uiSnippets, uiParentSnippets, openTabs, foundSnippets } = useAppStore.getState();
+        
+        useAppStore.setState({
+          uiSnippets: uiSnippets.map(s => s.id === updated.id ? updated : s),
+          uiParentSnippets: uiParentSnippets.map(s => s.id === updated.id ? updated : s),
+          openTabs: openTabs.map(tab => tab.id === updated.id ? updated : tab),
+          foundSnippets: foundSnippets.map(s => s.id === updated.id ? updated : s),
+          selectedSnippet: updated,
+          lastSelectedItem: updated
+        });
+        
+        setSaveStatus('unsaved');
+        scheduleSave(updated);
+      } else {
+        // Extension not recognized, just update the title
+        setUiTitle(title);
+        
+        const updated = { 
+          ...selectedSnippet, 
+          title
+        };
+        
+        const { uiSnippets, uiParentSnippets, openTabs, foundSnippets } = useAppStore.getState();
+        
+        useAppStore.setState({
+          uiSnippets: uiSnippets.map(s => s.id === updated.id ? updated : s),
+          uiParentSnippets: uiParentSnippets.map(s => s.id === updated.id ? updated : s),
+          openTabs: openTabs.map(tab => tab.id === updated.id ? updated : tab),
+          foundSnippets: foundSnippets.map(s => s.id === updated.id ? updated : s),
+          selectedSnippet: updated,
+          lastSelectedItem: updated
+        });
+        
+        setSaveStatus('unsaved');
+        scheduleSave(updated);
       }
+    } else {
+      // No extension - just update the title, keep current language
+      setUiTitle(newFilename);
+      
+      const updated = { 
+        ...selectedSnippet, 
+        title: newFilename
+      };
+      
+      const { uiSnippets, uiParentSnippets, openTabs, foundSnippets } = useAppStore.getState();
+      
+      useAppStore.setState({
+        uiSnippets: uiSnippets.map(s => s.id === updated.id ? updated : s),
+        uiParentSnippets: uiParentSnippets.map(s => s.id === updated.id ? updated : s),
+        openTabs: openTabs.map(tab => tab.id === updated.id ? updated : tab),
+        foundSnippets: foundSnippets.map(s => s.id === updated.id ? updated : s),
+        selectedSnippet: updated,
+        lastSelectedItem: updated
+      });
+      
+      setSaveStatus('unsaved');
+      scheduleSave(updated);
     }
   };
 
