@@ -1,17 +1,18 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  /* config options here */
+const nextConfig = {
   reactStrictMode: false,
+
   eslint: {
     ignoreDuringBuilds: true,
   },
-};
 
-module.exports = {
   images: {
-    domains: ["avatars.githubusercontent.com", "lh3.googleusercontent.com"],
+    domains: [
+      "avatars.githubusercontent.com",
+      "lh3.googleusercontent.com",
+    ],
   },
-};
+} satisfies NextConfig;
 
 export default nextConfig;
