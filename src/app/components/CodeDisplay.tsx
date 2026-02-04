@@ -39,6 +39,7 @@ export const CodeDisplay = () => {
   const [uiTitle, setUiTitle] = useState("");
 
   const {
+    user,
     openTabs,
     activeTabId,
     selectedSnippet,
@@ -53,6 +54,10 @@ export const CodeDisplay = () => {
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const saveTimeout = useRef<number | null>(null);
   const tabContextMenuRef = useRef<HTMLDivElement>(null);
+
+  const userTabs = openTabs.filter(tab => tab.userId === user?.id);
+  const userSelectedSnippet = selectedSnippet?.userId === user?.id ? selectedSnippet : null;
+
 
   useEffect(() => {
     if (selectedSnippet) {
@@ -215,7 +220,7 @@ export const CodeDisplay = () => {
     );
   }
 
-  if (openTabs.length === 0) {
+  if (userTabs.length === 0) {
     return (
       <div className="h-full flex flex-col items-center justify-center bg-[#1e1e1e]">
         <div className="text-center max-w-md px-8">
@@ -231,7 +236,7 @@ export const CodeDisplay = () => {
     );
   }
 
-  const snippet = selectedSnippet;
+  const snippet = userSelectedSnippet;
   if (!snippet) return null;
 
   const lineCount = uiText ? uiText.split("\n").length : 0;
@@ -245,7 +250,7 @@ export const CodeDisplay = () => {
     <div className={containerClasses}>
       {/* Tab Bar */}
       <div className="h-8.75 bg-[#252526] border-b border-[#3e3e42] flex items-center overflow-x-auto overflow-y-hidden">
-        {openTabs.map((tab) => {
+        {userTabs.map((tab) => { 
           const isActive = tab.id === activeTabId;
           const hasUnsaved = isActive && saveStatus === 'unsaved';
 
@@ -253,8 +258,8 @@ export const CodeDisplay = () => {
             <div
               key={tab.id}
               className={`flex items-center gap-2 px-3 py-1 min-w-30 max-w-50 cursor-pointer border-r border-[#252526] ${isActive
-                ? 'bg-[#1e1e1e] border-t-2 border-t-[#007acc] text-[#cccccc]'
-                : 'bg-[#2d2d2d] text-[#969696] hover:bg-[#2a2d2e]'
+                  ? 'bg-[#1e1e1e] border-t-2 border-t-[#007acc] text-[#cccccc]'
+                  : 'bg-[#2d2d2d] text-[#969696] hover:bg-[#2a2d2e]'
                 }`}
               onClick={() => setActiveTab(tab.id)}
               onContextMenu={(e) => handleTabContextMenu(e, tab.id)}
@@ -460,7 +465,7 @@ export const CodeDisplay = () => {
         <div className="flex items-center gap-4 opacity-80">
           <span>UTF-8</span>
           <span>{LANGUAGES.find(l => l.value === uiLanguage)?.label || "Plain Text"}</span>
-          <span>{openTabs.length} {openTabs.length === 1 ? 'file' : 'files'} open</span>
+          <span>{userTabs.length} {userTabs.length === 1 ? 'file' : 'files'} open</span>
         </div>
       </div>
     </div>

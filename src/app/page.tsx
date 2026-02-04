@@ -118,7 +118,7 @@ export default function Home() {
   return (
     <div className="h-screen flex flex-col bg-[#1e1e1e]">
       {/* Header */}
-      <div className="h-[35px] bg-[#323233] border-b border-[#3e3e42] flex items-center justify-between px-4">
+      <div className="h-8.75 bg-[#323233] border-b border-[#3e3e42] flex items-center justify-between px-4">
         <div className="flex items-center gap-3">
           <div className="text-[13px] font-medium text-[#cccccc] tracking-tight">Voronoi</div>
           <div className="text-[11px] text-[#858585]">Code Library Manager</div>
@@ -145,7 +145,7 @@ export default function Home() {
                     <BiUser className="w-3 h-3 text-[#cccccc]" />
                   )}
                 </div>
-                <span className="text-[11px] text-[#cccccc] max-w-[150px] truncate">{user?.email}</span>
+                <span className="text-[11px] text-[#cccccc] max-w-37.5 truncate">{user?.email}</span>
               </button>
 
               <div className="absolute right-0 top-full mt-1 w-48 bg-[#252526] border border-[#454545] rounded-sm shadow-2xl py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
@@ -199,7 +199,7 @@ export default function Home() {
           {isInitialLoading ? (
             // Initial loading skeleton (before hydration)
             <>
-              <div className="h-[35px] flex items-center justify-between px-3 border-b border-[#3e3e42]">
+              <div className="h-8.75 flex items-center justify-between px-3 border-b border-[#3e3e42]">
                 <div className="h-3 w-16 bg-[#3e3e42] rounded animate-pulse"></div>
                 <div className="flex items-center gap-1">
                   <div className="w-7 h-7 bg-[#3e3e42] rounded animate-pulse"></div>
@@ -214,7 +214,7 @@ export default function Home() {
           ) : activity === ActivityItem.Explorer ? (
             <>
               {/* Explorer Header */}
-              <div className="h-[35px] flex items-center justify-between px-3 border-b border-[#3e3e42]">
+              <div className="h-8.75 flex items-center justify-between px-3 border-b border-[#3e3e42]">
                 <h3 className="text-[11px] font-medium text-[#cccccc] uppercase tracking-wider">Explorer</h3>
                 <div className="flex items-center gap-1">
                   <button
@@ -334,7 +334,7 @@ export default function Home() {
           ) : (
             // Search View
             <div className="flex flex-col h-full">
-              <div className="h-[35px] flex items-center px-3 border-b border-[#3e3e42]">
+              <div className="h-8.75 flex items-center px-3 border-b border-[#3e3e42]">
                 <h3 className="text-[11px] font-medium text-[#cccccc] uppercase tracking-wider">Search</h3>
               </div>
 
@@ -438,15 +438,15 @@ export default function Home() {
                 </p>
                 <div className="space-y-2 text-left max-w-xs mx-auto">
                   <div className="flex items-center gap-3 text-[#858585] text-sm">
-                    <VscFiles className="w-4 h-4 flex-shrink-0" />
+                    <VscFiles className="w-4 h-4 shrink-0" />
                     <span>Browse your libraries in the explorer</span>
                   </div>
                   <div className="flex items-center gap-3 text-[#858585] text-sm">
-                    <VscSearch className="w-4 h-4 flex-shrink-0" />
+                    <VscSearch className="w-4 h-4 shrink-0" />
                     <span>Search across all your snippets</span>
                   </div>
                   <div className="flex items-center gap-3 text-[#858585] text-sm">
-                    <BiCode className="w-4 h-4 flex-shrink-0" />
+                    <BiCode className="w-4 h-4 shrink-0" />
                     <span>Click any snippet to view it here</span>
                   </div>
                 </div>
