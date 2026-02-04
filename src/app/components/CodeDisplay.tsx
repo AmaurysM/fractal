@@ -47,6 +47,7 @@ export const CodeDisplay = () => {
     setActiveTab,
     closeAllTabs,
     closeOtherTabs,
+    isHydrated
   } = useAppStore();
 
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -206,6 +207,14 @@ export const CodeDisplay = () => {
     }
   };
 
+  if (!isHydrated) {
+    return (
+      <div className="h-full flex items-center justify-center bg-[#1e1e1e]">
+        <div className="text-[#858585]">Loading...</div>
+      </div>
+    );
+  }
+
   if (openTabs.length === 0) {
     return (
       <div className="h-full flex flex-col items-center justify-center bg-[#1e1e1e]">
@@ -244,8 +253,8 @@ export const CodeDisplay = () => {
             <div
               key={tab.id}
               className={`flex items-center gap-2 px-3 py-1 min-w-30 max-w-50 cursor-pointer border-r border-[#252526] ${isActive
-                  ? 'bg-[#1e1e1e] border-t-2 border-t-[#007acc] text-[#cccccc]'
-                  : 'bg-[#2d2d2d] text-[#969696] hover:bg-[#2a2d2e]'
+                ? 'bg-[#1e1e1e] border-t-2 border-t-[#007acc] text-[#cccccc]'
+                : 'bg-[#2d2d2d] text-[#969696] hover:bg-[#2a2d2e]'
                 }`}
               onClick={() => setActiveTab(tab.id)}
               onContextMenu={(e) => handleTabContextMenu(e, tab.id)}
