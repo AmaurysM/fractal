@@ -53,7 +53,8 @@ export default function Home() {
     selectedSnippet,
     lastSelectedItem,
     setSelectedSnippet,
-    setLastSelectedItem
+    setLastSelectedItem,
+    openTab
   } = useAppStore();
 
   useEffect(() => {
@@ -98,6 +99,13 @@ export default function Home() {
     (isFetchingParentLibraries || isFetchingParentSnippets) &&
     parentLibraries.length === 0 &&
     parentSnippets.length === 0;
+
+  // Helper function to get latest snippet data
+  const getLatestSnippet = (snippet: Snippet): Snippet => {
+    return snippets.find(s => s.id === snippet.id) || 
+           parentSnippets.find(s => s.id === snippet.id) || 
+           snippet;
+  };
 
   return (
     <div className="h-screen flex flex-col bg-[#1e1e1e]">
@@ -278,8 +286,9 @@ export default function Home() {
                         key={snip.id}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setLastSelectedItem(snip);
-                          setSelectedSnippet(snip);
+                          const latestSnippet = getLatestSnippet(snip);
+                          setLastSelectedItem(latestSnippet);
+                          openTab(latestSnippet);
                         }}
                       >
                         <TreeItem item={snip} type={ExplorerItemType.File} />
@@ -360,8 +369,9 @@ export default function Home() {
                         key={snip.id}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setLastSelectedItem(snip);
-                          setSelectedSnippet(snip);
+                          const latestSnippet = getLatestSnippet(snip);
+                          setLastSelectedItem(latestSnippet);
+                          openTab(latestSnippet);
                         }}
                       >
                         <TreeItem item={snip} type={ExplorerItemType.File} />

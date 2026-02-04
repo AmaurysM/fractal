@@ -62,7 +62,14 @@ export default function EnhancedVoronoiBackground() {
 
       const points2D: Pt[] = pointsRef.current.map(p => [p.x, p.y]);
       const delaunay = Delaunay.from(points2D);
-      const voronoi = delaunay.voronoi([0, 0, worldW.current, worldH.current]);
+      const pad = 2;
+
+      const voronoi = delaunay.voronoi([
+        -pad,
+        -pad,
+        worldW.current + pad,
+        worldH.current + pad,
+      ]);
 
       for (let i = 0; i < pointsRef.current.length; i++) {
         const cell = voronoi.cellPolygon(i);
@@ -178,8 +185,14 @@ export default function EnhancedVoronoiBackground() {
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 z-0 cursor-auto"
-      style={{ background: '#000' }}
+      className="absolute inset-0 z-0 cursor-auto block"
+      style={{
+        background: "#000",
+        border: "none",
+        outline: "none",
+        display: "block",
+      }}
     />
+
   );
 }

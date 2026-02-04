@@ -147,23 +147,49 @@ export const useAppStore = create<AppState>()(
       setIsAddingSnippet: (isAddingSnippet) => set({ isAddingSnippet }),
       setSelectedSnippet: (selectedSnippet) => set({ selectedSnippet }),
       setLastSelectedItem: (lastSelectedItem) => set({ lastSelectedItem }),
-      setUser: (user) => set({ user }),
+      setUser: (user) => {
+        const currentUser = get().user;
+        
+        // If user changed, clear tabs and selections
+        if (currentUser && user && currentUser.id !== user.id) {
+          set({
+            user,
+            openTabs: [],
+            activeTabId: null,
+            selectedSnippet: null,
+            lastSelectedItem: null,
+          });
+        } else {
+          set({ user });
+        }
+      },
 
       // Tab management methods
       openTab: (snippet: Snippet) => {
-        const { openTabs } = get();
-        const existingTab = openTabs.find((tab) => tab.id === snippet.id);
+        const { openTabs, uiSnippets, uiParentSnippets } = get();
+        
+        // Get the latest version of the snippet from the store
+        const latestSnippet = uiSnippets.find(s => s.id === snippet.id) || 
+                              uiParentSnippets.find(s => s.id === snippet.id) || 
+                              snippet;
+        
+        const existingTabIndex = openTabs.findIndex((tab) => tab.id === latestSnippet.id);
 
-        if (existingTab) {
+        if (existingTabIndex !== -1) {
+          // Update the existing tab with latest data
+          const updatedTabs = [...openTabs];
+          updatedTabs[existingTabIndex] = latestSnippet;
+          
           set({
-            activeTabId: snippet.id,
-            selectedSnippet: snippet,
+            openTabs: updatedTabs,
+            activeTabId: latestSnippet.id,
+            selectedSnippet: latestSnippet,
           });
         } else {
           set({
-            openTabs: [...openTabs, snippet],
-            activeTabId: snippet.id,
-            selectedSnippet: snippet,
+            openTabs: [...openTabs, latestSnippet],
+            activeTabId: latestSnippet.id,
+            selectedSnippet: latestSnippet,
           });
         }
       },
@@ -198,13 +224,24 @@ export const useAppStore = create<AppState>()(
       },
 
       setActiveTab: (snippetId: string) => {
-        const { openTabs } = get();
+        const { openTabs, uiSnippets, uiParentSnippets } = get();
         const tab = openTabs.find((t) => t.id === snippetId);
 
         if (tab) {
+          // Get the latest version from the store
+          const latestSnippet = uiSnippets.find(s => s.id === snippetId) || 
+                                uiParentSnippets.find(s => s.id === snippetId) || 
+                                tab;
+          
+          // Update the tab with latest data
+          const updatedTabs = openTabs.map(t => 
+            t.id === snippetId ? latestSnippet : t
+          );
+          
           set({
+            openTabs: updatedTabs,
             activeTabId: snippetId,
-            selectedSnippet: tab,
+            selectedSnippet: latestSnippet,
           });
         }
       },
@@ -218,14 +255,19 @@ export const useAppStore = create<AppState>()(
       },
 
       closeOtherTabs: (snippetId: string) => {
-        const { openTabs } = get();
+        const { openTabs, uiSnippets, uiParentSnippets } = get();
         const keepTab = openTabs.find((tab) => tab.id === snippetId);
 
         if (keepTab) {
+          // Get latest version
+          const latestSnippet = uiSnippets.find(s => s.id === snippetId) || 
+                                uiParentSnippets.find(s => s.id === snippetId) || 
+                                keepTab;
+          
           set({
-            openTabs: [keepTab],
+            openTabs: [latestSnippet],
             activeTabId: snippetId,
-            selectedSnippet: keepTab,
+            selectedSnippet: latestSnippet,
           });
         }
       },
@@ -614,7 +656,7 @@ export const useAppStore = create<AppState>()(
       },
 
       saveSnippet: async (updatedSnippet: Snippet) => {
-        // Optimistic UI update
+        // Optimistic UI update - update all references
         set((state) => ({
           uiSnippets: state.uiSnippets.map((s) =>
             s.id === updatedSnippet.id ? updatedSnippet : s,
@@ -628,6 +670,9 @@ export const useAppStore = create<AppState>()(
               : state.selectedSnippet,
           openTabs: state.openTabs.map((tab) =>
             tab.id === updatedSnippet.id ? updatedSnippet : tab,
+          ),
+          foundSnippets: state.foundSnippets.map((s) =>
+            s.id === updatedSnippet.id ? updatedSnippet : s,
           ),
         }));
 
@@ -778,6 +823,8 @@ export const useAppStore = create<AppState>()(
     {
       name: "fractal-storage",
       partialize: (state) => ({
+        // Persist user ID to detect user changes
+        userId: state.user?.id,
         // Only persist UI state and tabs
         uiLibraries: state.uiLibraries,
         uiParentLibraries: state.uiParentLibraries,

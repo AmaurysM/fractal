@@ -33,7 +33,6 @@ export const CodeDisplay = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [tabContextMenu, setTabContextMenu] = useState<{ x: number; y: number; snippetId: string } | null>(null);
 
-  // Separate UI state from DB state
   const [uiText, setUiText] = useState("");
   const [uiDescription, setUiDescription] = useState("");
   const [uiLanguage, setUiLanguage] = useState("");
@@ -236,7 +235,7 @@ export const CodeDisplay = () => {
   return (
     <div className={containerClasses}>
       {/* Tab Bar */}
-      <div className="h-[35px] bg-[#252526] border-b border-[#3e3e42] flex items-center overflow-x-auto overflow-y-hidden">
+      <div className="h-8.75 bg-[#252526] border-b border-[#3e3e42] flex items-center overflow-x-auto overflow-y-hidden">
         {openTabs.map((tab) => {
           const isActive = tab.id === activeTabId;
           const hasUnsaved = isActive && saveStatus === 'unsaved';
@@ -244,19 +243,19 @@ export const CodeDisplay = () => {
           return (
             <div
               key={tab.id}
-              className={`flex items-center gap-2 px-3 py-1 min-w-[120px] max-w-[200px] cursor-pointer border-r border-[#252526] ${isActive
+              className={`flex items-center gap-2 px-3 py-1 min-w-30 max-w-50 cursor-pointer border-r border-[#252526] ${isActive
                   ? 'bg-[#1e1e1e] border-t-2 border-t-[#007acc] text-[#cccccc]'
                   : 'bg-[#2d2d2d] text-[#969696] hover:bg-[#2a2d2e]'
                 }`}
               onClick={() => setActiveTab(tab.id)}
               onContextMenu={(e) => handleTabContextMenu(e, tab.id)}
             >
-              <VscCode className="w-4 h-4 flex-shrink-0" />
+              <VscCode className="w-4 h-4 shrink-0" />
               <span className="flex-1 text-[13px] truncate">{tab.title || "Untitled"}</span>
               {hasUnsaved && <span className="text-[#858585] text-xs">●</span>}
               <button
                 onClick={(e) => handleCloseTab(e, tab.id)}
-                className="flex-shrink-0 hover:bg-[#3e3e42] p-0.5 rounded-sm transition-colors"
+                className="shrink-0 hover:bg-[#3e3e42] p-0.5 rounded-sm transition-colors"
               >
                 <VscClose className="w-3 h-3" />
               </button>
@@ -269,7 +268,7 @@ export const CodeDisplay = () => {
       {tabContextMenu && (
         <div
           ref={tabContextMenuRef}
-          className="fixed bg-[#252526] border border-[#454545] rounded-sm shadow-2xl py-1 z-50 min-w-[180px]"
+          className="fixed bg-[#252526] border border-[#454545] rounded-sm shadow-2xl py-1 z-50 min-w-45"
           style={{ left: tabContextMenu.x, top: tabContextMenu.y }}
         >
           <button
@@ -303,7 +302,7 @@ export const CodeDisplay = () => {
       )}
 
       {/* Toolbar */}
-      <div className="h-[35px] bg-[#323233] border-b border-[#3e3e42] flex items-center justify-between px-4">
+      <div className="h-8.75 bg-[#323233] border-b border-[#3e3e42] flex items-center justify-between px-4">
         <div className="flex items-center gap-3">
           <div className="relative">
             <button
@@ -421,7 +420,7 @@ export const CodeDisplay = () => {
       </div>
 
       {/* Status Bar */}
-      <div className="h-[22px] bg-[#007acc] flex items-center justify-between px-3 text-[11px] text-white">
+      <div className="h-5.5 bg-[#007acc] flex items-center justify-between px-3 text-[11px] text-white">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
             {saveStatus === 'saving' && (
