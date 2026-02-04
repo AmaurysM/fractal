@@ -55,9 +55,9 @@ export const CodeDisplay = () => {
   const saveTimeout = useRef<number | null>(null);
   const tabContextMenuRef = useRef<HTMLDivElement>(null);
 
-  const userTabs = openTabs.filter(tab => tab.userId === user?.id);
-  const userSelectedSnippet = selectedSnippet?.userId === user?.id ? selectedSnippet : null;
-
+  // Remove the user filtering - just use openTabs and selectedSnippet directly
+  const userTabs = openTabs;
+  const snippet = selectedSnippet;
 
   useEffect(() => {
     if (selectedSnippet) {
@@ -236,8 +236,21 @@ export const CodeDisplay = () => {
     );
   }
 
-  const snippet = userSelectedSnippet;
-  if (!snippet) return null;
+  if (!snippet) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center bg-[#1e1e1e]">
+        <div className="text-center max-w-md px-8">
+          <VscCode className="w-24 h-24 text-[#3e3e42] mx-auto mb-6" />
+          <h3 className="text-xl font-medium text-[#cccccc] mb-3">
+            No File Selected
+          </h3>
+          <p className="text-[#858585] text-sm leading-relaxed">
+            Select a code snippet from the sidebar to view and edit.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const lineCount = uiText ? uiText.split("\n").length : 0;
   const charCount = uiText.length;
