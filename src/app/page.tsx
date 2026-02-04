@@ -99,7 +99,7 @@ export default function Home() {
         console.error("Error fetching initial data:", error);
       });
     }
-  }, [user, isHydrated, fetchLibraries, fetchSnippets, fetchParentLibraries, fetchParentSnippets, selectedSnippet]);
+  }, [user, isHydrated, fetchLibraries, fetchSnippets, fetchParentLibraries, fetchParentSnippets]);
 
   const isInitialLoading = !user || !isHydrated;
 
