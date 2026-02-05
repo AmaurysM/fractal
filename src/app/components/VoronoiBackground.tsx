@@ -8,9 +8,12 @@ type Pt = [number, number];
 interface VoronoiPoint {
   x: number;
   y: number;
+  targetX: number;
+  targetY: number;
+  alpha: number; // For fade-in animation
 }
 
-export default function EnhancedVoronoiBackground() {
+export default function VoronoiBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number | null>(null);
 
@@ -18,11 +21,21 @@ export default function EnhancedVoronoiBackground() {
   const worldH = useRef(0);
   const pointsRef = useRef<VoronoiPoint[]>([]);
   const densityRef = useRef(0);
+  const scrollYRef = useRef(0);
 
-  const createPoint = useCallback((x: number, y: number): VoronoiPoint => {
+  const createPoint = useCallback((x: number, y: number, instant = false): VoronoiPoint => {
+    // Add random offset for smoother appearance
+    const offsetDistance = instant ? 0 : 50 + Math.random() * 100;
+    const angle = Math.random() * Math.PI * 2;
+    const offsetX = Math.cos(angle) * offsetDistance;
+    const offsetY = Math.sin(angle) * offsetDistance;
+    
     return {
-      x,
-      y,
+      x: instant ? x : x + offsetX,
+      y: instant ? y : y + offsetY,
+      targetX: x,
+      targetY: y,
+      alpha: instant ? 1 : 0, // Start invisible for animated entrance
     };
   }, []);
 
@@ -36,14 +49,17 @@ export default function EnhancedVoronoiBackground() {
 
     const initW = window.innerWidth;
     const initH = window.innerHeight;
-    const initialCount = 20;
+    // Reduced from 10 to 4 points initially
+    const initialCount = 4;
 
     worldW.current = initW;
     worldH.current = initH;
+    // Much lower density for fewer points
     densityRef.current = initialCount / (initW * initH);
 
+    // Initialize points in viewport coordinates with instant visibility
     pointsRef.current = Array.from({ length: initialCount }, () =>
-      createPoint(Math.random() * initW, Math.random() * initH)
+      createPoint(Math.random() * initW, Math.random() * initH, true)
     );
 
     const draw = () => {
@@ -55,10 +71,22 @@ export default function EnhancedVoronoiBackground() {
 
       ctx.setTransform(sx, 0, 0, sy, 0, 0);
       ctx.fillStyle = "rgb(29, 35, 42)";
-
       ctx.fillRect(0, 0, worldW.current, worldH.current);
 
       if (pointsRef.current.length === 0) return;
+
+      // Animate points towards their targets and fade in
+      pointsRef.current.forEach(point => {
+        // Smooth interpolation towards target with easing
+        const easeAmount = point.alpha < 0.5 ? 0.15 : 0.08; // Faster initially, then slow down
+        point.x += (point.targetX - point.x) * easeAmount;
+        point.y += (point.targetY - point.y) * easeAmount;
+        
+        // Faster fade in animation
+        if (point.alpha < 1) {
+          point.alpha = Math.min(1, point.alpha + 0.05);
+        }
+      });
 
       const points2D: Pt[] = pointsRef.current.map(p => [p.x, p.y]);
       const delaunay = Delaunay.from(points2D);
@@ -81,15 +109,15 @@ export default function EnhancedVoronoiBackground() {
           ctx.lineTo(cell[j][0], cell[j][1]);
         }
         ctx.closePath();
-
       }
 
       ctx.beginPath();
       for (let i = 0; i < pointsRef.current.length; i++) {
         const cell = voronoi.cellPolygon(i);
-
         if (!cell) continue;
 
+        const alpha = pointsRef.current[i].alpha;
+        
         ctx.moveTo(cell[0][0], cell[0][1]);
         for (let j = 1; j < cell.length; j++) {
           ctx.lineTo(cell[j][0], cell[j][1]);
@@ -97,7 +125,9 @@ export default function EnhancedVoronoiBackground() {
         ctx.closePath();
       }
 
-      ctx.strokeStyle = "rgb(202, 213, 226)";
+      // Apply alpha to stroke for fade-in effect
+      const avgAlpha = pointsRef.current.reduce((sum, p) => sum + p.alpha, 0) / pointsRef.current.length;
+      ctx.strokeStyle = `rgba(202, 213, 226, ${avgAlpha})`;
       ctx.lineWidth = 0.8 / ((sx + sy) / 2);
       ctx.stroke();
     };
@@ -117,7 +147,8 @@ export default function EnhancedVoronoiBackground() {
       for (let i = 0; i < n; i++) {
         pointsRef.current.push(createPoint(
           x0 + Math.random() * width,
-          y0 + Math.random() * height
+          y0 + Math.random() * height,
+          false // Animate new points
         ));
       }
     };
@@ -154,6 +185,40 @@ export default function EnhancedVoronoiBackground() {
       worldH.current = newH;
     };
 
+    const handleScroll = () => {
+      const newScrollY = window.scrollY || window.pageYOffset;
+      const scrollDelta = newScrollY - scrollYRef.current;
+      
+      if (scrollDelta === 0) return;
+
+      const viewportH = window.innerHeight;
+      const margin = viewportH * 0.2;
+
+      if (scrollDelta > 0) {
+        // Scrolling down
+        pointsRef.current = pointsRef.current.filter(point => 
+          point.y > -margin
+        );
+        
+        const bottomY = viewportH;
+        addRandomPointsInRect(0, bottomY - margin, worldW.current, bottomY + margin);
+      } else {
+        // Scrolling up
+        pointsRef.current = pointsRef.current.filter(point => 
+          point.y < viewportH + margin
+        );
+        
+        addRandomPointsInRect(0, -margin, worldW.current, margin);
+      }
+
+      // Shift all points by the scroll delta
+      pointsRef.current.forEach(point => {
+        point.y -= scrollDelta;
+        point.targetY -= scrollDelta;
+      });
+
+      scrollYRef.current = newScrollY;
+    };
 
     const handleClick = (e: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
@@ -163,20 +228,19 @@ export default function EnhancedVoronoiBackground() {
       const clickX = (e.clientX - rect.left) * sx;
       const clickY = (e.clientY - rect.top) * sy;
 
-      pointsRef.current.push(createPoint(
-        clickX,
-        clickY
-      ));
+      pointsRef.current.push(createPoint(clickX, clickY, false));
     };
 
     handleResize();
     animate();
 
     window.addEventListener("resize", handleResize);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     canvas.addEventListener("click", handleClick);
 
     return () => {
-      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("resize", handleScroll);
+      window.removeEventListener("scroll", handleScroll);
       canvas.removeEventListener("click", handleClick);
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
@@ -185,7 +249,7 @@ export default function EnhancedVoronoiBackground() {
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 z-0 cursor-auto block"
+      className="fixed inset-0 z-0 cursor-auto block"
       style={{
         background: "#000",
         border: "none",
@@ -193,6 +257,5 @@ export default function EnhancedVoronoiBackground() {
         display: "block",
       }}
     />
-
   );
 }

@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import VoronoiBackground from "../components/VoronoiBackground"; // your animated background
+import VoronoiBackground from "../components/VoronoiBackground";
 
 export default function LandingPage() {
   return (
