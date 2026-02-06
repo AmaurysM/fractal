@@ -24,7 +24,6 @@ export default function VoronoiBackground() {
   const scrollYRef = useRef(0);
 
   const createPoint = useCallback((x: number, y: number, instant = false): VoronoiPoint => {
-    // Add random offset for smoother appearance
     const offsetDistance = instant ? 0 : 50 + Math.random() * 100;
     const angle = Math.random() * Math.PI * 2;
     const offsetX = Math.cos(angle) * offsetDistance;
@@ -35,7 +34,7 @@ export default function VoronoiBackground() {
       y: instant ? y : y + offsetY,
       targetX: x,
       targetY: y,
-      alpha: instant ? 1 : 0, // Start invisible for animated entrance
+      alpha: instant ? 1 : 0,
     };
   }, []);
 
@@ -49,15 +48,12 @@ export default function VoronoiBackground() {
 
     const initW = window.innerWidth;
     const initH = window.innerHeight;
-    // Reduced from 10 to 4 points initially
-    const initialCount = 4;
+    const initialCount = 8;
 
     worldW.current = initW;
     worldH.current = initH;
-    // Much lower density for fewer points
     densityRef.current = initialCount / (initW * initH);
 
-    // Initialize points in viewport coordinates with instant visibility
     pointsRef.current = Array.from({ length: initialCount }, () =>
       createPoint(Math.random() * initW, Math.random() * initH, true)
     );
@@ -75,14 +71,11 @@ export default function VoronoiBackground() {
 
       if (pointsRef.current.length === 0) return;
 
-      // Animate points towards their targets and fade in
       pointsRef.current.forEach(point => {
-        // Smooth interpolation towards target with easing
-        const easeAmount = point.alpha < 0.5 ? 0.15 : 0.08; // Faster initially, then slow down
+        const easeAmount = point.alpha < 0.5 ? 0.15 : 0.08; 
         point.x += (point.targetX - point.x) * easeAmount;
         point.y += (point.targetY - point.y) * easeAmount;
         
-        // Faster fade in animation
         if (point.alpha < 1) {
           point.alpha = Math.min(1, point.alpha + 0.05);
         }
