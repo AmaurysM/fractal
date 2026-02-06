@@ -48,7 +48,7 @@ export default function VoronoiBackground() {
 
     const initW = window.innerWidth;
     const initH = window.innerHeight;
-    const initialCount = 8;
+    const initialCount = 20;
 
     worldW.current = initW;
     worldH.current = initH;
