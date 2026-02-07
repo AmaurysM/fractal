@@ -6,70 +6,72 @@ import { ExplorerItemType } from "../../../types/types";
 import { useAppStore } from "../store/useAppStore";
 import { AiOutlineFileText } from "react-icons/ai";
 
-export const TreeItemCreation = ({
+export const TreeItemEdit = ({
     level = 0,
+    editingTitle = "",
     type = ExplorerItemType.Folder,
-    parentId,
+    itemId,
     onSuccess,
 }: {
     level?: number;
+    editingTitle?: string;
     type?: ExplorerItemType;
-    parentId?: string;
+    itemId: string;
     onSuccess?: () => void;
 }) => {
-    const [title, setTitle] = useState("");
+    const [title, setTitle] = useState(editingTitle);
     const [isHovered, setIsHovered] = useState(false);
-    const [isCreating, setIsCreating] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
     const {
-        addSnippet,
-        addFolder,
-        cancelAddFolder,
-        cancelAddSnippet,
+        editFolder,
+        editSnippet,
+        cancelEditFolder,
+        cancelEditSnippet,
     } = useAppStore();
 
     const isFolder = type === ExplorerItemType.Folder;
     const paddingLeft = level * 16 + 6;
 
-    const add = async (title: string) => {
+    const edit = async (title: string) => {
         if (!title.trim()) {
             setError("Name cannot be empty");
             return;
         }
 
-        setIsCreating(true);
+        setIsEditing(true);
         setError(null);
 
         try {
             if (isFolder) {
-                await addFolder(title, parentId, onSuccess);
+                await editFolder(title, itemId, onSuccess);
             } else {
-                await addSnippet(title, parentId, onSuccess);
+                await editSnippet(title, itemId, onSuccess);
             }
         } catch (err) {
             setError((err as Error).message || "Failed to create");
-            setIsCreating(false);
+            setIsEditing(false);
         }
     };
 
     const cancel = () => {
-        if (isCreating) return;
+        if (isEditing) return;
 
-        isFolder ? cancelAddFolder() : cancelAddSnippet();
-        setIsCreating(false);
+        isFolder ? cancelEditFolder() : cancelEditSnippet();
+        setIsEditing(false);
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (isCreating) return;
+        if (isEditing) return;
 
-        if (e.key === "Enter") add(title);
+        if (e.key === "Enter") edit(title);
         if (e.key === "Escape") cancel();
     };
 
     const handleBlur = () => {
-        if (title.trim() && !isCreating && !error) add(title);
+        if (title.trim() && !isEditing && !error) edit(title);
     };
 
     useEffect(() => {
@@ -86,15 +88,16 @@ export const TreeItemCreation = ({
         <div>
             <div
                 className={`
-                    group flex items-center border-l-2  py-0
+                    group flex items-center border-l-2 py-0
                     border-[#1D232A] transition-colors
                     ${isHovered ? "bg-gray-700 border-gray-700" : ""}
-                    ${isCreating ? "opacity-75" : ""}
+                    ${isEditing ? "opacity-75" : ""}
                 `}
                 style={{ paddingLeft }}
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
             >
+                {/* ICON — fixed, never stretches */}
                 <div className="flex-none">
                     {isFolder ? (
                         <BiFolder className="w-4 h-4 mr-1.5 text-blue-500" />
@@ -103,6 +106,7 @@ export const TreeItemCreation = ({
                     )}
                 </div>
 
+                {/* INPUT — does the squash/stretch */}
                 <input
                     ref={inputRef}
                     type="text"
@@ -113,7 +117,7 @@ export const TreeItemCreation = ({
                     }}
                     onKeyDown={handleKeyDown}
                     onBlur={handleBlur}
-                    disabled={isCreating}
+                    disabled={isEditing}
                     placeholder={isFolder ? "New folder" : "New file"}
                     className={`
                         flex-1 text-sm bg-transparent text-white
@@ -124,11 +128,11 @@ export const TreeItemCreation = ({
                         group-hover:scale-x-100
                         focus:scale-x-100
                         ${error ? "border-red-500" : "border-gray-500 focus:border-blue-500"}
-                        ${isCreating ? "cursor-not-allowed" : ""}
+                        ${isEditing ? "cursor-not-allowed" : ""}
                     `}
                 />
 
-                {isCreating && (
+                {isEditing && (
                     <div className="flex-none ml-2 w-3 h-3 border-2 border-gray-500 border-t-blue-500 rounded-full animate-spin" />
                 )}
             </div>

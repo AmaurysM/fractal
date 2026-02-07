@@ -27,11 +27,16 @@ interface AppState {
   isAddingSnippet: boolean;
   isFindingSnippets: boolean;
   isFindingLibraries: boolean;
+  isEditingSnippet: boolean;
+  isEditingFolder: boolean;
 
   libraryController?: AbortController;
   snippetController?: AbortController;
   addFolderController?: AbortController;
   addSnippetController?: AbortController;
+
+  editFolderController?: AbortController;
+  editSnippetController?: AbortController;
 
   selectedSnippet: Snippet | null;
   lastSelectedItem: Snippet | Library | null;
@@ -51,9 +56,15 @@ interface AppState {
     parentId?: string,
     onSuccess?: () => void,
   ) => Promise<void>;
+  editFolder: (
+    title: string,
+    itemId: string,
+    onSuccess?: () => void,
+  ) => Promise<void>;
   deleteFolder: (libraryId: string) => Promise<void>;
   setIsAddingLibrary: (isAddingLibrary: boolean) => void;
   cancelAddFolder: () => void;
+  cancelEditFolder: () => void;
 
   fetchSnippets: (userId: string) => Promise<void>;
   fetchParentSnippets: (userId: string) => Promise<void>;
@@ -62,10 +73,20 @@ interface AppState {
     parentId?: string,
     onSuccess?: () => void,
   ) => Promise<void>;
+  editSnippet: (
+    title: string,
+    itemId: string,
+    onSuccess?: () => void,
+  ) => Promise<void>;
+
   deleteSnippet: (fileId: string) => Promise<void>;
   saveSnippet: (snippet: Snippet) => Promise<void>;
   setIsAddingSnippet: (isAddingSnippet: boolean) => void;
   cancelAddSnippet: () => void;
+  cancelEditSnippet: () => void;
+
+  setIsEditingSnippet: (isEditingSnippet: boolean) => void;
+  setIsEditingFolder: (isEditingFolder: boolean) => void;
 
   findSnippets: (title: string) => Promise<void>;
   findLibraries: (title: string) => Promise<void>;
@@ -111,6 +132,8 @@ export const useAppStore = create<AppState>()(
       isAddingSnippet: false,
       isFindingLibraries: false,
       isFindingSnippets: false,
+      isEditingSnippet: false,
+      isEditingFolder: false,
 
       selectedSnippet: null,
       lastSelectedItem: null,
@@ -125,6 +148,9 @@ export const useAppStore = create<AppState>()(
       setIsAddingSnippet: (isAddingSnippet) => set({ isAddingSnippet }),
       setSelectedSnippet: (selectedSnippet) => set({ selectedSnippet }),
       setLastSelectedItem: (lastSelectedItem) => set({ lastSelectedItem }),
+      setIsEditingFolder: (isEditingFolder) => set({ isEditingFolder }),
+      setIsEditingSnippet: (isEditingSnippet) => set({ isEditingSnippet }),
+
       setUser: (user) => {
         const state = get();
         const currentUserId = state.user?.id;
@@ -437,6 +463,59 @@ export const useAppStore = create<AppState>()(
           set({ isAddingLibrary: false, addFolderController: undefined });
         }
       },
+      editFolder: async (title, folderId, onSuccess) => {
+        const { user } = get();
+        if (!user) return;
+
+        set({ isEditingFolder: true }); // Add this
+
+        const prevUiLibraries = get().uiLibraries;
+        const prevUiParentLibraries = get().uiParentLibraries;
+
+        set((state) => ({
+          uiLibraries: state.uiLibraries.map((lib) =>
+            lib.id === folderId ? { ...lib, title } : lib,
+          ),
+          uiParentLibraries: state.uiParentLibraries.map((lib) =>
+            lib.id === folderId ? { ...lib, title } : lib,
+          ),
+        }));
+
+        try {
+          const res = await fetch(`/api/libraries/title`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: folderId, title }),
+          });
+
+          if (!res.ok) throw new Error("Failed to edit folder");
+
+          const updatedFolder: Library = await res.json();
+
+          set((state) => ({
+            dbLibraries: state.dbLibraries.map((lib) =>
+              lib.id === folderId ? updatedFolder : lib,
+            ),
+            dbParentLibraries: state.dbParentLibraries.map((lib) =>
+              lib.id === folderId ? updatedFolder : lib,
+            ),
+          }));
+
+          onSuccess?.();
+        } catch (e) {
+          console.error("Error editing folder:", e);
+
+          // rollback
+          set({
+            uiLibraries: prevUiLibraries,
+            uiParentLibraries: prevUiParentLibraries,
+          });
+
+          throw e; // Re-throw so component can catch it
+        } finally {
+          set({ isEditingFolder: false }); // Add this
+        }
+      },
 
       addSnippet: async (title, parentId, onSuccess) => {
         const { user } = get();
@@ -510,6 +589,59 @@ export const useAppStore = create<AppState>()(
         }
       },
 
+      editSnippet: async (title, snippetId, onSuccess) => {
+        const { user } = get();
+        if (!user) return;
+
+        set({ isEditingSnippet: true }); // Add this
+
+        const prevUiSnippets = get().uiSnippets;
+        const prevUiParentSnippets = get().uiParentSnippets;
+
+        set((state) => ({
+          uiSnippets: state.uiSnippets.map((snip) =>
+            snip.id === snippetId ? { ...snip, title } : snip,
+          ),
+          uiParentSnippets: state.uiParentSnippets.map((snip) =>
+            snip.id === snippetId ? { ...snip, title } : snip,
+          ),
+        }));
+
+        try {
+          const res = await fetch(`/api/snippets/title`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: snippetId, title }),
+          });
+
+          if (!res.ok) throw new Error("Failed to edit snippet");
+
+          const updatedSnippet: Snippet = await res.json();
+
+          set((state) => ({
+            dbSnippets: state.dbSnippets.map((snip) =>
+              snip.id === snippetId ? updatedSnippet : snip,
+            ),
+            dbParentSnippets: state.dbParentSnippets.map((snip) =>
+              snip.id === snippetId ? updatedSnippet : snip,
+            ),
+          }));
+
+          onSuccess?.();
+        } catch (e) {
+          console.error("Error editing snippet:", e);
+
+          set({
+            uiSnippets: prevUiSnippets,
+            uiParentSnippets: prevUiParentSnippets,
+          });
+
+          throw e; // Re-throw so component can catch it
+        } finally {
+          set({ isEditingSnippet: false }); // Add this
+        }
+      },
+
       cancelAddFolder: () => {
         const controller = get().addFolderController;
         if (controller) {
@@ -523,6 +655,22 @@ export const useAppStore = create<AppState>()(
         if (controller) {
           controller.abort();
           set({ isAddingSnippet: false, addSnippetController: undefined });
+        }
+      },
+
+      cancelEditFolder: () => {
+        const controller = get().editFolderController;
+        if (controller) {
+          controller.abort();
+          set({ isEditingFolder: false, editFolderController: undefined });
+        }
+      },
+
+      cancelEditSnippet: () => {
+        const controller = get().editSnippetController;
+        if (controller) {
+          controller.abort();
+          set({ isEditingSnippet: false, editSnippetController: undefined });
         }
       },
 
@@ -671,20 +819,26 @@ export const useAppStore = create<AppState>()(
           }));
         } catch (error) {
           console.error("Error updating snippet:", error);
-          
+
           // On error, revert UI to match database state
           set((state) => ({
             uiSnippets: [...state.dbSnippets],
             uiParentSnippets: [...state.dbParentSnippets],
-            openTabs: state.openTabs.map(tab => {
-              const dbSnippet = state.dbSnippets.find(s => s.id === tab.id) ||
-                               state.dbParentSnippets.find(s => s.id === tab.id);
+            openTabs: state.openTabs.map((tab) => {
+              const dbSnippet =
+                state.dbSnippets.find((s) => s.id === tab.id) ||
+                state.dbParentSnippets.find((s) => s.id === tab.id);
               return dbSnippet || tab;
             }),
-            selectedSnippet: state.selectedSnippet ? 
-              (state.dbSnippets.find(s => s.id === state.selectedSnippet?.id) ||
-               state.dbParentSnippets.find(s => s.id === state.selectedSnippet?.id) ||
-               state.selectedSnippet) : null,
+            selectedSnippet: state.selectedSnippet
+              ? state.dbSnippets.find(
+                  (s) => s.id === state.selectedSnippet?.id,
+                ) ||
+                state.dbParentSnippets.find(
+                  (s) => s.id === state.selectedSnippet?.id,
+                ) ||
+                state.selectedSnippet
+              : null,
           }));
         }
       },
@@ -813,11 +967,11 @@ export const useAppStore = create<AppState>()(
       },
       merge: (persistedState, currentState) => {
         const persisted = persistedState as Partial<AppState>;
-        
+
         if (!persisted.user) {
           return currentState;
         }
-        
+
         return {
           ...currentState,
           ...persisted,
@@ -828,16 +982,19 @@ export const useAppStore = create<AppState>()(
           // Clean up tabs that don't belong to current user
           if (state.user && state.openTabs) {
             state.openTabs = state.openTabs.filter(
-              tab => tab.userId === state.user?.id
+              (tab) => tab.userId === state.user?.id,
             );
-            
+
             // If active tab was filtered out, clear it
-            if (state.activeTabId && !state.openTabs.find(t => t.id === state.activeTabId)) {
+            if (
+              state.activeTabId &&
+              !state.openTabs.find((t) => t.id === state.activeTabId)
+            ) {
               state.activeTabId = null;
               state.selectedSnippet = null;
             }
           }
-          
+
           state.isHydrated = true;
         }
       },

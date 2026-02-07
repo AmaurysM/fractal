@@ -13,6 +13,7 @@ import Image from "next/image";
 import { signOut } from "next-auth/react"
 import { useAppStore } from "./store/useAppStore";
 import { StatsFooterSkeleton, TreeSkeleton } from "./components/SkeletonLoading";
+import { TreeItemEdit } from "./components/TreeItemEdit";
 
 enum ActivityItem {
   Explorer = "Explorer",
@@ -54,7 +55,11 @@ export default function Home() {
     lastSelectedItem,
     setSelectedSnippet,
     setLastSelectedItem,
-    openTab
+    openTab,
+    isEditingSnippet,
+    setIsEditingSnippet,
+    isEditingFolder,
+    setIsEditingFolder,
   } = useAppStore();
 
   useEffect(() => {
@@ -110,9 +115,9 @@ export default function Home() {
 
   // Helper function to get latest snippet data
   const getLatestSnippet = (snippet: Snippet): Snippet => {
-    return snippets.find(s => s.id === snippet.id) || 
-           parentSnippets.find(s => s.id === snippet.id) || 
-           snippet;
+    return snippets.find(s => s.id === snippet.id) ||
+      parentSnippets.find(s => s.id === snippet.id) ||
+      snippet;
   };
 
   return (
@@ -172,8 +177,8 @@ export default function Home() {
             <button
               onClick={() => setActivity(ActivityItem.Explorer)}
               className={`w-12 h-12 flex items-center justify-center transition-colors relative ${activity === ActivityItem.Explorer
-                  ? 'text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-white'
-                  : 'text-[#858585] hover:text-white'
+                ? 'text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-white'
+                : 'text-[#858585] hover:text-white'
                 }`}
               title="Explorer"
               disabled={isInitialLoading}
@@ -183,8 +188,8 @@ export default function Home() {
             <button
               onClick={() => setActivity(ActivityItem.Search)}
               className={`w-12 h-12 flex items-center justify-center transition-colors relative ${activity === ActivityItem.Search
-                  ? 'text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-white'
-                  : 'text-[#858585] hover:text-white'
+                ? 'text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-white'
+                : 'text-[#858585] hover:text-white'
                 }`}
               title="Search"
               disabled={isInitialLoading}
@@ -243,7 +248,6 @@ export default function Home() {
               {/* File Tree */}
               <div className="flex-1 overflow-auto" onClick={handleSidebarClick}>
                 {isDataLoading ? (
-                  // Show skeleton only when initially loading with no cached data
                   <div className="p-2">
                     <TreeSkeleton count={6} />
                   </div>
@@ -271,8 +275,23 @@ export default function Home() {
                               setLastSelectedItem(lib);
                             }}
                           >
-                            <TreeItem item={lib} type={ExplorerItemType.Folder} />
-                          </div>
+                            {isEditingFolder && lastSelectedItem?.id === lib.id ?
+                              <TreeItemEdit
+                                editingTitle={lib.title}
+                                type={ExplorerItemType.Folder}
+                                itemId={lib.id}
+                                onSuccess={() => {
+                                  setIsEditingFolder(false);
+                                  fetchLibraries(lib.id);
+                                }}
+                              />
+                              :
+                              <TreeItem
+                                item={lib}
+                                type={ExplorerItemType.Folder}
+                              />
+                            }                          
+                            </div>
                         ))}
                       </div>
                     )}
@@ -292,7 +311,7 @@ export default function Home() {
                     {parentSnippets.map((snip) => {
                       // Get the latest version from store to ensure real-time updates
                       const latestSnippet = getLatestSnippet(snip);
-                      
+
                       return (
                         <div
                           key={snip.id}
@@ -302,8 +321,22 @@ export default function Home() {
                             openTab(latestSnippet);
                           }}
                         >
-                          <TreeItem item={latestSnippet} type={ExplorerItemType.File} />
-                        </div>
+                          {isEditingSnippet && lastSelectedItem?.id === latestSnippet.id ?
+                            <TreeItemEdit
+                              editingTitle={latestSnippet.title}
+                              type={ExplorerItemType.File}
+                              itemId={latestSnippet.id}
+                              onSuccess={() => {
+                                setIsEditingSnippet(false);
+                                fetchSnippets(latestSnippet.id);
+                              }}
+                            />
+                            :
+                            <TreeItem
+                              item={latestSnippet}
+                              type={ExplorerItemType.File}
+                            />
+                          }                        </div>
                       );
                     })}
 
@@ -372,14 +405,28 @@ export default function Home() {
                           setLastSelectedItem(lib);
                         }}
                       >
-                        <TreeItem item={lib} type={ExplorerItemType.Folder} />
+                        {isEditingFolder && lastSelectedItem?.id === lib.id ?
+                          <TreeItemEdit
+                            editingTitle={lib.title}
+                            type={ExplorerItemType.Folder}
+                            itemId={lib.id}
+                            onSuccess={() => {
+                              setIsEditingFolder(false);
+                              fetchLibraries(lib.id);
+                            }}
+                          />
+                          :
+                          <TreeItem
+                            item={lib}
+                            type={ExplorerItemType.Folder}
+                          />
+                        }
                       </div>
                     ))}
 
                     {foundSnippets.map((snip: Snippet) => {
-                      // Get the latest version from store to ensure real-time updates
                       const latestSnippet = getLatestSnippet(snip);
-                      
+
                       return (
                         <div
                           key={snip.id}
@@ -389,7 +436,22 @@ export default function Home() {
                             openTab(latestSnippet);
                           }}
                         >
-                          <TreeItem item={latestSnippet} type={ExplorerItemType.File} />
+                          {isEditingSnippet && lastSelectedItem?.id === latestSnippet.id ?
+                            <TreeItemEdit
+                              editingTitle={latestSnippet.title}
+                              type={ExplorerItemType.File}
+                              itemId={latestSnippet.id}
+                              onSuccess={() => {
+                                setIsEditingSnippet(false);
+                                fetchSnippets(latestSnippet.id);
+                              }}
+                            />
+                            :
+                            <TreeItem
+                              item={latestSnippet}
+                              type={ExplorerItemType.File}
+                            />
+                          }
                         </div>
                       );
                     })}
@@ -421,8 +483,8 @@ export default function Home() {
 
         <PanelResizeHandle
           className={`transition-all duration-150 ${hoveringResizer || isDragging
-              ? 'w-1 bg-[#007acc]'
-              : 'w-px bg-[#3e3e42]'
+            ? 'w-1 bg-[#007acc]'
+            : 'w-px bg-[#3e3e42]'
             } cursor-col-resize`}
           onMouseEnter={() => setHoveringResizer(true)}
           onMouseLeave={() => setHoveringResizer(false)}

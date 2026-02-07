@@ -11,29 +11,31 @@ import { TbBrandCSharp } from "react-icons/tb";
 import { AiOutlineFileText } from "react-icons/ai";
 import { TreeItemCreation } from "./TreeItemCreation";
 import { useAppStore } from "../store/useAppStore";
+import { CgRename } from "react-icons/cg";
+import { TreeItemEdit } from "./TreeItemEdit";
 
 const LANGUAGE_CONFIG = [
-  { value: "", icon: AiOutlineFileText, ext: "txt", color: "#858585" },
-  { value: "JavaScript", icon: SiJavascript, ext: "js", color: "#f7df1e" },
-  { value: "TypeScript", icon: SiTypescript, ext: "ts", color: "#3178c6" },
-  { value: "Python", icon: SiPython, ext: "py", color: "#3776ab" },
-  { value: "Java", icon: FaJava, ext: "java", color: "#007396" },
-  { value: "C++", icon: SiCplusplus, ext: "cpp", color: "#00599c" },
-  { value: "C#", icon: TbBrandCSharp , ext: "cs", color: "#239120" },
-  { value: "C", icon: SiC, ext: "c", color: "#a8b9cc" },
-  { value: "Kotlin", icon: SiKotlin, ext: "kt", color: "#7f52ff" },
-  { value: "Node.js", icon: SiJavascript, ext: "js", color: "#339933" },
-  { value: "HTML", icon: SiHtml5, ext: "html", color: "#e34c26" },
-  { value: "CSS", icon: SiCss3, ext: "css", color: "#1572b6" },
-  { value: "JSON", icon: SiJson, ext: "json", color: "#000000" },
-  { value: "SQL", icon: AiOutlineFileText, ext: "sql", color: "#e38c00" },
-  { value: "PHP", icon: SiPhp, ext: "php", color: "#777bb4" },
-  { value: "Go", icon: SiGo, ext: "go", color: "#00add8" },
-  { value: "Rust", icon: SiRust, ext: "rs", color: "#000000" },
+    { value: "", icon: AiOutlineFileText, ext: "txt", color: "#858585" },
+    { value: "JavaScript", icon: SiJavascript, ext: "js", color: "#f7df1e" },
+    { value: "TypeScript", icon: SiTypescript, ext: "ts", color: "#3178c6" },
+    { value: "Python", icon: SiPython, ext: "py", color: "#3776ab" },
+    { value: "Java", icon: FaJava, ext: "java", color: "#007396" },
+    { value: "C++", icon: SiCplusplus, ext: "cpp", color: "#00599c" },
+    { value: "C#", icon: TbBrandCSharp, ext: "cs", color: "#239120" },
+    { value: "C", icon: SiC, ext: "c", color: "#a8b9cc" },
+    { value: "Kotlin", icon: SiKotlin, ext: "kt", color: "#7f52ff" },
+    { value: "Node.js", icon: SiJavascript, ext: "js", color: "#339933" },
+    { value: "HTML", icon: SiHtml5, ext: "html", color: "#e34c26" },
+    { value: "CSS", icon: SiCss3, ext: "css", color: "#1572b6" },
+    { value: "JSON", icon: SiJson, ext: "json", color: "#000000" },
+    { value: "SQL", icon: AiOutlineFileText, ext: "sql", color: "#e38c00" },
+    { value: "PHP", icon: SiPhp, ext: "php", color: "#777bb4" },
+    { value: "Go", icon: SiGo, ext: "go", color: "#00add8" },
+    { value: "Rust", icon: SiRust, ext: "rs", color: "#000000" },
 ];
 
 const getLanguageConfig = (language?: string) => {
-  return LANGUAGE_CONFIG.find(l => l.value === language) || LANGUAGE_CONFIG[0];
+    return LANGUAGE_CONFIG.find(l => l.value === language) || LANGUAGE_CONFIG[0];
 };
 
 const ContextMenu = ({
@@ -72,7 +74,7 @@ const ContextMenu = ({
     return (
         <div
             ref={menuRef}
-            className="fixed bg-[#252526] border border-[#454545] rounded-sm shadow-2xl py-1 z-50 min-w-[200px]"
+            className="fixed bg-[#252526] border border-[#454545] rounded-sm shadow-2xl py-1 z-50 min-w-50"
             style={{ left: x, top: y }}
         >
             {items.map((item, idx) => (
@@ -82,11 +84,10 @@ const ContextMenu = ({
                         item.onClick();
                         onClose();
                     }}
-                    className={`w-full flex items-center gap-3 px-3 py-1.5 text-sm text-left transition-colors ${
-                        item.danger
-                            ? 'hover:bg-[#f48771]/20 text-[#f48771]'
-                            : 'hover:bg-[#2a2d2e] text-[#cccccc]'
-                    }`}
+                    className={`w-full flex items-center gap-3 px-3 py-1.5 text-sm text-left transition-colors ${item.danger
+                        ? 'hover:bg-[#f48771]/20 text-[#f48771]'
+                        : 'hover:bg-[#2a2d2e] text-[#cccccc]'
+                        }`}
                 >
                     <span className="text-base">{item.icon}</span>
                     <span>{item.label}</span>
@@ -117,6 +118,10 @@ export const TreeItem = ({
         lastSelectedItem,
         uiSnippets,
         uiLibraries,
+        isEditingFolder,
+        isEditingSnippet,
+        setIsEditingFolder,
+        setIsEditingSnippet
     } = useAppStore();
 
     const [isExpanded, setIsExpanded] = useState(false);
@@ -131,12 +136,12 @@ export const TreeItem = ({
     const isSelected = lastSelectedItem?.id === item.id;
 
     // Get language config for files - use latest data from store
-    const latestItem = type === ExplorerItemType.File 
+    const latestItem = type === ExplorerItemType.File
         ? (uiSnippets.find(s => s.id === item.id) || item)
         : item;
-    
-    const langConfig = type === ExplorerItemType.File 
-        ? getLanguageConfig((latestItem as Snippet).language) 
+
+    const langConfig = type === ExplorerItemType.File
+        ? getLanguageConfig((latestItem as Snippet).language)
         : null;
     const FileIcon = langConfig?.icon || AiOutlineFileText;
 
@@ -187,14 +192,14 @@ export const TreeItem = ({
                 const latestVersion = uiSnippets.find(s => s.id === childFile.id);
                 return latestVersion || childFile;
             });
-            
+
             // Only update if something actually changed
             const hasChanges = updatedChildFiles.some((updated, idx) => {
                 const current = childFiles[idx];
-                return updated.title !== current.title || 
-                       updated.language !== current.language;
+                return updated.title !== current.title ||
+                    updated.language !== current.language;
             });
-            
+
             if (hasChanges) {
                 setChildFiles(updatedChildFiles);
             }
@@ -208,12 +213,12 @@ export const TreeItem = ({
                 const latestVersion = uiLibraries.find(l => l.id === childFolder.id);
                 return latestVersion || childFolder;
             });
-            
+
             const hasChanges = updatedChildFolders.some((updated, idx) => {
                 const current = childFolders[idx];
                 return updated.title !== current.title;
             });
-            
+
             if (hasChanges) {
                 setChildFolders(updatedChildFolders);
             }
@@ -323,23 +328,26 @@ export const TreeItem = ({
                     setIsExpanded(true);
                 }
             });
+            items.push({
+                label: 'Change Name',
+                icon: <CgRename className="w-4 h-4" />,
+                onClick: () => {
+                    handleTreeItemSelect(item);
+                    setIsEditingFolder(true);
+                }
+
+            });
         } else {
             items.push({
-                label: 'New Folder',
-                icon: <VscNewFolder className="w-4 h-4" />,
+                label: 'Change Name',
+                icon: <CgRename className="w-4 h-4" />,
                 onClick: () => {
                     handleTreeItemSelect(item);
-                    setIsAddingLibrary(true);
+                    setIsEditingSnippet(true);
                 }
-            });
-            items.push({
-                label: 'New File',
-                icon: <VscNewFile className="w-4 h-4" />,
-                onClick: () => {
-                    handleTreeItemSelect(item);
-                    setIsAddingSnippet(true);
-                }
-            });
+
+            })
+
         }
 
         items.push({
@@ -359,13 +367,12 @@ export const TreeItem = ({
     return (
         <div className={isDeleting ? 'opacity-40 pointer-events-none' : ''}>
             <div
-                className={`flex items-center h-[22px] cursor-pointer transition-colors select-none ${
-                    isSelected
-                        ? 'bg-[#37373d]'
-                        : isHovered
+                className={`flex items-center h-5.5 cursor-pointer transition-colors select-none ${isSelected
+                    ? 'bg-[#37373d]'
+                    : isHovered
                         ? 'bg-[#2a2d2e]'
                         : ''
-                }`}
+                    }`}
                 style={{ paddingLeft }}
                 onClick={() => {
                     if (loadingChildren) return;
@@ -383,17 +390,16 @@ export const TreeItem = ({
             >
                 {type === ExplorerItemType.Folder && (
                     <BiChevronRight
-                        className={`w-3 h-3 text-[#cccccc] transition-transform mr-0.5 flex-shrink-0 ${
-                            isExpanded ? 'rotate-90' : ''
-                        } ${loadingChildren ? 'opacity-50' : ''}`}
+                        className={`w-3 h-3 text-[#cccccc] transition-transform mr-0.5 shrink-0 ${isExpanded ? 'rotate-90' : ''
+                            } ${loadingChildren ? 'opacity-50' : ''}`}
                     />
                 )}
 
                 {type === ExplorerItemType.Folder ? (
-                    <BiFolder className={`w-4 h-4 mr-1.5 flex-shrink-0 ${isExpanded ? 'text-[#dcb67a]' : 'text-[#dcb67a]'}`} />
+                    <BiFolder className={`w-4 h-4 mr-1.5 shrink-0 ${isExpanded ? 'text-[#dcb67a]' : 'text-[#dcb67a]'}`} />
                 ) : (
-                    <FileIcon 
-                        className="w-4 h-4 mr-1.5 flex-shrink-0" 
+                    <FileIcon
+                        className="w-4 h-4 mr-1.5 shrink-0"
                         style={{ color: langConfig?.color || '#cccccc' }}
                     />
                 )}
@@ -405,7 +411,7 @@ export const TreeItem = ({
                 </span>
 
                 {type === ExplorerItemType.File && (
-                    <span className="text-[11px] text-[#858585] mr-2 flex-shrink-0">
+                    <span className="text-[11px] text-[#858585] mr-2 shrink-0">
                         .{langConfig?.ext}
                     </span>
                 )}
@@ -443,11 +449,24 @@ export const TreeItem = ({
                                 handleTreeItemSelect(lib);
                             }}
                         >
-                            <TreeItem
-                                item={lib}
-                                type={ExplorerItemType.Folder}
-                                level={level + 1}
-                            />
+                            {isEditingFolder && lastSelectedItem?.id === lib.id ?
+                                <TreeItemEdit
+                                    level={level + 1}
+                                    editingTitle={lib.title}
+                                    type={ExplorerItemType.Folder}
+                                    itemId={lib.id}
+                                    onSuccess={() => {
+                                        setIsEditingFolder(false);
+                                        fetchLibraries(item.id);
+                                    }}
+                                />
+                                :
+                                <TreeItem
+                                    item={lib}
+                                    type={ExplorerItemType.Folder}
+                                    level={level + 1}
+                                />
+                            }
                         </div>
                     ))}
 
@@ -468,11 +487,24 @@ export const TreeItem = ({
                                 handleTreeItemSelect(file);
                             }}
                         >
-                            <TreeItem
-                                item={file}
-                                type={ExplorerItemType.File}
-                                level={level + 1}
-                            />
+                            {isEditingSnippet && lastSelectedItem?.id === file.id ?
+                                <TreeItemEdit
+                                    level={level +1}
+                                    editingTitle={file.title}
+                                    type={ExplorerItemType.File}
+                                    itemId={file.id}
+                                    onSuccess={() => {
+                                        setIsEditingSnippet(false);
+                                        fetchSnippets(item.id);
+                                    }}
+                                />
+                                :
+                                <TreeItem
+                                    item={file}
+                                    type={ExplorerItemType.File}
+                                    level={level + 1}
+                                />
+                            }
                         </div>
                     ))}
                 </div>
