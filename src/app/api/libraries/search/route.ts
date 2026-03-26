@@ -2,6 +2,7 @@ import db from "@/app/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/authOptions";
+import { LibraryDTO } from "../parents/route";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -14,8 +15,8 @@ export async function GET(req: NextRequest) {
   if (!libTitle) return NextResponse.json({ message: "Missing folderTitle" }, { status: 400 });
 
   try {
-    const result = await db.query(
-      'SELECT l.* FROM "Library" l WHERE l.title ILIKE $1 AND l.userid = $2',
+    const result = await db.query<LibraryDTO>(
+      'SELECT l.id, l.title FROM "Library" l WHERE l.title ILIKE $1 AND l.userid = $2',
       [`%${libTitle}%`, userId]
     );
     return NextResponse.json(result.rows);

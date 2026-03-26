@@ -13,14 +13,12 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Query the library junction to find the parent
     const result = await db.query(
       `SELECT parentlibrary FROM "LibraryJunction" WHERE childlibrary = $1 LIMIT 1`,
       [libraryId]
     );
 
     if (result.rows.length === 0) {
-      // No parent found - this is a root level library
       return NextResponse.json({ parentId: null });
     }
 

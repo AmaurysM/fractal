@@ -51,7 +51,7 @@ export const metadata: Metadata = {
   authors: [
     {
       name: 'Amaurys De Los Santos Mendez',
-      url: 'https://www.amaurysdelossantos.com', // optional
+      url: 'https://www.amaurysdelossantos.com',
     },
   ],
 

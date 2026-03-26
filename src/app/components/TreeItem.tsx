@@ -4,290 +4,111 @@ import { useEffect, useState, useRef } from "react";
 import { Library, Snippet, ExplorerItemType } from "../../../types/types";
 import { BiChevronRight, BiFolder, BiTrash } from "react-icons/bi";
 import { VscNewFolder, VscNewFile } from "react-icons/vsc";
-import { SiJavascript, SiTypescript, SiPython, SiCplusplus, SiC, SiKotlin, SiHtml5, SiCss3, SiJson, SiPhp, SiGo, SiRust } from "react-icons/si";
-import { FaJava } from "react-icons/fa6";
-import { TbBrandCSharp } from "react-icons/tb";
-
 import { AiOutlineFileText } from "react-icons/ai";
 import { TreeItemCreation } from "./TreeItemCreation";
-import { useAppStore } from "../store/useAppStore";
 import { CgRename } from "react-icons/cg";
 import { TreeItemEdit } from "./TreeItemEdit";
-
-const LANGUAGE_CONFIG = [
-    { value: "", icon: AiOutlineFileText, ext: "txt", color: "#858585" },
-    { value: "JavaScript", icon: SiJavascript, ext: "js", color: "#f7df1e" },
-    { value: "TypeScript", icon: SiTypescript, ext: "ts", color: "#3178c6" },
-    { value: "Python", icon: SiPython, ext: "py", color: "#3776ab" },
-    { value: "Java", icon: FaJava, ext: "java", color: "#007396" },
-    { value: "C++", icon: SiCplusplus, ext: "cpp", color: "#00599c" },
-    { value: "C#", icon: TbBrandCSharp, ext: "cs", color: "#239120" },
-    { value: "C", icon: SiC, ext: "c", color: "#a8b9cc" },
-    { value: "Kotlin", icon: SiKotlin, ext: "kt", color: "#7f52ff" },
-    { value: "Node.js", icon: SiJavascript, ext: "js", color: "#339933" },
-    { value: "HTML", icon: SiHtml5, ext: "html", color: "#e34c26" },
-    { value: "CSS", icon: SiCss3, ext: "css", color: "#1572b6" },
-    { value: "JSON", icon: SiJson, ext: "json", color: "#000000" },
-    { value: "SQL", icon: AiOutlineFileText, ext: "sql", color: "#e38c00" },
-    { value: "PHP", icon: SiPhp, ext: "php", color: "#777bb4" },
-    { value: "Go", icon: SiGo, ext: "go", color: "#00add8" },
-    { value: "Rust", icon: SiRust, ext: "rs", color: "#000000" },
-];
-
-const getLanguageConfig = (language?: string) => {
-    return LANGUAGE_CONFIG.find(l => l.value === language) || LANGUAGE_CONFIG[0];
-};
-
-const ContextMenu = ({
-    x,
-    y,
-    onClose,
-    items
-}: {
-    x: number;
-    y: number;
-    onClose: () => void;
-    items: Array<{ label: string; icon: React.ReactNode; onClick: () => void; danger?: boolean }>;
-}) => {
-    const menuRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-                onClose();
-            }
-        };
-
-        const handleEscape = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose();
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        document.addEventListener('keydown', handleEscape);
-
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-            document.removeEventListener('keydown', handleEscape);
-        };
-    }, [onClose]);
-
-    return (
-        <div
-            ref={menuRef}
-            className="fixed bg-[#252526] border border-[#454545] rounded-sm shadow-2xl py-1 z-50 min-w-50"
-            style={{ left: x, top: y }}
-        >
-            {items.map((item, idx) => (
-                <button
-                    key={idx}
-                    onClick={() => {
-                        item.onClick();
-                        onClose();
-                    }}
-                    className={`w-full flex items-center gap-3 px-3 py-1.5 text-sm text-left transition-colors ${item.danger
-                        ? 'hover:bg-[#f48771]/20 text-[#f48771]'
-                        : 'hover:bg-[#2a2d2e] text-[#cccccc]'
-                        }`}
-                >
-                    <span className="text-base">{item.icon}</span>
-                    <span>{item.label}</span>
-                </button>
-            ))}
-        </div>
-    );
-};
+import { useLibrary } from "../hooks/useLibrary";
+import { useLibraryStore } from "../store/libraryStore";
+import { useSnippet } from "../hooks/useSnippet";
+import { useSession } from "next-auth/react";
+import { LibraryDTO } from "../api/libraries/parents/route";
+import { SnippetDTO } from "../api/snippets/parents/route";
+import { useTabStore } from "../store/tabStore";
+import { getLanguageConfig, LANGUAGES } from "../../../types/languages";
+import { ContextMenu } from "./ContextMenu";
 
 export const TreeItem = ({
     item,
     type,
     level = 0,
+    onDelete,
 }: {
     item: Library | Snippet;
     type: ExplorerItemType;
     level?: number;
+    onDelete?: (id: string) => void;
 }) => {
+
     const {
-        user,
-        deleteFolder,
-        deleteSnippet,
-        setIsAddingLibrary,
-        isAddingLibrary,
-        setIsAddingSnippet,
-        isAddingSnippet,
-        handleTreeItemSelect,
-        lastSelectedItem,
-        uiSnippets,
-        uiLibraries,
-        isEditingFolder,
+        fetchParentLibraries,
+        searchLibraries,
+        addLibrary,
+        deleteLibrary,
+    } = useLibrary();
+
+    const {
+        fetchParentSnippets,
+        fetchSnippet,
+        deleteSnippet
+    } = useSnippet();
+
+    const {
+        addingSnippet,
+        addingLibrary,
         isEditingSnippet,
+        setIsEditingSnippet,
+        setAddingLibrary,
+        setAddingSnippet,
+        selectedItem,
+        setSelectedItem,
         setIsEditingFolder,
-        setIsEditingSnippet
-    } = useAppStore();
+        isEditingFolder,
+    } = useLibraryStore();
+
+    const { data: session } = useSession();
+    const [libraries, setLibraries] = useState<LibraryDTO[]>([]);
+    const [snippets, setSnippets] = useState<SnippetDTO[]>([]);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [currentItem, setCurrentItem] = useState<Library | Snippet>(item);
 
     const [isExpanded, setIsExpanded] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
-    const [childFolders, setChildFolders] = useState<Library[]>();
-    const [childFiles, setChildFiles] = useState<Snippet[]>();
     const [loadingChildren, setLoadingChildren] = useState(false);
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
-    const [shouldShowCreation, setShouldShowCreation] = useState(false);
-
-    const isSelected = lastSelectedItem?.id === item.id;
-
-    // Get language config for files - use latest data from store
-    const latestItem = type === ExplorerItemType.File
-        ? (uiSnippets.find(s => s.id === item.id) || item)
-        : item;
+    const isSelected = selectedItem === item.id;
 
     const langConfig = type === ExplorerItemType.File
-        ? getLanguageConfig((latestItem as Snippet).language)
+        ? getLanguageConfig((currentItem as Snippet).language)
         : null;
     const FileIcon = langConfig?.icon || AiOutlineFileText;
 
-    const fetchLibraries = async (libraryId: string) => {
-        setLoadingChildren(true);
-        try {
-            const res = await fetch(`api/libraries/children`, {
-                method: "GET",
-                headers: {
-                    "x-library-id": libraryId
+    useEffect(() => {
+        if (!session) return;
+
+        const loadData = async () => {
+            setLoading(true);
+
+            try {
+                if (type === ExplorerItemType.Folder && isExpanded) {
+                    const [libs, snips] = await Promise.all([
+                        fetchParentLibraries(currentItem.id),
+                        fetchParentSnippets(currentItem.id),
+                    ]);
+
+                    if (libs) setLibraries(libs);
+                    if (snips) setSnippets(snips);
                 }
-            });
-            if (!res.ok) throw new Error("Failed to fetch child libraries");
-            const data: Library[] = await res.json();
-            setChildFolders(data);
-        } catch (error) {
-            console.log("Failed to fetch libraries: " + (error as Error).message);
-            setChildFolders([]);
-        } finally {
-            setLoadingChildren(false);
-        }
-    };
 
-    const fetchSnippets = async (libraryId: string) => {
-        setLoadingChildren(true);
-        try {
-            const res = await fetch(`api/snippets/library`, {
-                method: "GET",
-                headers: {
-                    "x-library-id": libraryId
+                if (type === ExplorerItemType.File) {
+                    const updated = await fetchSnippet(currentItem.id);
+                    if (updated) setCurrentItem(updated);
                 }
-            });
-            if (!res.ok) throw new Error("Failed to fetch child files");
-            const data: Snippet[] = await res.json();
-            setChildFiles(data);
-        } catch (error) {
-            console.log("Failed to fetch snippets: " + (error as Error).message);
-            setChildFiles([]);
-        } finally {
-            setLoadingChildren(false);
-        }
-    };
-
-    // Sync child files with store data to get real-time updates
-    useEffect(() => {
-        if (childFiles && childFiles.length > 0) {
-            const updatedChildFiles = childFiles.map(childFile => {
-                const latestVersion = uiSnippets.find(s => s.id === childFile.id);
-                return latestVersion || childFile;
-            });
-
-            // Only update if something actually changed
-            const hasChanges = updatedChildFiles.some((updated, idx) => {
-                const current = childFiles[idx];
-                return updated.title !== current.title ||
-                    updated.language !== current.language;
-            });
-
-            if (hasChanges) {
-                setChildFiles(updatedChildFiles);
+            } catch (error) {
+                console.error("Failed to load item:", error);
+            } finally {
+                setLoading(false);
             }
-        }
-    }, [uiSnippets]);
-
-    // Sync child folders with store data
-    useEffect(() => {
-        if (childFolders && childFolders.length > 0) {
-            const updatedChildFolders = childFolders.map(childFolder => {
-                const latestVersion = uiLibraries.find(l => l.id === childFolder.id);
-                return latestVersion || childFolder;
-            });
-
-            const hasChanges = updatedChildFolders.some((updated, idx) => {
-                const current = childFolders[idx];
-                return updated.title !== current.title;
-            });
-
-            if (hasChanges) {
-                setChildFolders(updatedChildFolders);
-            }
-        }
-    }, [uiLibraries]);
-
-    useEffect(() => {
-        if (!user) return;
-        if (isExpanded) {
-            fetchLibraries(item.id);
-            fetchSnippets(item.id);
-        }
-    }, [isExpanded, item.id, user]);
-
-    useEffect(() => {
-        if (!user) return;
-        if ((isAddingLibrary || isAddingSnippet) && isSelected) {
-            setIsExpanded(true);
-        }
-    }, [isAddingLibrary, isAddingSnippet, user, isSelected]);
-
-    useEffect(() => {
-        const checkIfShouldShowCreation = () => {
-            if (!lastSelectedItem) {
-                setShouldShowCreation(false);
-                return;
-            }
-
-            if ('title' in lastSelectedItem && !('text' in lastSelectedItem)) {
-                if (isSelected && type === ExplorerItemType.Folder) {
-                    setShouldShowCreation(true);
-                } else {
-                    setShouldShowCreation(false);
-                }
-                return;
-            }
-
-            if ('text' in lastSelectedItem) {
-                if (type === ExplorerItemType.Folder && childFiles?.some(f => f.id === lastSelectedItem.id)) {
-                    setShouldShowCreation(true);
-                } else {
-                    setShouldShowCreation(false);
-                }
-                return;
-            }
-
-            setShouldShowCreation(false);
         };
 
-        if (type === ExplorerItemType.Folder && (isAddingLibrary || isAddingSnippet)) {
-            checkIfShouldShowCreation();
-        } else {
-            setShouldShowCreation(false);
-        }
-    }, [lastSelectedItem, isAddingLibrary, isAddingSnippet, type, isSelected, item.id, childFiles]);
-
-    useEffect(() => {
-        if (shouldShowCreation && type === ExplorerItemType.Folder) {
-            setIsExpanded(true);
-            if (!childFolders && !childFiles && !loadingChildren) {
-                fetchLibraries(item.id);
-                fetchSnippets(item.id);
-            }
-        }
-    }, [shouldShowCreation, childFolders, childFiles, loadingChildren, item.id, type]);
+        loadData();
+    }, [isExpanded, type, currentItem.id, session]);
 
     const handleContextMenu = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
+
         setContextMenu({ x: e.clientX, y: e.clientY });
     };
 
@@ -295,10 +116,11 @@ export const TreeItem = ({
         setIsDeleting(true);
         try {
             if (type === ExplorerItemType.Folder) {
-                await deleteFolder(item.id);
+                await deleteLibrary(item.id);
             } else {
                 await deleteSnippet(item.id);
             }
+            onDelete?.(item.id);
         } catch (error) {
             console.error("Failed to delete:", error);
         } finally {
@@ -314,8 +136,8 @@ export const TreeItem = ({
                 label: 'New Folder',
                 icon: <VscNewFolder className="w-4 h-4" />,
                 onClick: () => {
-                    handleTreeItemSelect(item);
-                    setIsAddingLibrary(true);
+                    setSelectedItem(item.id, ExplorerItemType.Folder);
+                    setAddingLibrary(true);
                     setIsExpanded(true);
                 }
             });
@@ -323,8 +145,8 @@ export const TreeItem = ({
                 label: 'New File',
                 icon: <VscNewFile className="w-4 h-4" />,
                 onClick: () => {
-                    handleTreeItemSelect(item);
-                    setIsAddingSnippet(true);
+                    setSelectedItem(item.id, ExplorerItemType.File);
+                    setAddingSnippet(true);
                     setIsExpanded(true);
                 }
             });
@@ -332,7 +154,7 @@ export const TreeItem = ({
                 label: 'Change Name',
                 icon: <CgRename className="w-4 h-4" />,
                 onClick: () => {
-                    handleTreeItemSelect(item);
+                    setSelectedItem(item.id, ExplorerItemType.Folder);
                     setIsEditingFolder(true);
                 }
 
@@ -342,7 +164,7 @@ export const TreeItem = ({
                 label: 'Change Name',
                 icon: <CgRename className="w-4 h-4" />,
                 onClick: () => {
-                    handleTreeItemSelect(item);
+                    setSelectedItem(item.id, ExplorerItemType.File);
                     setIsEditingSnippet(true);
                 }
 
@@ -361,8 +183,11 @@ export const TreeItem = ({
     };
 
     const paddingLeft = level * 12 + 8;
+    function handleClick(item: string): void {
 
-    if (!user) return null;
+        setSelectedItem(item, type);
+
+    }
 
     return (
         <div className={isDeleting ? 'opacity-40 pointer-events-none' : ''}>
@@ -379,10 +204,10 @@ export const TreeItem = ({
 
                     if (type === ExplorerItemType.Folder) {
                         setIsExpanded(!isExpanded);
-                        setIsAddingLibrary(false);
+                        setAddingLibrary(false);
                     }
 
-                    handleTreeItemSelect(item);
+                    handleClick(currentItem.id);
                 }}
                 onContextMenu={handleContextMenu}
                 onMouseEnter={() => setIsHovered(true)}
@@ -406,8 +231,8 @@ export const TreeItem = ({
 
                 <span className="flex-1 text-[13px] truncate text-[#cccccc] font-normal">
                     {type === ExplorerItemType.Folder
-                        ? (latestItem as Library).title
-                        : (latestItem as Snippet).title}
+                        ? (item as Library).title
+                        : (item as Snippet).title}
                 </span>
 
                 {type === ExplorerItemType.File && (
@@ -432,77 +257,99 @@ export const TreeItem = ({
 
             {type === ExplorerItemType.Folder && isExpanded && (
                 <div>
-                    {isAddingLibrary && shouldShowCreation && (
+                    {addingLibrary && isSelected && (
                         <TreeItemCreation
                             level={level + 1}
                             type={ExplorerItemType.Folder}
                             parentId={item.id}
-                            onSuccess={() => fetchLibraries(item.id)}
+                            onSuccess={(newItem) => {
+                                setLibraries(prev => [...prev, newItem as LibraryDTO]);
+                            }}
                         />
                     )}
 
-                    {!loadingChildren && childFolders?.map((lib) => (
+                    {!loadingChildren && libraries?.map((lib) => (
                         <div
                             key={lib.id}
                             onClick={(e) => {
                                 e.stopPropagation();
-                                handleTreeItemSelect(lib);
+                                setSelectedItem(lib.id);
                             }}
                         >
-                            {isEditingFolder && lastSelectedItem?.id === lib.id ?
+                            {isEditingFolder && selectedItem === lib.id ?
                                 <TreeItemEdit
                                     level={level + 1}
-                                    editingTitle={lib.title}
+                                    //editingTitle={lib.title}
                                     type={ExplorerItemType.Folder}
-                                    itemId={lib.id}
+                                    //itemId={lib.id}
+                                    item={lib}
                                     onSuccess={() => {
                                         setIsEditingFolder(false);
-                                        fetchLibraries(item.id);
+                                        //fetchLibraries(item.id);
+                                        setLibraries(prev => prev.map(l =>
+                                            l.id === lib.id ? { ...l, title: lib.title } : l
+                                        ));
                                     }}
                                 />
                                 :
                                 <TreeItem
-                                    item={lib}
+                                    item={{
+                                        id: lib.id,
+                                        userid: session?.user.id!,
+                                        title: lib.title,
+                                    } as Library}
                                     type={ExplorerItemType.Folder}
                                     level={level + 1}
+                                    onDelete={(id) => setLibraries(prev => prev.filter(l => l.id !== id))}
+
                                 />
                             }
+
                         </div>
                     ))}
 
-                    {isAddingSnippet && shouldShowCreation && (
+                    {addingSnippet && isSelected && (
                         <TreeItemCreation
                             level={level + 1}
                             type={ExplorerItemType.File}
                             parentId={item.id}
-                            onSuccess={() => fetchSnippets(item.id)}
+                            onSuccess={(newItem) => {
+                                setSnippets(prev => [...prev, newItem as SnippetDTO]);
+                            }}
                         />
                     )}
 
-                    {!loadingChildren && childFiles?.map((file) => (
+                    {!loadingChildren && snippets?.map((snip) => (
                         <div
-                            key={file.id}
+                            key={snip.id}
                             onClick={(e) => {
                                 e.stopPropagation();
-                                handleTreeItemSelect(file);
+                                setSelectedItem(snip.id);
                             }}
                         >
-                            {isEditingSnippet && lastSelectedItem?.id === file.id ?
+                            {isEditingSnippet && selectedItem === snip.id ?
                                 <TreeItemEdit
-                                    level={level +1}
-                                    editingTitle={file.title}
+                                    level={level + 1}
                                     type={ExplorerItemType.File}
-                                    itemId={file.id}
+                                    item={snip}
                                     onSuccess={() => {
                                         setIsEditingSnippet(false);
-                                        fetchSnippets(item.id);
+                                        setSnippets(prev => prev.map(s =>
+                                            s.id === snip.id ? { ...s, title: snip.title } : s
+                                        ));
                                     }}
                                 />
                                 :
                                 <TreeItem
-                                    item={file}
+                                    item={{
+                                        id: snip.id,
+                                        title: snip.title,
+                                        userId: session?.user.id!
+                                    } as Snippet}
                                     type={ExplorerItemType.File}
                                     level={level + 1}
+                                    onDelete={(id) => setSnippets(prev => prev.filter(s => s.id !== id))}
+
                                 />
                             }
                         </div>

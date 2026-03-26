@@ -16,7 +16,7 @@ export async function GET() {
 
   const userId = session.user.id;
   if (!userId) {
-    return NextResponse.json({ message: "Missing headers" }, { status: 400 });
+    return NextResponse.json({ message: "Missing User" }, { status: 400 });
   }
 
   try {
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ status: 201, libraryId: newLibraryId });
+    return NextResponse.json({ libraryId: newLibraryId });
   } catch (error) {
     console.error(error);
     return NextResponse.json(
@@ -120,13 +120,13 @@ export async function DELETE(req: NextRequest) {
 
     // Step 3: Delete all libraries in the tree
     // CASCADE will automatically delete LibraryJunction and SnippetJunction records
-    await db.query(
+    const oldLibrary = await db.query(
       `DELETE FROM "Library" WHERE id = ANY($1)`,
       [libraryIds]
     );
 
     await db.query('COMMIT');
-    return NextResponse.json({ status: 200 });
+    return NextResponse.json({ libraryId: oldLibrary });
   } catch (error) {
     await db.query('ROLLBACK');
     console.error(error);

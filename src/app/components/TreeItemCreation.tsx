@@ -3,8 +3,12 @@
 import { useState, useEffect, useRef } from "react";
 import { BiFolder } from "react-icons/bi";
 import { ExplorerItemType } from "../../../types/types";
-import { useAppStore } from "../store/useAppStore";
 import { AiOutlineFileText } from "react-icons/ai";
+import { LibraryDTO } from "../api/libraries/parents/route";
+import { SnippetDTO } from "../api/snippets/parents/route";
+import { useSnippet } from "../hooks/useSnippet";
+import { useLibrary } from "../hooks/useLibrary";
+import { useLibraryStore } from "../store/libraryStore";
 
 export const TreeItemCreation = ({
     level = 0,
@@ -15,7 +19,7 @@ export const TreeItemCreation = ({
     level?: number;
     type?: ExplorerItemType;
     parentId?: string;
-    onSuccess?: () => void;
+    onSuccess?: (item: SnippetDTO | LibraryDTO) => void;
 }) => {
     const [title, setTitle] = useState("");
     const [isHovered, setIsHovered] = useState(false);
@@ -25,10 +29,18 @@ export const TreeItemCreation = ({
 
     const {
         addSnippet,
-        addFolder,
-        cancelAddFolder,
-        cancelAddSnippet,
-    } = useAppStore();
+        addController: addSnipController
+    } = useSnippet();
+
+    const {
+        addLibrary,
+        addController: addLibraryController
+    } = useLibrary();
+
+    const {
+        setAddingSnippet,
+        setAddingLibrary
+    } = useLibraryStore();
 
     const isFolder = type === ExplorerItemType.Folder;
     const paddingLeft = level * 16 + 6;
@@ -43,13 +55,23 @@ export const TreeItemCreation = ({
         setError(null);
 
         try {
+            let created: SnippetDTO | LibraryDTO | undefined;
+
             if (isFolder) {
-                await addFolder(title, parentId, onSuccess);
+                created = await addLibrary(title, parentId);
             } else {
-                await addSnippet(title, parentId, onSuccess);
+                created = await addSnippet(title, parentId);
             }
+
+
+            if (!created) throw new Error("Failed to create");
+
+            setAddingLibrary(false);
+            setAddingSnippet(false);
+            onSuccess?.(created);
         } catch (err) {
             setError((err as Error).message || "Failed to create");
+        } finally {
             setIsCreating(false);
         }
     };
@@ -57,7 +79,7 @@ export const TreeItemCreation = ({
     const cancel = () => {
         if (isCreating) return;
 
-        isFolder ? cancelAddFolder() : cancelAddSnippet();
+        isFolder ? addLibraryController.abort() : addSnipController.abort();
         setIsCreating(false);
     };
 

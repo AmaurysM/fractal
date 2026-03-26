@@ -2,11 +2,10 @@ import db from "@/app/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "@/app/api/auth/authOptions";
 import { getServerSession } from "next-auth";
-import { Snippet } from "../../../../../types/types";
 
 export async function PATCH(req: NextRequest) {
   const body = await req.json();
-  const { id, title } = body;
+  const { library } = body;
   const session = await getServerSession(authOptions);
 
   if (!session) {
@@ -16,29 +15,26 @@ export async function PATCH(req: NextRequest) {
     );
   }
 
-  if (!title || !title.trim()) {
+  if (!library) {
     return NextResponse.json({ error: "Title is required" }, { status: 400 });
   }
 
+  if (!library.title || !library.userid) {
+    return NextResponse.json({ error: "Title and userid are required" }, { status: 400 });
+  }
+
+
   const UserId = session.user.id;
   try {
-    const result = await db.query(
-      `UPDATE "Snippet"
-       SET title = $1
-       WHERE id = $2 AND "userId" = $3
+    const editedLibrary = await db.query(
+      `UPDATE "Library"
+       SET title = $1, userid = $2
+       WHERE id = $3 AND "userid" = $4
        RETURNING *`,
-      [title.trim(), id, UserId],
+      [library.title.trim(), library.userid, library.id, UserId]
     );
 
-    const returnedValue: Snippet | null = result.rows[0];
-
-    return NextResponse.json(
-      {
-        message: "Snippet updated successfully",
-        snippet: returnedValue,
-      },
-      { status: 200 },
-    );
+    return NextResponse.json({ editedLibrary });
   } catch (error) {
     console.error(error);
     return NextResponse.json(
