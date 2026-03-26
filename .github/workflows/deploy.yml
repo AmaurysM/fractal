@@ -33,7 +33,7 @@ jobs:
           ssh ${{ secrets.SSH_USER }}@ssh.voronoi.space "
             cd ~/fractal &&
             git pull origin master &&
-            pnpm install &&
-            pnpm build &&
+            npm install &&
+            npm build &&
             pm2 restart voronoi
           "
