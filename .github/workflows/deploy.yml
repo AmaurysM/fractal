@@ -34,6 +34,7 @@ jobs:
             export NVM_DIR=\$HOME/.nvm &&
             source \$NVM_DIR/nvm.sh &&
             cd ~/fractal &&
+            git stash &&
             git pull origin master &&
             npm install &&
             npm run build &&
