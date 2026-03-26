@@ -2,35 +2,43 @@
 
 import { useState, useEffect, useRef } from "react";
 import { BiFolder } from "react-icons/bi";
-import { ExplorerItemType } from "../../../types/types";
-import { useAppStore } from "../store/useAppStore";
+import { ExplorerItemType, Library, Snippet } from "../../../types/types";
 import { AiOutlineFileText } from "react-icons/ai";
+import { useLibrary } from "../hooks/useLibrary";
+import { SnippetDTO } from "../api/snippets/parents/route";
+import { LibraryDTO } from "../api/libraries/parents/route";
+import { useSnippet } from "../hooks/useSnippet";
 
 export const TreeItemEdit = ({
     level = 0,
-    editingTitle = "",
     type = ExplorerItemType.Folder,
-    itemId,
+    item,
     onSuccess,
 }: {
     level?: number;
-    editingTitle?: string;
     type?: ExplorerItemType;
-    itemId: string;
+    item: LibraryDTO | SnippetDTO;
     onSuccess?: () => void;
 }) => {
+
+    const { title: editingTitle, id: itemId } = item;
     const [title, setTitle] = useState(editingTitle);
     const [isHovered, setIsHovered] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+    const [isSaving, setIsSaving] = useState(false);
+
 
     const {
-        editFolder,
-        editSnippet,
-        cancelEditFolder,
-        cancelEditSnippet,
-    } = useAppStore();
+        editLibraryTitle,
+        addController: addLibraryController
+    } = useLibrary();
+
+    const {
+        editSnippetTitle,
+        addController: addSnipController
+    } = useSnippet();
 
     const isFolder = type === ExplorerItemType.Folder;
     const paddingLeft = level * 16 + 6;
@@ -41,31 +49,33 @@ export const TreeItemEdit = ({
             return;
         }
 
-        setIsEditing(true);
+        setIsSaving(true);
         setError(null);
 
         try {
             if (isFolder) {
-                await editFolder(title, itemId, onSuccess);
+                await editLibraryTitle(item.id, title);
             } else {
-                await editSnippet(title, itemId, onSuccess);
+                await editSnippetTitle(item.id, title);
             }
+            item.title = title;
+            onSuccess?.();
         } catch (err) {
-            setError((err as Error).message || "Failed to create");
-            setIsEditing(false);
+            setError((err as Error).message || "Failed to save");
+        } finally {
+            setIsSaving(false);
         }
     };
 
     const cancel = () => {
-        if (isEditing) return;
-
-        isFolder ? cancelEditFolder() : cancelEditSnippet();
-        setIsEditing(false);
+        if (isSaving) return;
+        setError(null);
+        isFolder ? addLibraryController.abort() : addSnipController.abort();
+        onSuccess?.();
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (isEditing) return;
-
+        if (isSaving) return;
         if (e.key === "Enter") edit(title);
         if (e.key === "Escape") cancel();
     };
@@ -97,7 +107,6 @@ export const TreeItemEdit = ({
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
             >
-                {/* ICON — fixed, never stretches */}
                 <div className="flex-none">
                     {isFolder ? (
                         <BiFolder className="w-4 h-4 mr-1.5 text-blue-500" />
@@ -132,7 +141,7 @@ export const TreeItemEdit = ({
                     `}
                 />
 
-                {isEditing && (
+                {isSaving && (
                     <div className="flex-none ml-2 w-3 h-3 border-2 border-gray-500 border-t-blue-500 rounded-full animate-spin" />
                 )}
             </div>

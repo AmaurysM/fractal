@@ -7,13 +7,19 @@ import { VscNewFile, VscNewFolder, VscFiles, VscSearch } from "react-icons/vsc";
 import { CodeDisplay } from "./components/CodeDisplay";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { TreeItem } from "./components/TreeItem";
-import { TreeItemCreation } from "./components/TreeItemCreation";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { signOut } from "next-auth/react"
-import { useAppStore } from "./store/useAppStore";
-import { StatsFooterSkeleton, TreeSkeleton } from "./components/SkeletonLoading";
+import { TreeSkeleton } from "./components/SkeletonLoading";
 import { TreeItemEdit } from "./components/TreeItemEdit";
+import { FileTree } from "./components/FileTree";
+import { useLibraryStore } from "./store/libraryStore";
+import { useTabStore } from "./store/tabStore";
+import { useAuthStore } from "./store/authStore";
+import { useLibrary } from "./hooks/useLibrary";
+import { useSnippet } from "./hooks/useSnippet";
+import { LibraryDTO } from "./api/libraries/parents/route";
+import { SnippetDTO } from "./api/snippets/parents/route";
 
 enum ActivityItem {
   Explorer = "Explorer",
@@ -22,103 +28,69 @@ enum ActivityItem {
 
 export default function Home() {
   const { data: session } = useSession();
-  const [hoveringResizer, setHoveringResizer] = useState<boolean>(false);
-  const [isDragging, setIsDragging] = useState(false);
-  const [activity, setActivity] = useState<ActivityItem>(ActivityItem.Explorer);
-  const [searchValue, setSearchValue] = useState<string>("");
+
+  const { user, setUser } = useAuthStore();
 
   const {
-    user,
-    setUser,
-    isHydrated,
-    fetchLibraries,
-    fetchSnippets,
-    uiLibraries: libraries,
-    uiParentLibraries: parentLibraries,
-    uiSnippets: snippets,
-    uiParentSnippets: parentSnippets,
-    fetchParentSnippets,
-    fetchParentLibraries,
-    setIsAddingLibrary,
-    setIsAddingSnippet,
-    isFetchingParentLibraries,
-    isAddingSnippet,
-    isAddingLibrary,
-    isFetchingParentSnippets,
-    isFindingLibraries,
-    isFindingSnippets,
-    findLibraries,
-    findSnippets,
-    foundLibraries,
-    foundSnippets,
-    selectedSnippet,
-    lastSelectedItem,
-    setSelectedSnippet,
-    setLastSelectedItem,
-    openTab,
-    isEditingSnippet,
-    setIsEditingSnippet,
+    selectedItem,
+    setAddingSnippet,
+    setAddingLibrary,
     isEditingFolder,
     setIsEditingFolder,
-  } = useAppStore();
+    isEditingSnippet,
+    setIsEditingSnippet,
+  } = useLibraryStore();
 
+  const { tabs } = useTabStore();
+
+  const { searchLibraries } = useLibrary();
+  const { searchSnippets } = useSnippet();
+
+  const [hoveringResizer, setHoveringResizer] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [activity, setActivity] = useState<ActivityItem>(ActivityItem.Explorer);
+  const [searchValue, setSearchValue] = useState("");
+
+  const [foundLibraries, setFoundLibraries] = useState<LibraryDTO[]>([]);
+  const [foundSnippets, setFoundSnippets] = useState<SnippetDTO[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Sync session user into auth store
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        if (session?.user) {
-          setUser(session.user);
-        }
-      } catch (error) {
-        console.error("Failed to fetch user:", error);
-        setUser(null);
-      }
-    };
-
-    if (user === null && session?.user) {
-      fetchUser();
+    if (session?.user && (!user || session.user.id !== user.id)) {
+      setUser(session.user);
     }
   }, [session, user, setUser]);
 
-  // Effect to detect user changes and clear persisted data
-  useEffect(() => {
-    if (session?.user && user && session.user.id !== user.id) {
-      // User changed, update the user which will trigger the clear logic
-      setUser(session.user);
+  const handleSearch = async (query: string) => {
+    setSearchValue(query);
+    if (!query.trim()) {
+      setFoundLibraries([]);
+      setFoundSnippets([]);
+      return;
     }
-  }, [session?.user, user, setUser]);
 
-  const handleSidebarClick = () => {
-    setLastSelectedItem(null);
-    setIsAddingLibrary(false);
-    setIsAddingSnippet(false);
+    setIsSearching(true);
+    try {
+      const [libs, snips] = await Promise.all([
+        searchLibraries(query),
+        searchSnippets(query),
+      ]);
+      // searchLibraries returns string[] per the hook, so we need to handle that
+      // If your search returns full DTOs update accordingly
+      setFoundSnippets(snips ?? []);
+    } catch (e) {
+      console.error("Search failed:", e);
+    } finally {
+      setIsSearching(false);
+    }
   };
 
-  useEffect(() => {
-    if (user && isHydrated) {
-      Promise.all([
-        fetchLibraries(user.id),
-        fetchSnippets(user.id),
-        fetchParentLibraries(user.id),
-        fetchParentSnippets(user.id),
-      ]).catch(error => {
-        console.error("Error fetching initial data:", error);
-      });
-    }
-  }, [user, isHydrated, fetchLibraries, fetchSnippets, fetchParentLibraries, fetchParentSnippets]);
+  const isInitialLoading = !user;
 
-  const isInitialLoading = !user || !isHydrated;
-
-  const isDataLoading = isHydrated && user &&
-    (isFetchingParentLibraries || isFetchingParentSnippets) &&
-    parentLibraries.length === 0 &&
-    parentSnippets.length === 0;
-
-  // Helper function to get latest snippet data
-  const getLatestSnippet = (snippet: Snippet): Snippet => {
-    return snippets.find(s => s.id === snippet.id) ||
-      parentSnippets.find(s => s.id === snippet.id) ||
-      snippet;
-  };
+  function handleSignout() {
+    signOut({ callbackUrl: "/landing" });
+  }
 
   return (
     <div className="h-screen flex flex-col bg-[#1e1e1e]">
@@ -159,7 +131,7 @@ export default function Home() {
                   {user?.email}
                 </div>
                 <button
-                  onClick={() => signOut({ callbackUrl: "/landing" })}
+                  onClick={handleSignout}
                   className="w-full px-3 py-1.5 text-[12px] text-left text-[#f48771] hover:bg-[#f48771]/20 transition-colors"
                 >
                   Sign Out
@@ -176,10 +148,11 @@ export default function Home() {
           <div className="flex flex-col gap-0.5 flex-1">
             <button
               onClick={() => setActivity(ActivityItem.Explorer)}
-              className={`w-12 h-12 flex items-center justify-center transition-colors relative ${activity === ActivityItem.Explorer
-                ? 'text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-white'
-                : 'text-[#858585] hover:text-white'
-                }`}
+              className={`w-12 h-12 flex items-center justify-center transition-colors relative ${
+                activity === ActivityItem.Explorer
+                  ? 'text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-white'
+                  : 'text-[#858585] hover:text-white'
+              }`}
               title="Explorer"
               disabled={isInitialLoading}
             >
@@ -187,10 +160,11 @@ export default function Home() {
             </button>
             <button
               onClick={() => setActivity(ActivityItem.Search)}
-              className={`w-12 h-12 flex items-center justify-center transition-colors relative ${activity === ActivityItem.Search
-                ? 'text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-white'
-                : 'text-[#858585] hover:text-white'
-                }`}
+              className={`w-12 h-12 flex items-center justify-center transition-colors relative ${
+                activity === ActivityItem.Search
+                  ? 'text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-white'
+                  : 'text-[#858585] hover:text-white'
+              }`}
               title="Search"
               disabled={isInitialLoading}
             >
@@ -202,7 +176,6 @@ export default function Home() {
         {/* Sidebar */}
         <Panel defaultSize={20} minSize={15} maxSize={40} className="bg-[#252526] border-r border-[#3e3e42] flex flex-col">
           {isInitialLoading ? (
-            // Initial loading skeleton (before hydration)
             <>
               <div className="h-8.75 flex items-center justify-between px-3 border-b border-[#3e3e42]">
                 <div className="h-3 w-16 bg-[#3e3e42] rounded animate-pulse"></div>
@@ -214,7 +187,6 @@ export default function Home() {
               <div className="flex-1 overflow-auto p-2">
                 <TreeSkeleton count={6} />
               </div>
-              <StatsFooterSkeleton />
             </>
           ) : activity === ActivityItem.Explorer ? (
             <>
@@ -223,20 +195,14 @@ export default function Home() {
                 <h3 className="text-[11px] font-medium text-[#cccccc] uppercase tracking-wider">Explorer</h3>
                 <div className="flex items-center gap-1">
                   <button
-                    onClick={() => {
-                      setIsAddingSnippet(true);
-                      setIsAddingLibrary(false);
-                    }}
+                    onClick={() => setAddingSnippet(true)}
                     className="p-1.5 rounded-sm hover:bg-[#2a2d2e] transition-colors text-[#cccccc]"
                     title="New File"
                   >
                     <VscNewFile className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => {
-                      setIsAddingLibrary(true);
-                      setIsAddingSnippet(false);
-                    }}
+                    onClick={() => setAddingLibrary(true)}
                     className="p-1.5 rounded-sm hover:bg-[#2a2d2e] transition-colors text-[#cccccc]"
                     title="New Folder"
                   >
@@ -245,128 +211,7 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* File Tree */}
-              <div className="flex-1 overflow-auto" onClick={handleSidebarClick}>
-                {isDataLoading ? (
-                  <div className="p-2">
-                    <TreeSkeleton count={6} />
-                  </div>
-                ) : (
-                  <>
-                    {isAddingLibrary && (
-                      (lastSelectedItem === null ||
-                        (selectedSnippet !== null && parentSnippets.some(snip => snip.id === selectedSnippet.id))
-                      ) &&
-                      !(lastSelectedItem && 'title' in lastSelectedItem && !('text' in lastSelectedItem)) && (
-                        <TreeItemCreation
-                          type={ExplorerItemType.Folder}
-                          onSuccess={() => fetchParentLibraries(user.id)}
-                        />
-                      )
-                    )}
-
-                    {parentLibraries.length > 0 && (
-                      <div>
-                        {parentLibraries.map((lib) => (
-                          <div
-                            key={lib.id}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setLastSelectedItem(lib);
-                            }}
-                          >
-                            {isEditingFolder && lastSelectedItem?.id === lib.id ?
-                              <TreeItemEdit
-                                editingTitle={lib.title}
-                                type={ExplorerItemType.Folder}
-                                itemId={lib.id}
-                                onSuccess={() => {
-                                  setIsEditingFolder(false);
-                                  fetchLibraries(lib.id);
-                                }}
-                              />
-                              :
-                              <TreeItem
-                                item={lib}
-                                type={ExplorerItemType.Folder}
-                              />
-                            }                          
-                            </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {isAddingSnippet && (
-                      (lastSelectedItem === null ||
-                        (selectedSnippet !== null && parentSnippets.some(snip => snip.id === selectedSnippet.id))
-                      ) &&
-                      !(lastSelectedItem && 'title' in lastSelectedItem && !('text' in lastSelectedItem)) && (
-                        <TreeItemCreation
-                          type={ExplorerItemType.File}
-                          onSuccess={() => fetchParentSnippets(user.id)}
-                        />
-                      )
-                    )}
-
-                    {parentSnippets.map((snip) => {
-                      // Get the latest version from store to ensure real-time updates
-                      const latestSnippet = getLatestSnippet(snip);
-
-                      return (
-                        <div
-                          key={snip.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setLastSelectedItem(latestSnippet);
-                            openTab(latestSnippet);
-                          }}
-                        >
-                          {isEditingSnippet && lastSelectedItem?.id === latestSnippet.id ?
-                            <TreeItemEdit
-                              editingTitle={latestSnippet.title}
-                              type={ExplorerItemType.File}
-                              itemId={latestSnippet.id}
-                              onSuccess={() => {
-                                setIsEditingSnippet(false);
-                                fetchSnippets(latestSnippet.id);
-                              }}
-                            />
-                            :
-                            <TreeItem
-                              item={latestSnippet}
-                              type={ExplorerItemType.File}
-                            />
-                          }                        </div>
-                      );
-                    })}
-
-                    {!isDataLoading && libraries.length === 0 && parentSnippets.length === 0 && (
-                      <div className="text-center py-12 px-4">
-                        <p className="text-[#858585] text-[13px]">No files or folders</p>
-                        <p className="text-[#6e6e6e] text-[11px] mt-1">Click the icons above to get started</p>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* Stats Footer */}
-              {isDataLoading ? (
-                <StatsFooterSkeleton />
-              ) : (
-                <div className="border-t border-[#3e3e42] bg-[#2d2d30]">
-                  <div className="grid grid-cols-2 divide-x divide-[#3e3e42]">
-                    <div className="px-3 py-2">
-                      <div className="text-[10px] text-[#858585] uppercase tracking-wider mb-0.5">Libraries</div>
-                      <div className="text-[13px] text-[#cccccc] font-medium">{libraries.length}</div>
-                    </div>
-                    <div className="px-3 py-2">
-                      <div className="text-[10px] text-[#858585] uppercase tracking-wider mb-0.5">Snippets</div>
-                      <div className="text-[13px] text-[#cccccc] font-medium">{snippets.length}</div>
-                    </div>
-                  </div>
-                </div>
-              )}
+              <FileTree />
             </>
           ) : (
             // Search View
@@ -379,82 +224,68 @@ export default function Home() {
                 <input
                   type="text"
                   value={searchValue}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setSearchValue(value);
-                    findLibraries(value);
-                    findSnippets(value);
-                  }}
+                  onChange={(e) => handleSearch(e.target.value)}
                   className="w-full px-2 py-1.5 bg-[#3c3c3c] border border-[#3e3e42] text-[#cccccc] text-[13px] rounded-sm focus:outline-none focus:border-[#007acc] placeholder-[#6e6e6e]"
                   placeholder="Search files and folders..."
                 />
               </div>
 
               <div className="flex-1 overflow-auto">
-                {isFindingLibraries || isFindingSnippets ? (
+                {isSearching ? (
                   <div className="p-2">
                     <TreeSkeleton count={4} />
                   </div>
                 ) : (
                   <>
-                    {foundLibraries.map((lib: Library) => (
+                    {foundLibraries.map((lib) => (
                       <div
                         key={lib.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setLastSelectedItem(lib);
-                        }}
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        {isEditingFolder && lastSelectedItem?.id === lib.id ?
+                        {isEditingFolder && selectedItem === lib.id ? (
                           <TreeItemEdit
-                            editingTitle={lib.title}
                             type={ExplorerItemType.Folder}
-                            itemId={lib.id}
+                            item={lib}
                             onSuccess={() => {
                               setIsEditingFolder(false);
-                              fetchLibraries(lib.id);
+                              setFoundLibraries(prev => prev.map(l =>
+                                l.id === lib.id ? { ...l, title: lib.title } : l
+                              ));
                             }}
                           />
-                          :
+                        ) : (
                           <TreeItem
-                            item={lib}
+                            item={{ id: lib.id, userid: session?.user.id!, title: lib.title } as Library}
                             type={ExplorerItemType.Folder}
                           />
-                        }
+                        )}
                       </div>
                     ))}
 
-                    {foundSnippets.map((snip: Snippet) => {
-                      const latestSnippet = getLatestSnippet(snip);
-
-                      return (
-                        <div
-                          key={snip.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setLastSelectedItem(latestSnippet);
-                            openTab(latestSnippet);
-                          }}
-                        >
-                          {isEditingSnippet && lastSelectedItem?.id === latestSnippet.id ?
-                            <TreeItemEdit
-                              editingTitle={latestSnippet.title}
-                              type={ExplorerItemType.File}
-                              itemId={latestSnippet.id}
-                              onSuccess={() => {
-                                setIsEditingSnippet(false);
-                                fetchSnippets(latestSnippet.id);
-                              }}
-                            />
-                            :
-                            <TreeItem
-                              item={latestSnippet}
-                              type={ExplorerItemType.File}
-                            />
-                          }
-                        </div>
-                      );
-                    })}
+                    {foundSnippets.map((snip) => (
+                      <div
+                        key={snip.id}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {isEditingSnippet && selectedItem === snip.id ? (
+                          <TreeItemEdit
+                            type={ExplorerItemType.File}
+                            item={snip}
+                            onSuccess={() => {
+                              setIsEditingSnippet(false);
+                              setFoundSnippets(prev => prev.map(s =>
+                                s.id === snip.id ? { ...s, title: snip.title } : s
+                              ));
+                            }}
+                          />
+                        ) : (
+                          <TreeItem
+                            item={{ id: snip.id, title: snip.title, userId: session?.user.id! } as Snippet}
+                            type={ExplorerItemType.File}
+                          />
+                        )}
+                      </div>
+                    ))}
 
                     {searchValue && foundLibraries.length === 0 && foundSnippets.length === 0 && (
                       <div className="text-center py-12 px-4">
@@ -464,28 +295,14 @@ export default function Home() {
                   </>
                 )}
               </div>
-
-              <div className="border-t border-[#3e3e42] bg-[#2d2d30]">
-                <div className="grid grid-cols-2 divide-x divide-[#3e3e42]">
-                  <div className="px-3 py-2">
-                    <div className="text-[10px] text-[#858585] uppercase tracking-wider mb-0.5">Libraries</div>
-                    <div className="text-[13px] text-[#cccccc] font-medium">{foundLibraries.length}</div>
-                  </div>
-                  <div className="px-3 py-2">
-                    <div className="text-[10px] text-[#858585] uppercase tracking-wider mb-0.5">Snippets</div>
-                    <div className="text-[13px] text-[#cccccc] font-medium">{foundSnippets.length}</div>
-                  </div>
-                </div>
-              </div>
             </div>
           )}
         </Panel>
 
         <PanelResizeHandle
-          className={`transition-all duration-150 ${hoveringResizer || isDragging
-            ? 'w-1 bg-[#007acc]'
-            : 'w-px bg-[#3e3e42]'
-            } cursor-col-resize`}
+          className={`transition-all duration-150 ${
+            hoveringResizer || isDragging ? 'w-1 bg-[#007acc]' : 'w-px bg-[#3e3e42]'
+          } cursor-col-resize`}
           onMouseEnter={() => setHoveringResizer(true)}
           onMouseLeave={() => setHoveringResizer(false)}
           onDragging={(isDragging) => setIsDragging(isDragging)}
@@ -493,14 +310,14 @@ export default function Home() {
 
         {/* Main Content */}
         <Panel defaultSize={80} minSize={15} className="flex-1 flex flex-col bg-[#1e1e1e]">
-          {selectedSnippet ? (
+          {tabs.length > 0 ? (
             <CodeDisplay />
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center max-w-md px-8">
                 <BiCode className="w-20 h-20 text-[#3e3e42] mx-auto mb-6" />
                 <h2 className="text-xl font-medium text-[#cccccc] mb-3">
-                  Welcome to Fractal
+                  Welcome to Voronoi
                 </h2>
                 <p className="text-[#858585] text-sm leading-relaxed mb-6">
                   Your personal code library manager. Select a snippet from the sidebar to view and edit,

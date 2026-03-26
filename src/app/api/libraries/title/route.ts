@@ -2,6 +2,7 @@ import db from "@/app/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "@/app/api/auth/authOptions";
 import { getServerSession } from "next-auth";
+import { Library } from "../../../../../types/types";
 
 export async function PATCH(req: NextRequest) {
   const body = await req.json();
@@ -21,16 +22,21 @@ export async function PATCH(req: NextRequest) {
 
   const UserId = session.user.id;
   try {
-    await db.query(
+    const result = await db.query(
       `UPDATE "Library"
        SET title = $1
        WHERE id = $2 AND "userid" = $3
        RETURNING *`,
-      [title.trim(), id, UserId]
+      [title.trim(), id, UserId],
     );
 
+    const returnedValue: Library | null = result.rows[0];
+
     return NextResponse.json(
-      { message: "Snippet updated successfully" },
+      {
+        message: "Snippet updated successfully",
+        library: returnedValue,
+      },
       { status: 200 },
     );
   } catch (error) {

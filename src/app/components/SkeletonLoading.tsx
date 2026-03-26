@@ -26,11 +26,11 @@ export const StatsFooterSkeleton = () => {
       <div className="grid grid-cols-2 divide-x divide-[#3e3e42]">
         <div className="px-3 py-2">
           <div className="text-[10px] text-[#858585] uppercase tracking-wider mb-0.5">Libraries</div>
-          <div className="h-[13px] w-8 bg-[#3e3e42] rounded animate-pulse"></div>
+          <div className="h-3.25 w-8 bg-[#3e3e42] rounded animate-pulse"></div>
         </div>
         <div className="px-3 py-2">
           <div className="text-[10px] text-[#858585] uppercase tracking-wider mb-0.5">Snippets</div>
-          <div className="h-[13px] w-8 bg-[#3e3e42] rounded animate-pulse"></div>
+          <div className="h-3.25 w-8 bg-[#3e3e42] rounded animate-pulse"></div>
         </div>
       </div>
     </div>

@@ -10,7 +10,7 @@ interface VoronoiPoint {
   y: number;
   targetX: number;
   targetY: number;
-  alpha: number; // For fade-in animation
+  alpha: number;
 }
 
 export default function VoronoiBackground() {

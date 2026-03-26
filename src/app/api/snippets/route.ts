@@ -3,6 +3,7 @@ import { Snippet } from "../../../../types/types";
 import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "@/app/api/auth/authOptions";
 import { getServerSession } from "next-auth";
+import { SnippetDTO } from "./parents/route";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -53,18 +54,19 @@ export async function POST(req: NextRequest) {
 
   try {
     const result = await db.query(
-      'INSERT INTO "Snippet" ("userId", title ) VALUES ($1, $2) RETURNING id',
+      'INSERT INTO "Snippet" ("userId", title ) VALUES ($1, $2) RETURNING id, title',
       [userId, title]
     );
-    const newFileId = result.rows[0].id;
+    const newSnippet: SnippetDTO = result.rows[0];
+
     if (parentId) {
       await db.query(
         'INSERT INTO "SnippetJunction" (libraryid, snippetid) VALUES ($1, $2)',
-        [parentId, newFileId]
+        [parentId, newSnippet.id]
       );
     }
 
-    return NextResponse.json({ status: 201 });
+    return NextResponse.json(newSnippet);
   } catch (error) {
     console.error(error);
     return NextResponse.json(
@@ -76,14 +78,15 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const body = await req.json();
-  const { fileId } = body;
+  const { snippetId } = body;
 
   try {
-    await db.query('DELETE FROM "Snippet" WHERE id = ($1)', [
-      fileId,
+    const result = await db.query('DELETE FROM "Snippet" WHERE id = ($1) RETURNING id, title', [
+      snippetId,
     ]);
+    const oldSnippet: SnippetDTO = result.rows[0];
 
-    return NextResponse.json({ status: 201 });
+    return NextResponse.json({oldSnippet});
   } catch (error) {
     console.error(error);
     return NextResponse.json(
@@ -92,9 +95,11 @@ export async function DELETE(req: NextRequest) {
     );
   }
 }
+
 export async function PATCH(req: NextRequest) {
   const body = await req.json();
-  const { id, language, title, description, text } = body;
+  const { snippet } = body;
+  const {id, language, title, description, text} = snippet;
   const session = await getServerSession(authOptions);
 
   if (!session) {
@@ -106,7 +111,7 @@ export async function PATCH(req: NextRequest) {
 
   const UserId = session.user.id;
   try {
-    await db.query(
+    const result = await db.query(
       `UPDATE "Snippet"
        SET "userId" = $1,
            language = $2,
@@ -116,6 +121,8 @@ export async function PATCH(req: NextRequest) {
        WHERE id = $6`,
       [UserId, language, title, description, text, id]
     );
+
+
 
     return NextResponse.json(
       { message: "Snippet updated successfully" },
