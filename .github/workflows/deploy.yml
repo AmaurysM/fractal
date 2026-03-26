@@ -1,4 +1,4 @@
-name: Deploy Voronoi To Server
+name: Deploy Fractal
 
 on:
   push:
@@ -10,12 +10,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy via SSH
+      - name: Install cloudflared
+        run: |
+          curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
+          chmod +x cloudflared
+          sudo mv cloudflared /usr/local/bin/
+
+      - name: Deploy via SSH over Cloudflare Tunnel
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ssh.voronoi.space
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          proxy_url: "cloudflared access ssh --hostname ssh.voronoi.space"
           script: |
             cd ~/fractal
             git pull origin master
