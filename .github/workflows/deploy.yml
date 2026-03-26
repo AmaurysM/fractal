@@ -31,9 +31,11 @@ jobs:
       - name: Deploy
         run: |
           ssh ${{ secrets.SSH_USER }}@ssh.voronoi.space "
+            export NVM_DIR=\$HOME/.nvm &&
+            source \$NVM_DIR/nvm.sh &&
             cd ~/fractal &&
             git pull origin master &&
             npm install &&
-            npm build &&
+            npm run build &&
             pm2 restart voronoi
           "
