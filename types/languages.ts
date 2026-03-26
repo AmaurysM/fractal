@@ -1,6 +1,6 @@
 import { AiOutlineFileText } from "react-icons/ai";
 import { FaJava } from "react-icons/fa6";
-import { SiJavascript, SiTypescript, SiPython, SiCplusplus, SiC, SiKotlin, SiHtml5, SiCss3, SiJson, SiPhp, SiGo, SiRust } from "react-icons/si";
+import { SiJavascript, SiTypescript, SiPython, SiCplusplus, SiC, SiKotlin, SiHtml5, SiCss, SiJson, SiPhp, SiGo, SiRust } from "react-icons/si";
 import { TbBrandCSharp } from "react-icons/tb";
 
 export const LANGUAGES = [
@@ -15,7 +15,7 @@ export const LANGUAGES = [
   { value: "Kotlin", label: "Kotlin", monaco: "kotlin", ext: "kt", icon: SiKotlin, color: "#7f52ff" },
   { value: "Node.js", label: "Node.js", monaco: "javascript", ext: "js", icon: SiJavascript, color: "#339933" },
   { value: "HTML", label: "HTML", monaco: "html", ext: "html", icon: SiHtml5, color: "#e34c26" },
-  { value: "CSS", label: "CSS", monaco: "css", ext: "css", icon: SiCss3, color: "#1572b6" },
+  { value: "CSS", label: "CSS", monaco: "css", ext: "css", icon: SiCss, color: "#1572b6" },
   { value: "JSON", label: "JSON", monaco: "json", ext: "json", icon: SiJson, color: "#000000" },
   { value: "SQL", label: "SQL", monaco: "sql", ext: "sql", icon: AiOutlineFileText, color: "#e38c00" },
   { value: "PHP", label: "PHP", monaco: "php", ext: "php", icon: SiPhp, color: "#777bb4" },
