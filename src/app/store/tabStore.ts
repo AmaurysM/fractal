@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import { Snippet } from "../../../types/types";
 import { useLibraryStore } from "./libraryStore";
 
@@ -12,73 +13,113 @@ type TabStore = {
   closeAllTabs: () => void;
   closeOtherTabs: (snipId: string) => void;
   updateTab: (snippet: Snippet) => void;
+
+  moveTabToIndex: (snipId: string, index: number) => void;
 };
 
-export const useTabStore = create<TabStore>()((set, get) => ({
-  tabs: [],
-  selectedTab: null,
+const pickFallback = (tabs: Snippet[]): string | null =>
+  tabs[tabs.length - 1]?.id ?? null;
 
-  addTab: async (snipId: string) => {
-    const state = get();
-    const exists = state.tabs.some((t) => t.id === snipId);
-    if (exists) {
-      set({ selectedTab: snipId });
-      return;
-    }
+export const useTabStore = create<TabStore>()(
+  persist(
+    (set, get) => ({
+      tabs: [],
+      selectedTab: null,
 
-    try {
-      const res = await fetch(`/api/snippet`, {
-        method: "GET",
-        headers: { "voronoi-snippet-id": snipId },
-      });
+      addTab: async (snipId: string) => {
+        const state = get();
+        const exists = state.tabs.some((t) => t.id === snipId);
+        if (exists) {
+          set({ selectedTab: snipId });
+          return;
+        }
 
-      if (!res.ok) return;
+        try {
+          const res = await fetch(`/api/snippet`, {
+            method: "GET",
+            headers: { "voronoi-snippet-id": snipId },
+          });
 
-      const snippet: Snippet = await res.json();
+          if (!res.ok) return;
 
-      set((state) => ({
-        tabs: [...state.tabs, snippet],
-        selectedTab: snipId,
-      }));
-    } catch (e) {
-      console.error("Failed to add tab:", e);
-    }
-  },
-  selectTab: (snipId: string) => set(() => ({ selectedTab: snipId })),
-  closeTab: (snipId: string) => {
-    const libraryStore = useLibraryStore.getState();
+          const snippet: Snippet = await res.json();
 
-    set((state) => {
-      const newTabs = state.tabs.filter((t) => t.id !== snipId);
+          set((state) => ({
+            tabs: [...state.tabs, snippet],
+            selectedTab: snipId,
+          }));
+        } catch (e) {
+          console.error("Failed to add tab:", e);
+        }
+      },
 
-      const nextSelectedTab =
-        state.selectedTab === snipId
-          ? (newTabs[newTabs.length - 1]?.id ?? null)
-          : state.selectedTab;
+      selectTab: (snipId: string) => set(() => ({ selectedTab: snipId })),
 
-      libraryStore.setSelectedItem(nextSelectedTab);
+      closeTab: (snipId: string) => {
+        const libraryStore = useLibraryStore.getState();
 
-      return {
-        selectedTab: nextSelectedTab,
-        tabs: newTabs,
-      };
-    });
-  },
+        set((state) => {
+          const newTabs = state.tabs.filter((t) => t.id !== snipId);
 
-  closeAllTabs: () => set(() => ({ selectedTab: null, tabs: [] })),
-  closeOtherTabs: (snipId: string) =>
-    set((state) => {
-      const tab = state.tabs.find((t) => t.id === snipId);
-      if (!tab) return state;
+          const nextSelectedTab =
+            state.selectedTab === snipId
+              ? pickFallback(newTabs)
+              : state.selectedTab;
 
-      return {
-        tabs: [tab],
-        selectedTab: snipId,
-      };
+          libraryStore.setSelectedItem(nextSelectedTab);
+
+          return {
+            selectedTab: nextSelectedTab,
+            tabs: newTabs,
+          };
+        });
+      },
+
+      closeAllTabs: () =>
+        set((state) => ({
+          tabs: state.tabs,
+          selectedTab: pickFallback(state.tabs),
+        })),
+
+      closeOtherTabs: (snipId: string) =>
+        set((state) => {
+          const tab = state.tabs.find((t) => t.id === snipId);
+          if (!tab) return state;
+
+          return {
+            tabs: [tab],
+            selectedTab: snipId,
+          };
+        }),
+
+      updateTab: (snippet: Snippet) =>
+        set((state) => ({
+          tabs: state.tabs.map((t) => (t.id === snippet.id ? snippet : t)),
+        })),
+
+      moveTabToIndex: (snipId: string, index: number) => {
+        set((state) => {
+          const tabs = [...state.tabs];
+
+          const currentIndex = tabs.findIndex((tab) => tab.id === snipId);
+          if (currentIndex === -1) return state;
+
+          const [movedTab] = tabs.splice(currentIndex, 1);
+
+          const newIndex = Math.max(0, Math.min(index, tabs.length));
+
+          tabs.splice(newIndex, 0, movedTab);
+
+          return { tabs };
+        });
+      },
     }),
-  updateTab: (snippet: Snippet) =>
-    set((state) => ({
-      tabs: state.tabs.map((t) => (t.id === snippet.id ? snippet : t)),
-    })),
-  //  setSelectedItem: (item: string) => set(() => ({selectedItem: item, addingSnippet: false, addingLibrary: false})),
-}));
+    {
+      name: "tab-store",
+      partialize: (state) => ({
+        tabs: state.tabs,
+        selectedTab: state.selectedTab,
+      }),
+    }
+  )
+);

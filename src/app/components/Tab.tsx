@@ -2,6 +2,8 @@ import { VscClose } from "react-icons/vsc";
 import { useLibraryStore } from "../store/libraryStore";
 import { useTabStore } from "../store/tabStore";
 import { getLanguageColor, getLanguageIcon } from "../../../types/languages";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 export const Tab = ({
   tabId,
@@ -10,6 +12,15 @@ export const Tab = ({
   tabId: string;
   isActive: boolean;
 }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: tabId });
+
   const tabSnip = useTabStore((state) => state.tabs.find((t) => t.id === tabId));
   const { setSelectedItem } = useLibraryStore();
   const { closeTab } = useTabStore();
@@ -18,13 +29,25 @@ export const Tab = ({
 
   if (!tabSnip) return null;
 
+  const style = {
+    transform: transform
+      ? `translateX(${transform.x}px)`
+      : undefined,
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : undefined,
+  };
+
   return (
     <div
-      className={`flex items-center gap-2 px-3 py-1 min-w-30 max-w-50 cursor-pointer border-r border-[#252526] ${
-        isActive
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`flex items-center gap-2 px-3 py-1 min-w-30 max-w-50 cursor-grab active:cursor-grabbing border-r border-[#252526] ${isActive
           ? "bg-[#1e1e1e] border-t-2 border-t-[#007acc] text-[#cccccc]"
           : "bg-[#2d2d2d] text-[#969696] hover:bg-[#2a2d2e]"
-      }`}
+        }`}
       onClick={(e) => {
         e.stopPropagation();
         setSelectedItem(tabSnip.id);
