@@ -4,6 +4,7 @@ import { useTabStore } from "../store/tabStore";
 import { getLanguageColor, getLanguageIcon } from "../../../types/languages";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { ExplorerItemType } from "../../../types/types";
 
 export const Tab = ({
   tabId,
@@ -50,7 +51,7 @@ export const Tab = ({
         }`}
       onClick={(e) => {
         e.stopPropagation();
-        setSelectedItem(tabSnip.id);
+        setSelectedItem(tabSnip.id, ExplorerItemType.File);
       }}
     >
       <Icon

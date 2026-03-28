@@ -4,6 +4,7 @@ import { signIn } from "next-auth/react";
 import { FaGithub, FaGoogle, FaDiscord } from "react-icons/fa";
 import VoronoiBackground from "../../components/VoronoiBackground";
 import Image from "next/image";
+import { useTabStore } from "@/app/store/tabStore";
 
 const providers = [
   {
@@ -27,6 +28,7 @@ const providers = [
 ];
 
 export default function SignInPage() {
+  const {tabs, selectedTab} = useTabStore();
   return (
     <div className="relative min-h-screen flex flex-col overflow-hidden">
       <VoronoiBackground />
@@ -56,7 +58,10 @@ export default function SignInPage() {
               {providers.map((p) => (
                 <button
                   key={p.id}
-                  onClick={() => signIn(p.id, { callbackUrl: "/" })}
+                  onClick={() => {
+                    signIn(p.id, { callbackUrl: "/" })
+                    
+                  }}
                   className={`btn w-full justify-center ${p.color}`}
                 >
                   {p.icon}

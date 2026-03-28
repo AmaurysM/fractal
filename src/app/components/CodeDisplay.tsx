@@ -41,7 +41,7 @@ export const CodeDisplay = () => {
   } = useTabStore();
 
   const { editSnippet, fetchSnippet } = useSnippet();
-  const { selectedItem, selectedItemType } = useLibraryStore();
+  const { selectedItem, selectedItemType, setSelectedItem } = useLibraryStore();
 
   const [addingDescription, setAddingDescription] = useState(false);
   const [descriptionVisible, setDescriptionVisible] = useState(false);
@@ -70,10 +70,29 @@ export const CodeDisplay = () => {
       setTimeout(() => textareaRef.current?.focus(), 200);
     }
   }, [descriptionVisible]);
+  const hasHydrated = useRef(false);
 
   useEffect(() => {
+    if (hasHydrated.current) return;
+    hasHydrated.current = true;
+
     if (!selectedItem) return;
-    const cached = useTabStore.getState().tabs.find((t) => t.id === selectedItem);
+    if (tabs.length <= 0) return;
+
+    const cached = tabs.find((t) => t.id === selectedItem);
+    if (!cached) {
+      setSelectedItem(tabs[0].id, ExplorerItemType.File);
+    } else {
+      setSnippet(cached);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasHydrated.current) return;
+    if (!selectedItem) return;
+    if (selectedItemType !== ExplorerItemType.File) return;
+
+    const cached = tabs.find((t) => t.id === selectedItem);
     if (cached) setSnippet(cached);
   }, [selectedItem]);
 
@@ -362,8 +381,8 @@ export const CodeDisplay = () => {
               {/* Dot indicator when there's saved content */}
               <span
                 className={`absolute top-0.75 right-0.75 w-1.25 h-1.25 rounded-full bg-[#4ec9b0] transition-all duration-200 ${snippet.description?.trim()
-                    ? "opacity-100 scale-100"
-                    : "opacity-0 scale-0"
+                  ? "opacity-100 scale-100"
+                  : "opacity-0 scale-0"
                   }`}
               />
             </button>
@@ -382,8 +401,8 @@ export const CodeDisplay = () => {
             >
               <BiDownload
                 className={`w-4 h-4 transition-all duration-150 ${downloaded
-                    ? "opacity-0 translate-y-1 text-[#4ec9b0]"
-                    : "opacity-100 translate-y-0"
+                  ? "opacity-0 translate-y-1 text-[#4ec9b0]"
+                  : "opacity-100 translate-y-0"
                   }`}
               />
               <span className={`absolute inset-0 flex items-center justify-center transition-all duration-200 text-[#4ec9b0] ${downloaded ? "opacity-100 scale-100" : "opacity-0 scale-50"

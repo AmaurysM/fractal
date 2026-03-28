@@ -32,22 +32,18 @@ type LibraryStore = {
 
   pendingRemove: string | null;
   setPendingRemove: (id: string | null) => void;
-  
 };
 
 export const useLibraryStore = create<LibraryStore>()(
   persist(
     (set, get) => ({
       selectedItem: null,
-      selectedItemType:null,
+      selectedItemType: null,
       setSelectedItem: (item: string | null, type?: ExplorerItemType) => {
         const tabStore = useTabStore.getState();
         const state = get();
         if (item && type === ExplorerItemType.File) {
           tabStore.addTab(item);
-        }
-        if (item && !type) {
-          tabStore.selectTab(item);
         }
         const isChangingItem = item !== state.selectedItem;
         set(() => ({
@@ -97,14 +93,21 @@ export const useLibraryStore = create<LibraryStore>()(
       partialize: (state) => ({
         selectedItem: state.selectedItem,
       }),
-      onRehydrateStorage: () => (state) => {
-        if (!state) return;
-        const tabStore = useTabStore.getState();
-        const tabSelected = tabStore.selectedTab;
-        if (tabSelected) {
-          state.selectedItem = tabSelected;
-        }
-      },
+      // onRehydrateStorage: () => (state) => {
+      //   if (!state) return;
+      //   const tabStore = useTabStore.getState();
+      //   const tabSelected = tabStore.selectedTab;
+      //   const tabs = tabStore.tabs;
+
+      //   // If there are tabs but no valid file is selected, pick from tabs
+      //   const selectedIsATab = tabs.some((t) => t.id === state.selectedItem);
+      //   if (!selectedIsATab && tabSelected) {
+      //     state.setSelectedItem(tabSelected, ExplorerItemType.File)
+      //     //tabStore.selectTab(tabSelected)
+      //     // state.selectedItem = tabSelected;
+      //     // state.selectedItemType = ExplorerItemType.File;
+      //   }
+      // },
     },
   ),
 );

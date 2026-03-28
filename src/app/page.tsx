@@ -41,7 +41,7 @@ export default function Home() {
     setIsEditingSnippet,
   } = useLibraryStore();
 
-  const { tabs } = useTabStore();
+  const { tabs, clearTabs } = useTabStore();
 
   const { searchLibraries } = useLibrary();
   const { searchSnippets } = useSnippet();
@@ -55,7 +55,6 @@ export default function Home() {
   const [foundSnippets, setFoundSnippets] = useState<SnippetDTO[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  // Sync session user into auth store
   useEffect(() => {
     if (session?.user && (!user || session.user.id !== user.id)) {
       setUser(session.user);
@@ -76,8 +75,7 @@ export default function Home() {
         searchLibraries(query),
         searchSnippets(query),
       ]);
-      // searchLibraries returns string[] per the hook, so we need to handle that
-      // If your search returns full DTOs update accordingly
+
       setFoundSnippets(snips ?? []);
     } catch (e) {
       console.error("Search failed:", e);
@@ -89,6 +87,7 @@ export default function Home() {
   const isInitialLoading = !user;
 
   function handleSignout() {
+    clearTabs();
     signOut({ callbackUrl: "/landing" });
   }
 

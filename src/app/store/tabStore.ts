@@ -14,6 +14,7 @@ type TabStore = {
   closeOtherTabs: (snipId: string) => void;
   updateTab: (snippet: Snippet) => void;
   moveTabToIndex: (snipId: string, index: number) => void;
+  clearTabs: () => void;
 };
 
 const pickFallback = (tabs: Snippet[]): string | null =>
@@ -112,6 +113,7 @@ export const useTabStore = create<TabStore>()(
           return { tabs };
         });
       },
+      clearTabs: () => set({ tabs: [], selectedTab: null }),
     }),
     {
       name: "tab-store",

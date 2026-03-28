@@ -223,7 +223,8 @@ export const TreeItem = ({
                 style={{ paddingLeft }}
                 className={`flex items-center h-5.5 cursor-pointer transition-colors select-none ${isSelected ? 'bg-[#37373d]' : isHovered ? 'bg-[#2a2d2e]' : ''
                     }`}
-                onClick={() => {
+                onClick={(e) => {
+                    e.stopPropagation();
                     if (loadingChildren) return;
                     if (type === ExplorerItemType.Folder) {
                         setIsExpanded(!isExpanded);
@@ -291,7 +292,7 @@ export const TreeItem = ({
                             key={lib.id}
                             onClick={(e) => {
                                 e.stopPropagation();
-                                setSelectedItem(lib.id);
+                                setSelectedItem(lib.id, ExplorerItemType.Folder);
                             }}
                         >
                             {isEditingFolder && selectedItem === lib.id ? (
@@ -340,7 +341,7 @@ export const TreeItem = ({
                             key={snip.id}
                             onClick={(e) => {
                                 e.stopPropagation();
-                                setSelectedItem(snip.id);
+                                setSelectedItem(snip.id, ExplorerItemType.File);
                             }}
                         >
                             {isEditingSnippet && selectedItem === snip.id ? (
