@@ -13,7 +13,6 @@ type TabStore = {
   closeAllTabs: () => void;
   closeOtherTabs: (snipId: string) => void;
   updateTab: (snippet: Snippet) => void;
-
   moveTabToIndex: (snipId: string, index: number) => void;
 };
 

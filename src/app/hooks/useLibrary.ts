@@ -8,6 +8,7 @@ export const useLibrary = () => {
   const addController = new AbortController();
   const deleteController = new AbortController();
   const editTitleController = new AbortController();
+  const editController = new AbortController();
 
   const fetchParentLibraries = async (
     libraryId: string = "",
@@ -52,8 +53,8 @@ export const useLibrary = () => {
       const res = await fetch(
         `/api/libraries/search?folderTitle=${encodeURIComponent(query)}`,
         {
-          signal: searchController.signal
-        }
+          signal: searchController.signal,
+        },
       );
       if (!res.ok) throw new Error("Failed to find libraries");
 
@@ -81,7 +82,7 @@ export const useLibrary = () => {
           parentId,
           title,
         }),
-        signal: addController.signal
+        signal: addController.signal,
       });
 
       if (!res.ok) throw new Error("Failed to add folder");
@@ -110,7 +111,7 @@ export const useLibrary = () => {
       const res = await fetch(`/api/libraries`, {
         method: "DELETE",
         body: JSON.stringify({ libraryId }),
-        signal: deleteController.signal
+        signal: deleteController.signal,
       });
 
       if (!res.ok) {
@@ -143,7 +144,7 @@ export const useLibrary = () => {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, title }),
-        signal: editTitleController.signal
+        signal: editTitleController.signal,
       });
 
       if (!res.ok) throw new Error("Failed to edit folder");
@@ -164,6 +165,28 @@ export const useLibrary = () => {
     }
   };
 
+  const moveLibrary = async (
+    libraryId: string,
+    newParentId: string | null,
+    setLoading?: Dispatch<SetStateAction<boolean>>,
+  ) => {
+    setLoading?.(true);
+    try {
+      const res = await fetch(`/api/libraries/move`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ libraryId, newParentId }),
+      });
+      if (!res.ok) throw new Error("Failed to move library");
+      return await res.json();
+    } catch (e) {
+      console.error("Failed to move library:", e);
+      return;
+    } finally {
+      setLoading?.(false);
+    }
+  };
+
   return {
     fetchParentLibraries,
     searchLibraries,
@@ -174,6 +197,7 @@ export const useLibrary = () => {
     searchController,
     addController,
     deleteController,
-    editTitleController
+    editTitleController,
+    moveLibrary,
   };
 };

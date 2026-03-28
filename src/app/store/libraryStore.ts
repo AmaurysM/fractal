@@ -3,8 +3,16 @@ import { persist } from "zustand/middleware";
 import { ExplorerItemType } from "../../../types/types";
 import { useTabStore } from "./tabStore";
 
+export type DragItem = {
+  id: string;
+  type: ExplorerItemType;
+  title: string;
+  parentLibraryId: string | null;
+};
+
 type LibraryStore = {
   selectedItem: string | null;
+  selectedItemType: ExplorerItemType | null;
   setSelectedItem: (item: string | null, type?: ExplorerItemType) => void;
 
   addingSnippet: boolean;
@@ -18,25 +26,32 @@ type LibraryStore = {
 
   isEditingFolder: boolean;
   setIsEditingFolder: (val: boolean) => void;
+
+  dragItem: DragItem | null;
+  setDragItem: (item: DragItem | null) => void;
+
+  pendingRemove: string | null;
+  setPendingRemove: (id: string | null) => void;
+  
 };
 
 export const useLibraryStore = create<LibraryStore>()(
   persist(
     (set, get) => ({
       selectedItem: null,
+      selectedItemType:null,
       setSelectedItem: (item: string | null, type?: ExplorerItemType) => {
         const tabStore = useTabStore.getState();
         const state = get();
         if (item && type === ExplorerItemType.File) {
           tabStore.addTab(item);
         }
-
         if (item && !type) {
           tabStore.selectTab(item);
         }
         const isChangingItem = item !== state.selectedItem;
-
         set(() => ({
+          selectedItemType: type,
           selectedItem: item,
           addingSnippet: false,
           addingLibrary: false,
@@ -70,6 +85,12 @@ export const useLibraryStore = create<LibraryStore>()(
           addingLibrary: false,
         }));
       },
+
+      dragItem: null,
+      pendingRemove: null,
+
+      setDragItem: (item) => set(() => ({ dragItem: item })),
+      setPendingRemove: (id: string | null) => set({ pendingRemove: id }),
     }),
     {
       name: "library-store",
@@ -84,6 +105,6 @@ export const useLibraryStore = create<LibraryStore>()(
           state.selectedItem = tabSelected;
         }
       },
-    }
-  )
+    },
+  ),
 );

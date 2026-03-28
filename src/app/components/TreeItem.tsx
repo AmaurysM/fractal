@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Library, Snippet, ExplorerItemType } from "../../../types/types";
 import { BiChevronRight, BiFolder, BiTrash } from "react-icons/bi";
 import { VscNewFolder, VscNewFile } from "react-icons/vsc";
@@ -14,20 +14,22 @@ import { useSnippet } from "../hooks/useSnippet";
 import { useSession } from "next-auth/react";
 import { LibraryDTO } from "../api/libraries/parents/route";
 import { SnippetDTO } from "../api/snippets/parents/route";
-import { useTabStore } from "../store/tabStore";
 import { getLanguageConfig, LANGUAGES } from "../../../types/languages";
 import { ContextMenu } from "./ContextMenu";
+import { TreeItemDropContainer } from "./TreeItemDropContainer";
 
 export const TreeItem = ({
     item,
     type,
     level = 0,
     onDelete,
+    onDragEnd,
 }: {
     item: Library | Snippet;
     type: ExplorerItemType;
     level?: number;
     onDelete?: (id: string) => void;
+    onDragEnd?: (event: any) => void;
 }) => {
 
     const {
@@ -35,12 +37,14 @@ export const TreeItem = ({
         searchLibraries,
         addLibrary,
         deleteLibrary,
+        moveLibrary
     } = useLibrary();
 
     const {
         fetchParentSnippets,
         fetchSnippet,
-        deleteSnippet
+        deleteSnippet,
+        moveSnippet
     } = useSnippet();
 
     const {
@@ -105,6 +109,19 @@ export const TreeItem = ({
         loadData();
     }, [isExpanded, type, currentItem.id, session]);
 
+    useEffect(() => {
+        if (type !== ExplorerItemType.Folder) return;
+
+        const handler = (e: CustomEvent) => {
+            if (e.detail.folderIds.includes(item.id)) {
+                refreshMyChildren();
+            }
+        };
+
+        window.addEventListener("tree:refresh", handler as EventListener);
+        return () => window.removeEventListener("tree:refresh", handler as EventListener);
+    }, [item.id, type]);
+
     const handleContextMenu = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -126,6 +143,21 @@ export const TreeItem = ({
         } finally {
             setIsDeleting(false);
         }
+    };
+
+    const refreshMyChildren = async () => {
+        const [libs, snips] = await Promise.all([
+            fetchParentLibraries(currentItem.id),
+            fetchParentSnippets(currentItem.id),
+        ]);
+        if (libs) setLibraries(libs);
+        if (snips) setSnippets(snips);
+    };
+
+    const handleChildDragEnd = async (event: any) => {
+        if (event.canceled) return;
+        await refreshMyChildren();
+        onDragEnd?.(event);
     };
 
     const getContextMenuItems = () => {
@@ -183,31 +215,21 @@ export const TreeItem = ({
     };
 
     const paddingLeft = level * 12 + 8;
-    function handleClick(item: string): void {
-
-        setSelectedItem(item, type);
-
-    }
 
     return (
+
         <div className={isDeleting ? 'opacity-40 pointer-events-none' : ''}>
             <div
-                className={`flex items-center h-5.5 cursor-pointer transition-colors select-none ${isSelected
-                    ? 'bg-[#37373d]'
-                    : isHovered
-                        ? 'bg-[#2a2d2e]'
-                        : ''
-                    }`}
                 style={{ paddingLeft }}
+                className={`flex items-center h-5.5 cursor-pointer transition-colors select-none ${isSelected ? 'bg-[#37373d]' : isHovered ? 'bg-[#2a2d2e]' : ''
+                    }`}
                 onClick={() => {
                     if (loadingChildren) return;
-
                     if (type === ExplorerItemType.Folder) {
                         setIsExpanded(!isExpanded);
                         setAddingLibrary(false);
                     }
-
-                    handleClick(currentItem.id);
+                    setSelectedItem(currentItem.id, type);
                 }}
                 onContextMenu={handleContextMenu}
                 onMouseEnter={() => setIsHovered(true)}
@@ -219,28 +241,24 @@ export const TreeItem = ({
                             } ${loadingChildren ? 'opacity-50' : ''}`}
                     />
                 )}
-
                 {type === ExplorerItemType.Folder ? (
-                    <BiFolder className={`w-4 h-4 mr-1.5 shrink-0 ${isExpanded ? 'text-[#dcb67a]' : 'text-[#dcb67a]'}`} />
+                    <BiFolder className="w-4 h-4 mr-1.5 shrink-0 text-[#dcb67a]" />
                 ) : (
                     <FileIcon
                         className="w-4 h-4 mr-1.5 shrink-0"
                         style={{ color: langConfig?.color || '#cccccc' }}
                     />
                 )}
-
                 <span className="flex-1 text-[13px] truncate text-[#cccccc] font-normal">
                     {type === ExplorerItemType.Folder
                         ? (item as Library).title
                         : (item as Snippet).title}
                 </span>
-
                 {type === ExplorerItemType.File && (
                     <span className="text-[11px] text-[#858585] mr-2 shrink-0">
                         .{langConfig?.ext}
                     </span>
                 )}
-
                 {loadingChildren && (
                     <div className="w-2.5 h-2.5 border border-[#cccccc] border-t-transparent rounded-full animate-spin mr-2" />
                 )}
@@ -276,35 +294,33 @@ export const TreeItem = ({
                                 setSelectedItem(lib.id);
                             }}
                         >
-                            {isEditingFolder && selectedItem === lib.id ?
+                            {isEditingFolder && selectedItem === lib.id ? (
                                 <TreeItemEdit
                                     level={level + 1}
-                                    //editingTitle={lib.title}
                                     type={ExplorerItemType.Folder}
-                                    //itemId={lib.id}
                                     item={lib}
                                     onSuccess={() => {
                                         setIsEditingFolder(false);
-                                        //fetchLibraries(item.id);
                                         setLibraries(prev => prev.map(l =>
                                             l.id === lib.id ? { ...l, title: lib.title } : l
                                         ));
                                     }}
                                 />
-                                :
-                                <TreeItem
-                                    item={{
-                                        id: lib.id,
-                                        userid: session?.user.id!,
-                                        title: lib.title,
-                                    } as Library}
+                            ) : (
+                                <TreeItemDropContainer
+                                    dto={lib}
+                                    parentId={item.id}
                                     type={ExplorerItemType.Folder}
-                                    level={level + 1}
-                                    onDelete={(id) => setLibraries(prev => prev.filter(l => l.id !== id))}
-
-                                />
-                            }
-
+                                >
+                                    <TreeItem
+                                        item={{ id: lib.id, userid: session?.user.id!, title: lib.title } as Library}
+                                        type={ExplorerItemType.Folder}
+                                        level={level + 1}
+                                        onDelete={(id) => setLibraries(prev => prev.filter(l => l.id !== id))}
+                                        onDragEnd={handleChildDragEnd}
+                                    />
+                                </TreeItemDropContainer>
+                            )}
                         </div>
                     ))}
 
@@ -327,7 +343,7 @@ export const TreeItem = ({
                                 setSelectedItem(snip.id);
                             }}
                         >
-                            {isEditingSnippet && selectedItem === snip.id ?
+                            {isEditingSnippet && selectedItem === snip.id ? (
                                 <TreeItemEdit
                                     level={level + 1}
                                     type={ExplorerItemType.File}
@@ -339,19 +355,21 @@ export const TreeItem = ({
                                         ));
                                     }}
                                 />
-                                :
-                                <TreeItem
-                                    item={{
-                                        id: snip.id,
-                                        title: snip.title,
-                                        userId: session?.user.id!
-                                    } as Snippet}
+                            ) : (
+                                <TreeItemDropContainer
+                                    dto={snip}
+                                    parentId={item.id}
                                     type={ExplorerItemType.File}
-                                    level={level + 1}
-                                    onDelete={(id) => setSnippets(prev => prev.filter(s => s.id !== id))}
-
-                                />
-                            }
+                                >
+                                    <TreeItem
+                                        item={{ id: snip.id, title: snip.title, userId: session?.user.id! } as Snippet}
+                                        type={ExplorerItemType.File}
+                                        level={level + 1}
+                                        onDelete={(id) => setSnippets(prev => prev.filter(s => s.id !== id))}
+                                        onDragEnd={handleChildDragEnd}
+                                    />
+                                </TreeItemDropContainer>
+                            )}
                         </div>
                     ))}
                 </div>

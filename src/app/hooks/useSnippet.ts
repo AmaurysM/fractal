@@ -56,10 +56,12 @@ export const useSnippet = () => {
     setLoading?.(true);
 
     try {
-      const res = await fetch(`/api/snippets/search?fileTitle=${encodeURIComponent(query)}`,
+      const res = await fetch(
+        `/api/snippets/search?fileTitle=${encodeURIComponent(query)}`,
         {
           signal: searchController.signal,
-        });
+        },
+      );
       if (!res.ok) throw new Error("Failed to find libraries");
 
       const data: SnippetDTO[] = await res.json();
@@ -115,7 +117,7 @@ export const useSnippet = () => {
       const res = await fetch(`/api/snippets`, {
         method: "DELETE",
         body: JSON.stringify({ snippetId }),
-        signal: deleteController.signal
+        signal: deleteController.signal,
       });
 
       if (!res.ok) {
@@ -156,7 +158,7 @@ export const useSnippet = () => {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ snippet }),
-        signal: editController.signal
+        signal: editController.signal,
       });
 
       if (!res.ok) throw new Error("Failed to edit snippet");
@@ -187,7 +189,7 @@ export const useSnippet = () => {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, title }),
-        signal: editTitleController.signal
+        signal: editTitleController.signal,
       });
 
       if (!res.ok) throw new Error("Failed to edit snippet");
@@ -228,8 +230,30 @@ export const useSnippet = () => {
       if (e instanceof Error && e.name === "AbortError") {
         console.log("Fetch snippets cancelled");
       } else {
-        console.error("Failed to fetch snippets:", e);
+        console.error("Failed to fetch snippet:", e);
       }
+    } finally {
+      setLoading?.(false);
+    }
+  };
+
+  const moveSnippet = async (
+    snippetId: string,
+    newParentId: string | null,
+    setLoading?: Dispatch<SetStateAction<boolean>>,
+  ) => {
+    setLoading?.(true);
+    try {
+      const res = await fetch(`/api/snippets/move`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ snippetId, newParentId }),
+      });
+      if (!res.ok) throw new Error("Failed to move snippet");
+      return await res.json();
+    } catch (e) {
+      console.error("Failed to move snippet:", e);
+      return;
     } finally {
       setLoading?.(false);
     }
@@ -249,6 +273,7 @@ export const useSnippet = () => {
     deleteController,
     editController,
     editTitleController,
-    fetchParentController
+    fetchParentController,
+    moveSnippet,
   };
 };

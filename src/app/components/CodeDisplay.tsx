@@ -1,7 +1,7 @@
 import { BiCopy, BiCheck, BiDownload, BiSave } from "react-icons/bi";
 import { VscCode, VscChevronDown } from "react-icons/vsc";
 import { MdNotes } from "react-icons/md";
-import { Snippet } from "../../../types/types";
+import { ExplorerItemType, Snippet } from "../../../types/types";
 import { useState, useEffect, useRef } from "react";
 import Editor, { Monaco } from "@monaco-editor/react";
 import * as monaco from "monaco-editor";
@@ -41,7 +41,7 @@ export const CodeDisplay = () => {
   } = useTabStore();
 
   const { editSnippet, fetchSnippet } = useSnippet();
-  const { selectedItem, setSelectedItem } = useLibraryStore();
+  const { selectedItem, selectedItemType } = useLibraryStore();
 
   const [addingDescription, setAddingDescription] = useState(false);
   const [descriptionVisible, setDescriptionVisible] = useState(false);
@@ -78,7 +78,7 @@ export const CodeDisplay = () => {
   }, [selectedItem]);
 
   useEffect(() => {
-    if (!session || !selectedItem) return;
+    if (!session || !selectedItem || selectedItemType !== ExplorerItemType.File) return;
     const refresh = async () => {
       try {
         const updated = await fetchSnippet(selectedItem);
@@ -87,7 +87,7 @@ export const CodeDisplay = () => {
           updateTab(updated);
         }
       } catch (error) {
-        console.error("Failed to refresh snippet:", error);
+        console.error("Failed to refresh snippet in CodeDisply:", error);
       }
     };
     refresh();
