@@ -13,7 +13,11 @@ export type DragItem = {
 type LibraryStore = {
   selectedItem: string | null;
   selectedItemType: ExplorerItemType | null;
-  setSelectedItem: (item: string | null, type?: ExplorerItemType) => void;
+
+  /// array of item <--------
+
+  selectedParentId: string | null;
+  setSelectedItem: (item: string | null, type?: ExplorerItemType, parentId?: string | null) => void;
 
   addingSnippet: boolean;
   setAddingSnippet: (val: boolean) => void;
@@ -39,16 +43,29 @@ export const useLibraryStore = create<LibraryStore>()(
     (set, get) => ({
       selectedItem: null,
       selectedItemType: null,
-      setSelectedItem: (item: string | null, type?: ExplorerItemType) => {
+      selectedParentId: null,
+      setSelectedItem: (item: string | null, type?: ExplorerItemType, parentId?: string | null) => {
         const tabStore = useTabStore.getState();
         const state = get();
         if (item && type === ExplorerItemType.File) {
           tabStore.addTab(item);
         }
         const isChangingItem = item !== state.selectedItem;
+
+        // If it's a file, parentId is the folder containing it.
+        // If it's a folder, it is its own parent context for adding children.
+        // If null (root), parentId is null.
+        const resolvedParentId =
+          type === ExplorerItemType.File
+            ? (parentId ?? null)
+            : type === ExplorerItemType.Folder
+            ? item
+            : null;
+
         set(() => ({
           selectedItemType: type,
           selectedItem: item,
+          selectedParentId: resolvedParentId,
           addingSnippet: false,
           addingLibrary: false,
           isEditingFolder: isChangingItem ? false : state.isEditingFolder,
@@ -93,21 +110,6 @@ export const useLibraryStore = create<LibraryStore>()(
       partialize: (state) => ({
         selectedItem: state.selectedItem,
       }),
-      // onRehydrateStorage: () => (state) => {
-      //   if (!state) return;
-      //   const tabStore = useTabStore.getState();
-      //   const tabSelected = tabStore.selectedTab;
-      //   const tabs = tabStore.tabs;
-
-      //   // If there are tabs but no valid file is selected, pick from tabs
-      //   const selectedIsATab = tabs.some((t) => t.id === state.selectedItem);
-      //   if (!selectedIsATab && tabSelected) {
-      //     state.setSelectedItem(tabSelected, ExplorerItemType.File)
-      //     //tabStore.selectTab(tabSelected)
-      //     // state.selectedItem = tabSelected;
-      //     // state.selectedItemType = ExplorerItemType.File;
-      //   }
-      // },
     },
   ),
 );

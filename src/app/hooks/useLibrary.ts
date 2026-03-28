@@ -87,7 +87,7 @@ export const useLibrary = () => {
 
       if (!res.ok) throw new Error("Failed to add folder");
 
-      const newLibrary: Library = await res.json();
+      const newLibrary: LibraryDTO = await res.json();
       return newLibrary;
     } catch (e) {
       if (e instanceof Error && e.name === "AbortError") {

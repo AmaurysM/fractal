@@ -3,6 +3,7 @@ import { Library } from "../../../../types/types";
 import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "@/app/api/auth/authOptions";
 import { getServerSession } from "next-auth";
+import { LibraryDTO } from "./parents/route";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -10,7 +11,7 @@ export async function GET() {
   if (!session) {
     return NextResponse.json(
       { message: "Error fetching Snippets" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
@@ -29,7 +30,7 @@ export async function GET() {
     console.error(error);
     return NextResponse.json(
       { message: "Error fetching user" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
   if (!session) {
     return NextResponse.json(
       { message: "Error fetching Snippets" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
@@ -54,26 +55,31 @@ export async function POST(req: NextRequest) {
       `INSERT INTO "Library" (userid, title) 
        VALUES ($1, $2) 
        RETURNING id`,
-      [userId, title]
+      [userId, title],
     );
 
-    const newLibraryId = result.rows[0].id;
-    
+    const newLibrary = result.rows[0];
 
     if (parentId) {
       await db.query(
         `INSERT INTO "LibraryJunction" (parentlibrary, childlibrary) 
          VALUES ($1, $2)`,
-        [parentId, newLibraryId]
+        [parentId, newLibrary.id],
       );
     }
 
-    return NextResponse.json({ libraryId: newLibraryId });
+    const dto: LibraryDTO = {
+      id: newLibrary.id,
+      title: newLibrary.title,
+      parentId: parentId ?? null,
+    };
+
+    return NextResponse.json({ dto });
   } catch (error) {
     console.error(error);
     return NextResponse.json(
       { error: "Something went wrong" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -82,8 +88,8 @@ export async function DELETE(req: NextRequest) {
   const { libraryId } = await req.json();
 
   try {
-    await db.query('BEGIN');
-    
+    await db.query("BEGIN");
+
     // Step 1: Find all libraries in the tree (current + all descendants)
     const libraryTreeResult = await db.query(
       `WITH RECURSIVE library_tree AS (
@@ -97,13 +103,13 @@ export async function DELETE(req: NextRequest) {
         INNER JOIN library_tree lt ON lj.parentlibrary = lt.id
       )
       SELECT id FROM library_tree`,
-      [libraryId]
+      [libraryId],
     );
 
-    const libraryIds = libraryTreeResult.rows.map(row => row.id);
+    const libraryIds = libraryTreeResult.rows.map((row) => row.id);
 
     if (libraryIds.length === 0) {
-      await db.query('ROLLBACK');
+      await db.query("ROLLBACK");
       return NextResponse.json({ error: "Library not found" }, { status: 404 });
     }
 
@@ -115,24 +121,24 @@ export async function DELETE(req: NextRequest) {
          FROM "SnippetJunction" 
          WHERE libraryid = ANY($1)
        )`,
-      [libraryIds]
+      [libraryIds],
     );
 
     // Step 3: Delete all libraries in the tree
     // CASCADE will automatically delete LibraryJunction and SnippetJunction records
     const oldLibrary = await db.query(
       `DELETE FROM "Library" WHERE id = ANY($1)`,
-      [libraryIds]
+      [libraryIds],
     );
 
-    await db.query('COMMIT');
+    await db.query("COMMIT");
     return NextResponse.json({ libraryId: oldLibrary });
   } catch (error) {
-    await db.query('ROLLBACK');
+    await db.query("ROLLBACK");
     console.error(error);
     return NextResponse.json(
       { error: "Something went wrong" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

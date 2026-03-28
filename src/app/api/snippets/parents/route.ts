@@ -2,6 +2,7 @@ import db from "@/app/lib/db";
 import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "@/app/api/auth/authOptions";
+
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const libId = req.headers.get("voronoi-library-id");
@@ -14,29 +15,32 @@ export async function GET(req: NextRequest) {
 
   try {
     let result;
+
     if (libId) {
       result = await db.query(
-        `SELECT s.id, s.title
+        `SELECT s.id, s.title, sj.libraryid AS "parentId"
          FROM "Snippet" s
-         INNER JOIN "SnippetJunction" sj
-           ON s.id = sj.snippetid
+         INNER JOIN "SnippetJunction" sj ON s.id = sj.snippetid
          WHERE s."userId" = $1 AND sj.libraryid = $2
          ORDER BY s.title ASC`,
-        [userId, libId]
+        [userId, libId],
       );
     } else {
       result = await db.query(
-        'SELECT l.id, l.title FROM "Snippet" l LEFT JOIN "SnippetJunction" lj ON l.id = lj.snippetid WHERE l."userId" = $1 AND lj.id IS NULL ORDER BY l.title ASC',
+        `SELECT s.id, s.title, NULL AS "parentId"
+         FROM "Snippet" s
+         LEFT JOIN "SnippetJunction" sj ON s.id = sj.snippetid
+         WHERE s."userId" = $1 AND sj.id IS NULL
+         ORDER BY s.title ASC`,
         [userId],
       );
     }
 
-    const Snippets: SnippetDTO[] = result.rows;
-    return NextResponse.json(Snippets);
+    return NextResponse.json(result.rows as SnippetDTO[]);
   } catch (error) {
     console.error(error);
     return NextResponse.json(
-      { message: "Error fetching user" },
+      { message: "Error fetching snippets" },
       { status: 500 },
     );
   }
@@ -45,4 +49,5 @@ export async function GET(req: NextRequest) {
 export type SnippetDTO = {
   id: string;
   title: string;
+  parentId: string | null;
 };

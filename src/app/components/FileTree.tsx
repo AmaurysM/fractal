@@ -1,7 +1,7 @@
 "use client"
 
 import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { TreeSkeleton } from "./SkeletonLoading";
 import { TreeItemCreation } from "./TreeItemCreation";
 import { ExplorerItemType, Snippet } from "../../../types/types";
@@ -10,12 +10,11 @@ import { useLibraryStore } from "../store/libraryStore";
 import { TreeItem } from "./TreeItem";
 import { TreeItemEdit } from "./TreeItemEdit";
 import { Library } from "../../../types/types";
-import { LibraryDTO } from "../api/libraries/parents/route";
 import { useSnippet } from "../hooks/useSnippet";
-import { SnippetDTO } from "../api/snippets/parents/route";
 import { DragDropProvider, useDroppable } from "@dnd-kit/react";
 import { TreeItemDropContainer } from "./TreeItemDropContainer";
 import { directionBiased } from "@dnd-kit/collision";
+import { ROOT_KEY, useTreeStore } from "../store/treeStore";
 
 const RootDropZone = ({
     children,
@@ -45,7 +44,7 @@ const RootDropZone = ({
     );
 };
 
-export const FileTree = () => {
+const FileTreeInner = () => {
     const { fetchParentLibraries, moveLibrary } = useLibrary();
     const { fetchParentSnippets, moveSnippet } = useSnippet();
 
@@ -60,73 +59,72 @@ export const FileTree = () => {
         setIsEditingSnippet,
     } = useLibraryStore();
 
+    const { cache, setFolder, moveItem } = useTreeStore();
     const { data: session } = useSession();
-    const [libraries, setLibraries] = useState<LibraryDTO[]>([]);
-    const [snippets, setSnippets] = useState<SnippetDTO[]>([]);
-    const [loading, setLoading] = useState<boolean>(false);
+
+    const rootContents = cache[ROOT_KEY];
+    const libraries = rootContents?.libs  ?? [];
+    const snippets  = rootContents?.snips ?? [];
+    const loading   = rootContents === undefined;
     const isSelected = selectedItem == null;
 
     useEffect(() => {
-        if (!session) return;
+        if (!session || rootContents !== undefined) return;
 
         const load = async () => {
-            setLoading(true);
             try {
                 const [libs, snips] = await Promise.all([
                     fetchParentLibraries(),
                     fetchParentSnippets(),
                 ]);
-                if (libs) setLibraries(libs);
-                if (snips) setSnippets(snips);
-            } catch (error) {
-                console.error("Failed to fetch tree:", error);
-            } finally {
-                setLoading(false);
+                setFolder(ROOT_KEY, { libs: libs ?? [], snips: snips ?? [] });
+            } catch (err) {
+                console.error("Failed to fetch tree:", err);
+                setFolder(ROOT_KEY, { libs: [], snips: [] });
             }
         };
 
         load();
-    }, [session]);
-    const refreshRoot = async () => {
+    }, [session, rootContents]);
+
+    const refreshFolder = async (folderId: string) => {
         const [libs, snips] = await Promise.all([
-            fetchParentLibraries(),
-            fetchParentSnippets(),
+            fetchParentLibraries(folderId === ROOT_KEY ? undefined : folderId),
+            fetchParentSnippets(folderId === ROOT_KEY ? undefined : folderId),
         ]);
-        if (libs) setLibraries(libs);
-        if (snips) setSnippets(snips);
+        setFolder(folderId, { libs: libs ?? [], snips: snips ?? [] });
     };
 
-    // FileTree.tsx
     const handleDragEnd = async (event: any) => {
         if (event.canceled) return;
 
-        const source = event.operation.source?.data;
-        const target = event.operation.target?.data;
+        const source = event.operation.source?.data as {
+            id: string; type: ExplorerItemType; parentId: string | null;
+        } | undefined;
+        const target = event.operation.target?.data as {
+            id: string | null; type: ExplorerItemType;
+        } | undefined;
 
         if (!source || !target) return;
         if (source.id === target.id) return;
         if (target.type !== ExplorerItemType.Folder) return;
 
-        const targetFolderId: string | null = target.id ?? null;
+        const fromKey = source.parentId ?? ROOT_KEY;
+        const toKey   = target.id       ?? ROOT_KEY;
+        if (fromKey === toKey) return;
 
+        // 1. Optimistic update — UI responds instantly
+        moveItem(source.id, fromKey, toKey, source.type === ExplorerItemType.Folder);
+
+        // 2. Persist to server
         if (source.type === ExplorerItemType.Folder) {
-            await moveLibrary(source.id, targetFolderId);
+            await moveLibrary(source.id, target.id ?? null);
         } else {
-            await moveSnippet(source.id, targetFolderId);
+            await moveSnippet(source.id, target.id ?? null);
         }
 
-        const sourceWasAtRoot = !source.parentId;
-        const targetIsRoot = targetFolderId === null;
-
-        if (sourceWasAtRoot || targetIsRoot) {
-            await refreshRoot();
-        }
-
-        window.dispatchEvent(new CustomEvent("tree:refresh", {
-            detail: {
-                folderIds: [source.parentId, targetFolderId].filter(Boolean)
-            }
-        }));
+        // 3. Reconcile both affected folders with the DB
+        await Promise.all([refreshFolder(fromKey), refreshFolder(toKey)]);
     };
 
     return (
@@ -141,7 +139,12 @@ export const FileTree = () => {
                         {addingLibrary && isSelected && (
                             <TreeItemCreation
                                 type={ExplorerItemType.Folder}
-                                onSuccess={() => fetchParentLibraries()}
+                                onSuccess={(newItem) =>
+                                    setFolder(ROOT_KEY, {
+                                        libs: [...libraries, newItem as any],
+                                        snips: snippets,
+                                    })
+                                }
                             />
                         )}
 
@@ -152,21 +155,27 @@ export const FileTree = () => {
                                         type={ExplorerItemType.Folder}
                                         item={lib}
                                         onSuccess={() => {
+                                            // TreeItemEdit mutates item.title in place before calling onSuccess
                                             setIsEditingFolder(false);
-                                            setLibraries(prev =>
-                                                prev.map(l =>
+                                            setFolder(ROOT_KEY, {
+                                                libs: libraries.map((l) =>
                                                     l.id === lib.id ? { ...l, title: lib.title } : l
-                                                )
-                                            );
+                                                ),
+                                                snips: snippets,
+                                            });
                                         }}
                                     />
                                 ) : (
-                                    // Wrap root-level folders so they register as draggable sources
                                     <TreeItemDropContainer dto={lib} type={ExplorerItemType.Folder}>
                                         <TreeItem
                                             item={{ id: lib.id, userid: session?.user.id!, title: lib.title } as Library}
                                             type={ExplorerItemType.Folder}
-                                            onDelete={(id) => setLibraries(prev => prev.filter(l => l.id !== id))}
+                                            onDelete={(id) =>
+                                                setFolder(ROOT_KEY, {
+                                                    libs: libraries.filter((l) => l.id !== id),
+                                                    snips: snippets,
+                                                })
+                                            }
                                         />
                                     </TreeItemDropContainer>
                                 )}
@@ -176,7 +185,12 @@ export const FileTree = () => {
                         {addingSnippet && isSelected && (
                             <TreeItemCreation
                                 type={ExplorerItemType.File}
-                                onSuccess={() => fetchParentSnippets()}
+                                onSuccess={(newItem) =>
+                                    setFolder(ROOT_KEY, {
+                                        libs: libraries,
+                                        snips: [...snippets, newItem as any],
+                                    })
+                                }
                             />
                         )}
 
@@ -187,28 +201,34 @@ export const FileTree = () => {
                                         type={ExplorerItemType.File}
                                         item={snip}
                                         onSuccess={() => {
+                                            // TreeItemEdit mutates item.title in place before calling onSuccess
                                             setIsEditingSnippet(false);
-                                            setSnippets(prev =>
-                                                prev.map(s =>
+                                            setFolder(ROOT_KEY, {
+                                                libs: libraries,
+                                                snips: snippets.map((s) =>
                                                     s.id === snip.id ? { ...s, title: snip.title } : s
-                                                )
-                                            );
+                                                ),
+                                            });
                                         }}
                                     />
                                 ) : (
-                                    // Wrap root-level files so they register as draggable sources
                                     <TreeItemDropContainer dto={snip} type={ExplorerItemType.File}>
                                         <TreeItem
                                             item={{ id: snip.id, title: snip.title, userId: session?.user.id! } as Snippet}
                                             type={ExplorerItemType.File}
-                                            onDelete={(id) => setSnippets(prev => prev.filter(s => s.id !== id))}
+                                            onDelete={(id) =>
+                                                setFolder(ROOT_KEY, {
+                                                    libs: libraries,
+                                                    snips: snippets.filter((s) => s.id !== id),
+                                                })
+                                            }
                                         />
                                     </TreeItemDropContainer>
                                 )}
                             </div>
                         ))}
 
-                        {!loading && libraries.length === 0 && snippets.length === 0 && (
+                        {libraries.length === 0 && snippets.length === 0 && (
                             <div className="text-center py-12 px-4">
                                 <p className="text-[#858585] text-[13px]">No files or folders</p>
                                 <p className="text-[#6e6e6e] text-[11px] mt-1">Click the icons above to get started</p>
@@ -219,4 +239,6 @@ export const FileTree = () => {
             </RootDropZone>
         </DragDropProvider>
     );
-}
+};
+
+export const FileTree = () => <FileTreeInner />;

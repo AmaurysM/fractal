@@ -14,38 +14,26 @@ import { useSnippet } from "../hooks/useSnippet";
 import { useSession } from "next-auth/react";
 import { LibraryDTO } from "../api/libraries/parents/route";
 import { SnippetDTO } from "../api/snippets/parents/route";
-import { getLanguageConfig, LANGUAGES } from "../../../types/languages";
+import { getLanguageConfig } from "../../../types/languages";
 import { ContextMenu } from "./ContextMenu";
 import { TreeItemDropContainer } from "./TreeItemDropContainer";
+import { useTreeStore } from "../store/treeStore";
 
 export const TreeItem = ({
     item,
     type,
     level = 0,
+    parentId = null,
     onDelete,
-    onDragEnd,
 }: {
     item: Library | Snippet;
     type: ExplorerItemType;
     level?: number;
+    parentId?: string | null;
     onDelete?: (id: string) => void;
-    onDragEnd?: (event: any) => void;
 }) => {
-
-    const {
-        fetchParentLibraries,
-        searchLibraries,
-        addLibrary,
-        deleteLibrary,
-        moveLibrary
-    } = useLibrary();
-
-    const {
-        fetchParentSnippets,
-        fetchSnippet,
-        deleteSnippet,
-        moveSnippet
-    } = useSnippet();
+    const { fetchParentLibraries, deleteLibrary } = useLibrary();
+    const { fetchParentSnippets, fetchSnippet, deleteSnippet } = useSnippet();
 
     const {
         addingSnippet,
@@ -60,72 +48,63 @@ export const TreeItem = ({
         isEditingFolder,
     } = useLibraryStore();
 
+    const { cache, setFolder } = useTreeStore();
     const { data: session } = useSession();
-    const [libraries, setLibraries] = useState<LibraryDTO[]>([]);
-    const [snippets, setSnippets] = useState<SnippetDTO[]>([]);
-    const [loading, setLoading] = useState<boolean>(false);
-    const [currentItem, setCurrentItem] = useState<Library | Snippet>(item);
 
+    const [currentItem, setCurrentItem] = useState<Library | Snippet>(item);
     const [isExpanded, setIsExpanded] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
-    const [loadingChildren, setLoadingChildren] = useState(false);
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
-    const isSelected = selectedItem === item.id;
+
+    const isSelected    = selectedItem === item.id;
+    const folderId      = currentItem.id;
+    const folderContents = type === ExplorerItemType.Folder ? cache[folderId] : undefined;
+    const libraries     = folderContents?.libs  ?? [];
+    const snippets      = folderContents?.snips ?? [];
+    const loadingChildren = type === ExplorerItemType.Folder && isExpanded && folderContents === undefined;
 
     const langConfig = type === ExplorerItemType.File
         ? getLanguageConfig((currentItem as Snippet).language)
         : null;
     const FileIcon = langConfig?.icon || AiOutlineFileText;
 
+    // Load folder contents on first expand (cache miss)
     useEffect(() => {
         if (!session) return;
-
-        const loadData = async () => {
-            setLoading(true);
-
-            try {
-                if (type === ExplorerItemType.Folder && isExpanded) {
-                    const [libs, snips] = await Promise.all([
-                        fetchParentLibraries(currentItem.id),
-                        fetchParentSnippets(currentItem.id),
-                    ]);
-
-                    if (libs) setLibraries(libs);
-                    if (snips) setSnippets(snips);
-                }
-
-                if (type === ExplorerItemType.File) {
-                    const updated = await fetchSnippet(currentItem.id);
-                    if (updated) setCurrentItem(updated);
-                }
-            } catch (error) {
-                console.error("Failed to load item:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        loadData();
-    }, [isExpanded, type, currentItem.id, session]);
-
-    useEffect(() => {
         if (type !== ExplorerItemType.Folder) return;
+        if (!isExpanded) return;
+        if (folderContents !== undefined) return;
 
-        const handler = (e: CustomEvent) => {
-            if (e.detail.folderIds.includes(item.id)) {
-                refreshMyChildren();
+        const load = async () => {
+            try {
+                const [libs, snips] = await Promise.all([
+                    fetchParentLibraries(folderId),
+                    fetchParentSnippets(folderId),
+                ]);
+                setFolder(folderId, { libs: libs ?? [], snips: snips ?? [] });
+            } catch (err) {
+                console.error("Failed to load folder contents:", err);
+                setFolder(folderId, { libs: [], snips: [] });
             }
         };
 
-        window.addEventListener("tree:refresh", handler as EventListener);
-        return () => window.removeEventListener("tree:refresh", handler as EventListener);
-    }, [item.id, type]);
+        load();
+    }, [isExpanded, session, folderId, folderContents]);
+
+    // Load snippet metadata when rendered as a file
+    useEffect(() => {
+        if (!session) return;
+        if (type !== ExplorerItemType.File) return;
+
+        fetchSnippet(currentItem.id).then((updated) => {
+            if (updated) setCurrentItem(updated);
+        });
+    }, [session, currentItem.id]);
 
     const handleContextMenu = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-
         setContextMenu({ x: e.clientX, y: e.clientY });
     };
 
@@ -138,26 +117,11 @@ export const TreeItem = ({
                 await deleteSnippet(item.id);
             }
             onDelete?.(item.id);
-        } catch (error) {
-            console.error("Failed to delete:", error);
+        } catch (err) {
+            console.error("Failed to delete:", err);
         } finally {
             setIsDeleting(false);
         }
-    };
-
-    const refreshMyChildren = async () => {
-        const [libs, snips] = await Promise.all([
-            fetchParentLibraries(currentItem.id),
-            fetchParentSnippets(currentItem.id),
-        ]);
-        if (libs) setLibraries(libs);
-        if (snips) setSnippets(snips);
-    };
-
-    const handleChildDragEnd = async (event: any) => {
-        if (event.canceled) return;
-        await refreshMyChildren();
-        onDragEnd?.(event);
     };
 
     const getContextMenuItems = () => {
@@ -165,50 +129,47 @@ export const TreeItem = ({
 
         if (type === ExplorerItemType.Folder) {
             items.push({
-                label: 'New Folder',
+                label: "New Folder",
                 icon: <VscNewFolder className="w-4 h-4" />,
                 onClick: () => {
                     setSelectedItem(item.id, ExplorerItemType.Folder);
                     setAddingLibrary(true);
                     setIsExpanded(true);
-                }
+                },
             });
             items.push({
-                label: 'New File',
+                label: "New File",
                 icon: <VscNewFile className="w-4 h-4" />,
                 onClick: () => {
-                    setSelectedItem(item.id, ExplorerItemType.File);
+                    setSelectedItem(item.id, ExplorerItemType.Folder);
                     setAddingSnippet(true);
                     setIsExpanded(true);
-                }
+                },
             });
             items.push({
-                label: 'Change Name',
+                label: "Change Name",
                 icon: <CgRename className="w-4 h-4" />,
                 onClick: () => {
                     setSelectedItem(item.id, ExplorerItemType.Folder);
                     setIsEditingFolder(true);
-                }
-
+                },
             });
         } else {
             items.push({
-                label: 'Change Name',
+                label: "Change Name",
                 icon: <CgRename className="w-4 h-4" />,
                 onClick: () => {
-                    setSelectedItem(item.id, ExplorerItemType.File);
+                    setSelectedItem(item.id, ExplorerItemType.File, parentId);
                     setIsEditingSnippet(true);
-                }
-
-            })
-
+                },
+            });
         }
 
         items.push({
-            label: 'Delete',
+            label: "Delete",
             icon: <BiTrash className="w-4 h-4" />,
             onClick: handleDelete,
-            danger: true
+            danger: true,
         });
 
         return items;
@@ -217,20 +178,20 @@ export const TreeItem = ({
     const paddingLeft = level * 12 + 8;
 
     return (
-
-        <div className={isDeleting ? 'opacity-40 pointer-events-none' : ''}>
+        <div className={isDeleting ? "opacity-40 pointer-events-none" : ""}>
             <div
                 style={{ paddingLeft }}
-                className={`flex items-center h-5.5 cursor-pointer transition-colors select-none ${isSelected ? 'bg-[#37373d]' : isHovered ? 'bg-[#2a2d2e]' : ''
-                    }`}
+                className={`flex items-center h-5.5 cursor-pointer transition-colors select-none ${
+                    isSelected ? "bg-[#37373d]" : isHovered ? "bg-[#2a2d2e]" : ""
+                }`}
                 onClick={(e) => {
                     e.stopPropagation();
                     if (loadingChildren) return;
                     if (type === ExplorerItemType.Folder) {
-                        setIsExpanded(!isExpanded);
+                        setIsExpanded((x) => !x);
                         setAddingLibrary(false);
                     }
-                    setSelectedItem(currentItem.id, type);
+                    setSelectedItem(currentItem.id, type, parentId);
                 }}
                 onContextMenu={handleContextMenu}
                 onMouseEnter={() => setIsHovered(true)}
@@ -238,8 +199,9 @@ export const TreeItem = ({
             >
                 {type === ExplorerItemType.Folder && (
                     <BiChevronRight
-                        className={`w-3 h-3 text-[#cccccc] transition-transform mr-0.5 shrink-0 ${isExpanded ? 'rotate-90' : ''
-                            } ${loadingChildren ? 'opacity-50' : ''}`}
+                        className={`w-3 h-3 text-[#cccccc] transition-transform mr-0.5 shrink-0 ${
+                            isExpanded ? "rotate-90" : ""
+                        } ${loadingChildren ? "opacity-50" : ""}`}
                     />
                 )}
                 {type === ExplorerItemType.Folder ? (
@@ -247,7 +209,7 @@ export const TreeItem = ({
                 ) : (
                     <FileIcon
                         className="w-4 h-4 mr-1.5 shrink-0"
-                        style={{ color: langConfig?.color || '#cccccc' }}
+                        style={{ color: langConfig?.color || "#cccccc" }}
                     />
                 )}
                 <span className="flex-1 text-[13px] truncate text-[#cccccc] font-normal">
@@ -281,18 +243,21 @@ export const TreeItem = ({
                             level={level + 1}
                             type={ExplorerItemType.Folder}
                             parentId={item.id}
-                            onSuccess={(newItem) => {
-                                setLibraries(prev => [...prev, newItem as LibraryDTO]);
-                            }}
+                            onSuccess={(newItem) =>
+                                setFolder(folderId, {
+                                    libs: [...libraries, newItem as LibraryDTO],
+                                    snips: snippets,
+                                })
+                            }
                         />
                     )}
 
-                    {!loadingChildren && libraries?.map((lib) => (
+                    {libraries.map((lib) => (
                         <div
                             key={lib.id}
                             onClick={(e) => {
                                 e.stopPropagation();
-                                setSelectedItem(lib.id, ExplorerItemType.Folder);
+                                setSelectedItem(lib.id, ExplorerItemType.Folder, item.id);
                             }}
                         >
                             {isEditingFolder && selectedItem === lib.id ? (
@@ -301,10 +266,14 @@ export const TreeItem = ({
                                     type={ExplorerItemType.Folder}
                                     item={lib}
                                     onSuccess={() => {
+                                        // TreeItemEdit mutates lib.title in place before calling onSuccess
                                         setIsEditingFolder(false);
-                                        setLibraries(prev => prev.map(l =>
-                                            l.id === lib.id ? { ...l, title: lib.title } : l
-                                        ));
+                                        setFolder(folderId, {
+                                            libs: libraries.map((l) =>
+                                                l.id === lib.id ? { ...l, title: lib.title } : l
+                                            ),
+                                            snips: snippets,
+                                        });
                                     }}
                                 />
                             ) : (
@@ -317,8 +286,13 @@ export const TreeItem = ({
                                         item={{ id: lib.id, userid: session?.user.id!, title: lib.title } as Library}
                                         type={ExplorerItemType.Folder}
                                         level={level + 1}
-                                        onDelete={(id) => setLibraries(prev => prev.filter(l => l.id !== id))}
-                                        onDragEnd={handleChildDragEnd}
+                                        parentId={item.id}
+                                        onDelete={(id) =>
+                                            setFolder(folderId, {
+                                                libs: libraries.filter((l) => l.id !== id),
+                                                snips: snippets,
+                                            })
+                                        }
                                     />
                                 </TreeItemDropContainer>
                             )}
@@ -330,18 +304,21 @@ export const TreeItem = ({
                             level={level + 1}
                             type={ExplorerItemType.File}
                             parentId={item.id}
-                            onSuccess={(newItem) => {
-                                setSnippets(prev => [...prev, newItem as SnippetDTO]);
-                            }}
+                            onSuccess={(newItem) =>
+                                setFolder(folderId, {
+                                    libs: libraries,
+                                    snips: [...snippets, newItem as SnippetDTO],
+                                })
+                            }
                         />
                     )}
 
-                    {!loadingChildren && snippets?.map((snip) => (
+                    {snippets.map((snip) => (
                         <div
                             key={snip.id}
                             onClick={(e) => {
                                 e.stopPropagation();
-                                setSelectedItem(snip.id, ExplorerItemType.File);
+                                setSelectedItem(snip.id, ExplorerItemType.File, item.id);
                             }}
                         >
                             {isEditingSnippet && selectedItem === snip.id ? (
@@ -350,10 +327,14 @@ export const TreeItem = ({
                                     type={ExplorerItemType.File}
                                     item={snip}
                                     onSuccess={() => {
+                                        // TreeItemEdit mutates snip.title in place before calling onSuccess
                                         setIsEditingSnippet(false);
-                                        setSnippets(prev => prev.map(s =>
-                                            s.id === snip.id ? { ...s, title: snip.title } : s
-                                        ));
+                                        setFolder(folderId, {
+                                            libs: libraries,
+                                            snips: snippets.map((s) =>
+                                                s.id === snip.id ? { ...s, title: snip.title } : s
+                                            ),
+                                        });
                                     }}
                                 />
                             ) : (
@@ -366,8 +347,13 @@ export const TreeItem = ({
                                         item={{ id: snip.id, title: snip.title, userId: session?.user.id! } as Snippet}
                                         type={ExplorerItemType.File}
                                         level={level + 1}
-                                        onDelete={(id) => setSnippets(prev => prev.filter(s => s.id !== id))}
-                                        onDragEnd={handleChildDragEnd}
+                                        parentId={item.id}
+                                        onDelete={(id) =>
+                                            setFolder(folderId, {
+                                                libs: libraries,
+                                                snips: snippets.filter((s) => s.id !== id),
+                                            })
+                                        }
                                     />
                                 </TreeItemDropContainer>
                             )}

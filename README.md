@@ -23,7 +23,7 @@ It’s designed to feel lightweight and responsive while being built on a produc
 - Minimal re-renders and no unnecessary page refreshes
 
 ### 🎨 Modern UI
-- Tailwind CSS + DaisyUI
+- Tailwind CSS
 - Custom branding and background visuals
 - Polished empty, loading, and error states
 
@@ -38,7 +38,7 @@ It’s designed to feel lightweight and responsive while being built on a produc
 - **Authentication:** NextAuth
 - **Database:** Supabase (PostgreSQL)
 - **State Management:** Zustand
-- **Styling:** Tailwind CSS + DaisyUI
+- **Styling:** Tailwind CSS
 - **Hosting:** Vercel
 - **Domain:** Namecheap
 

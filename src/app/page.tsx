@@ -33,6 +33,8 @@ export default function Home() {
 
   const {
     selectedItem,
+    setSelectedItem,
+    selectedParentId,
     setAddingSnippet,
     setAddingLibrary,
     isEditingFolder,
@@ -147,11 +149,10 @@ export default function Home() {
           <div className="flex flex-col gap-0.5 flex-1">
             <button
               onClick={() => setActivity(ActivityItem.Explorer)}
-              className={`w-12 h-12 flex items-center justify-center transition-colors relative ${
-                activity === ActivityItem.Explorer
-                  ? 'text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-white'
-                  : 'text-[#858585] hover:text-white'
-              }`}
+              className={`w-12 h-12 flex items-center justify-center transition-colors relative ${activity === ActivityItem.Explorer
+                ? 'text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-white'
+                : 'text-[#858585] hover:text-white'
+                }`}
               title="Explorer"
               disabled={isInitialLoading}
             >
@@ -159,11 +160,10 @@ export default function Home() {
             </button>
             <button
               onClick={() => setActivity(ActivityItem.Search)}
-              className={`w-12 h-12 flex items-center justify-center transition-colors relative ${
-                activity === ActivityItem.Search
-                  ? 'text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-white'
-                  : 'text-[#858585] hover:text-white'
-              }`}
+              className={`w-12 h-12 flex items-center justify-center transition-colors relative ${activity === ActivityItem.Search
+                ? 'text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-white'
+                : 'text-[#858585] hover:text-white'
+                }`}
               title="Search"
               disabled={isInitialLoading}
             >
@@ -194,15 +194,23 @@ export default function Home() {
                 <h3 className="text-[11px] font-medium text-[#cccccc] uppercase tracking-wider">Explorer</h3>
                 <div className="flex items-center gap-1">
                   <button
-                    onClick={() => setAddingSnippet(true)}
-                    className="p-1.5 rounded-sm hover:bg-[#2a2d2e] transition-colors text-[#cccccc]"
+                    onClick={() => {
+                      if (selectedParentId !== undefined) {
+                        setSelectedItem(selectedParentId, ExplorerItemType.Folder);
+                      }
+                      setAddingSnippet(true);
+                    }} className="p-1.5 rounded-sm hover:bg-[#2a2d2e] transition-colors text-[#cccccc]"
                     title="New File"
                   >
                     <VscNewFile className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => setAddingLibrary(true)}
-                    className="p-1.5 rounded-sm hover:bg-[#2a2d2e] transition-colors text-[#cccccc]"
+                    onClick={() => {
+                      if (selectedParentId !== undefined) {
+                        setSelectedItem(selectedParentId, ExplorerItemType.Folder);
+                      }
+                      setAddingLibrary(true);
+                    }} className="p-1.5 rounded-sm hover:bg-[#2a2d2e] transition-colors text-[#cccccc]"
                     title="New Folder"
                   >
                     <VscNewFolder className="w-4 h-4" />
@@ -299,9 +307,8 @@ export default function Home() {
         </Panel>
 
         <PanelResizeHandle
-          className={`transition-all duration-150 ${
-            hoveringResizer || isDragging ? 'w-1 bg-[#007acc]' : 'w-px bg-[#3e3e42]'
-          } cursor-col-resize`}
+          className={`transition-all duration-150 ${hoveringResizer || isDragging ? 'w-1 bg-[#007acc]' : 'w-px bg-[#3e3e42]'
+            } cursor-col-resize`}
           onMouseEnter={() => setHoveringResizer(true)}
           onMouseLeave={() => setHoveringResizer(false)}
           onDragging={(isDragging) => setIsDragging(isDragging)}

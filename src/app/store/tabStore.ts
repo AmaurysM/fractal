@@ -26,70 +26,62 @@ export const useTabStore = create<TabStore>()(
       tabs: [],
       selectedTab: null,
 
-      addTab: async (snipId: string) => {
+      addTab: (snipId: string) => {
         const state = get();
-        const exists = state.tabs.some((t) => t.id === snipId);
-        if (exists) {
+
+        // Already open — just focus it
+        if (state.tabs.some((t) => t.id === snipId)) {
           set({ selectedTab: snipId });
           return;
         }
 
-        try {
-          const res = await fetch(`/api/snippet`, {
-            method: "GET",
-            headers: { "voronoi-snippet-id": snipId },
-          });
-
-          if (!res.ok) return;
-
-          const snippet: Snippet = await res.json();
-
-          set((state) => ({
-            tabs: [...state.tabs, snippet],
-            selectedTab: snipId,
-          }));
-        } catch (e) {
-          console.error("Failed to add tab:", e);
-        }
+        fetch(`/api/snippet`, {
+          method: "GET",
+          headers: { "voronoi-snippet-id": snipId },
+        })
+          .then((res) => {
+            if (!res.ok) return;
+            return res.json();
+          })
+          .then((snippet: Snippet | undefined) => {
+            if (!snippet) return;
+            set((s) => ({
+              tabs: [...s.tabs, snippet],
+              selectedTab: snipId,
+            }));
+          })
+          .catch((e) => console.error("Failed to add tab:", e));
       },
 
-      selectTab: (snipId: string) => set(() => ({ selectedTab: snipId })),
+      selectTab: (snipId: string) => set({ selectedTab: snipId }),
 
       closeTab: (snipId: string) => {
         const libraryStore = useLibraryStore.getState();
 
         set((state) => {
           const newTabs = state.tabs.filter((t) => t.id !== snipId);
-
-          const nextSelectedTab =
+          const nextSelected =
             state.selectedTab === snipId
               ? pickFallback(newTabs)
               : state.selectedTab;
 
-          libraryStore.setSelectedItem(nextSelectedTab);
+          libraryStore.setSelectedItem(nextSelected);
 
-          return {
-            selectedTab: nextSelectedTab,
-            tabs: newTabs,
-          };
+          return { tabs: newTabs, selectedTab: nextSelected };
         });
       },
 
-      closeAllTabs: () =>
-        set((state) => ({
-          tabs: state.tabs,
-          selectedTab: pickFallback(state.tabs),
-        })),
+      // Close every tab and clear selection
+      closeAllTabs: () => {
+        useLibraryStore.getState().setSelectedItem(null);
+        set({ tabs: [], selectedTab: null });
+      },
 
       closeOtherTabs: (snipId: string) =>
         set((state) => {
           const tab = state.tabs.find((t) => t.id === snipId);
           if (!tab) return state;
-
-          return {
-            tabs: [tab],
-            selectedTab: snipId,
-          };
+          return { tabs: [tab], selectedTab: snipId };
         }),
 
       updateTab: (snippet: Snippet) =>
@@ -97,22 +89,18 @@ export const useTabStore = create<TabStore>()(
           tabs: state.tabs.map((t) => (t.id === snippet.id ? snippet : t)),
         })),
 
-      moveTabToIndex: (snipId: string, index: number) => {
+      moveTabToIndex: (snipId: string, index: number) =>
         set((state) => {
           const tabs = [...state.tabs];
-
-          const currentIndex = tabs.findIndex((tab) => tab.id === snipId);
+          const currentIndex = tabs.findIndex((t) => t.id === snipId);
           if (currentIndex === -1) return state;
 
-          const [movedTab] = tabs.splice(currentIndex, 1);
-
-          const newIndex = Math.max(0, Math.min(index, tabs.length));
-
-          tabs.splice(newIndex, 0, movedTab);
+          const [moved] = tabs.splice(currentIndex, 1);
+          tabs.splice(Math.max(0, Math.min(index, tabs.length)), 0, moved);
 
           return { tabs };
-        });
-      },
+        }),
+
       clearTabs: () => set({ tabs: [], selectedTab: null }),
     }),
     {

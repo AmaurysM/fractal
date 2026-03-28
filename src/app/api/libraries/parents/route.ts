@@ -2,14 +2,13 @@ import db from "@/app/lib/db";
 import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "@/app/api/auth/authOptions";
-import { Query } from "pg";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const libId = req.headers.get("voronoi-library-id");
 
   if (!session) {
-    return NextResponse.json({ message: "Not Autherized" }, { status: 500 });
+    return NextResponse.json({ message: "Not Authorized" }, { status: 401 });
   }
 
   const userId = session.user.id;
@@ -23,7 +22,7 @@ export async function GET(req: NextRequest) {
 
     if (libId) {
       result = await db.query(
-        `SELECT l.id, l.title 
+        `SELECT l.id, l.title, lj.parentlibrary AS "parentId"
          FROM "Library" l
          INNER JOIN "LibraryJunction" lj ON l.id = lj.childlibrary
          WHERE lj.parentlibrary = $1 AND l.userid = $2
@@ -32,7 +31,7 @@ export async function GET(req: NextRequest) {
       );
     } else {
       result = await db.query(
-        `SELECT l.id, l.title 
+        `SELECT l.id, l.title, NULL AS "parentId"
          FROM "Library" l
          LEFT JOIN "LibraryJunction" lj ON l.id = lj.childlibrary
          WHERE l.userid = $1 AND lj.id IS NULL
@@ -41,12 +40,11 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const libraries = result.rows;
-    return NextResponse.json(libraries as LibraryDTO[]);
+    return NextResponse.json(result.rows as LibraryDTO[]);
   } catch (error) {
     console.error(error);
     return NextResponse.json(
-      { message: "Error fetching user" },
+      { message: "Error fetching libraries" },
       { status: 500 },
     );
   }
@@ -55,4 +53,5 @@ export async function GET(req: NextRequest) {
 export type LibraryDTO = {
   id: string;
   title: string;
+  parentId: string | null;
 };
