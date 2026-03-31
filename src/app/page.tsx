@@ -122,7 +122,7 @@ export default function Home() {
         </div>
 
         {/* Sidebar */}
-        <Panel defaultSize={20} minSize={15} maxSize={40} className="bg-[#252526] border-r border-[#3e3e42] flex flex-col">
+        <Panel defaultSize={20} minSize={15} maxSize={40} className="bg-[#252526] border-r border-[#3e3e42] max-h-full">
           {isInitialLoading ? (
             <>
               <div className="h-8.75 flex items-center justify-between px-3 border-b border-[#3e3e42]">

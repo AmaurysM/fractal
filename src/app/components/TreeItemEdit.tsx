@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { BiFolder } from "react-icons/bi";
+import { BiFolder, BiChevronRight } from "react-icons/bi";
 import { ExplorerItemType, Library, Snippet } from "../../../types/types";
 import { AiOutlineFileText } from "react-icons/ai";
 import { useLibrary } from "../hooks/useLibrary";
@@ -41,7 +41,7 @@ export const TreeItemEdit = ({
     } = useSnippet();
 
     const isFolder = type === ExplorerItemType.Folder;
-    const paddingLeft = level * 16 + 6;
+    const paddingLeft = level * 12;
 
     const edit = async (title: string) => {
         if (!title.trim()) {
@@ -98,24 +98,28 @@ export const TreeItemEdit = ({
         <div>
             <div
                 className={`
-                    group flex items-center border-l-2 py-0
-                    border-[#1D232A] transition-colors
-                    ${isHovered ? "bg-gray-700 border-gray-700" : ""}
+                    group flex items-center
+                    transition-colors
+                    ${isHovered ? "bg-gray-700" : ""}
                     ${isEditing ? "opacity-75" : ""}
                 `}
                 style={{ paddingLeft }}
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
             >
-                <div className="flex-none">
+                <div className="flex w-9 justify-center items-center">
                     {isFolder ? (
-                        <BiFolder className="w-4 h-4 mr-1.5 text-blue-500" />
+                        <>
+                            <BiChevronRight
+                                className={`w-3 h-3 text-transparent transition-transform mr-0.5 shrink-0`}
+                            />
+                            <BiFolder className="w-4 h-4 mr-1.5 text-blue-500" />
+                        </>
                     ) : (
                         <AiOutlineFileText className="w-4 h-4 mr-1.5 text-gray-500" />
                     )}
                 </div>
 
-                {/* INPUT — does the squash/stretch */}
                 <input
                     ref={inputRef}
                     type="text"

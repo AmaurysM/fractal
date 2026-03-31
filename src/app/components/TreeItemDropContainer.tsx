@@ -42,7 +42,6 @@ export const TreeItemDropContainer = ({
             ref={ref}
             style={{
                 outline: isDropTarget && isFolder ? '1px solid #007fd4' : undefined,
-                borderRadius: isDropTarget ? 2 : undefined,
             }}
         >
             {children}
