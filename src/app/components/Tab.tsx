@@ -3,8 +3,8 @@ import { useLibraryStore } from "../store/libraryStore";
 import { useTabStore } from "../store/tabStore";
 import { getLanguageColor, getLanguageIcon } from "../../../types/languages";
 import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { ExplorerItemType } from "../../../types/types";
+import { useEffect } from "react";
 
 export const Tab = ({
   tabId,
@@ -46,8 +46,8 @@ export const Tab = ({
       {...attributes}
       {...listeners}
       className={`flex items-center gap-2 px-3 py-1 min-w-30 max-w-50 cursor-grab active:cursor-grabbing border-r border-[#252526] ${isActive
-          ? "bg-[#1e1e1e] border-t-2 border-t-[#007acc] text-[#cccccc]"
-          : "bg-[#2d2d2d] text-[#969696] hover:bg-[#2a2d2e]"
+        ? "bg-[#1e1e1e] border-t-2 border-t-[#007acc] text-[#cccccc]"
+        : "bg-[#2d2d2d] text-[#969696] hover:bg-[#2a2d2e]"
         }`}
       onClick={(e) => {
         e.stopPropagation();

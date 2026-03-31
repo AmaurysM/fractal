@@ -32,7 +32,8 @@ export const CodeDisplay = () => {
   const { data: session } = useSession();
   const {
     tabs,
-    selectedTab,
+    selectedTab: selectedItem,
+    isRehydrating,
     closeTab,
     closeAllTabs,
     closeOtherTabs,
@@ -41,9 +42,8 @@ export const CodeDisplay = () => {
   } = useTabStore();
 
   const { editSnippet, fetchSnippet } = useSnippet();
-  const { selectedItem, selectedItemType, setSelectedItem } = useLibraryStore();
+  const { selectedItemType, setSelectedItem } = useLibraryStore();
 
-  const [addingDescription, setAddingDescription] = useState(false);
   const [descriptionVisible, setDescriptionVisible] = useState(false);
   const [copied, setCopied] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
@@ -62,51 +62,43 @@ export const CodeDisplay = () => {
   const tabContextMenuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const cachedSnippet = tabs.find((t) => t.id === selectedItem) ?? null;
-  const [snippet, setSnippet] = useState<Snippet | undefined>(cachedSnippet ?? undefined);
+  // Derive snippet directly from store — stays in sync automatically
+  const snippet = tabs.find((t) => t.id === selectedItem) ?? null;
 
   useEffect(() => {
     if (descriptionVisible && textareaRef.current) {
       setTimeout(() => textareaRef.current?.focus(), 200);
     }
   }, [descriptionVisible]);
-  const hasHydrated = useRef(false);
 
+  // Rehydrate tabs from DB on mount, after persist has finished loading from localStorage
   useEffect(() => {
-    if (hasHydrated.current) return;
-    hasHydrated.current = true;
+    const unsub = useTabStore.persist.onFinishHydration(() => {
+      useTabStore.getState().rehydrateTabs();
+    });
 
-    if (!selectedItem) return;
-    if (tabs.length <= 0) return;
-
-    const cached = tabs.find((t) => t.id === selectedItem);
-    if (!cached) {
-      setSelectedItem(tabs[0].id, ExplorerItemType.File);
-    } else {
-      setSnippet(cached);
+    if (useTabStore.persist.hasHydrated()) {
+      useTabStore.getState().rehydrateTabs();
     }
+
+    return () => unsub();
   }, []);
 
+  // Sync libraryStore selection when selectedItem changes
   useEffect(() => {
-    if (!hasHydrated.current) return;
-    if (!selectedItem) return;
-    if (selectedItemType !== ExplorerItemType.File) return;
-
-    const cached = tabs.find((t) => t.id === selectedItem);
-    if (cached) setSnippet(cached);
+    if (!selectedItem || selectedItemType === ExplorerItemType.File) return;
+    setSelectedItem(selectedItem, ExplorerItemType.File);
   }, [selectedItem]);
 
+  // Fetch fresh snippet from DB whenever selected tab changes
   useEffect(() => {
     if (!session || !selectedItem || selectedItemType !== ExplorerItemType.File) return;
     const refresh = async () => {
       try {
         const updated = await fetchSnippet(selectedItem);
-        if (updated) {
-          setSnippet(updated);
-          updateTab(updated);
-        }
+        if (updated) updateTab(updated);
       } catch (error) {
-        console.error("Failed to refresh snippet in CodeDisply:", error);
+        console.error("Failed to refresh snippet in CodeDisplay:", error);
       }
     };
     refresh();
@@ -158,7 +150,7 @@ export const CodeDisplay = () => {
   const updateField = (field: keyof Snippet, value: string) => {
     if (!snippet) return;
     const updated = { ...snippet, [field]: value };
-    setSnippet(updated);
+    updateTab(updated);
     setSaveStatus("unsaved");
     scheduleSave(updated);
   };
@@ -240,6 +232,14 @@ export const CodeDisplay = () => {
     setDescriptionVisible((prev) => !prev);
   };
 
+  if (isRehydrating) {
+    return (
+      <div className="h-full flex items-center justify-center bg-[#1e1e1e]">
+        <div className="w-8 h-8 border-2 border-[#007acc] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   if (tabs.length === 0) {
     return (
       <div className="h-full flex flex-col items-center justify-center bg-[#1e1e1e]">
@@ -294,7 +294,7 @@ export const CodeDisplay = () => {
                 <Tab
                   key={tab.id}
                   tabId={tab.id}
-                  isActive={tab.id === selectedTab}
+                  isActive={tab.id === selectedItem}
                 />
               ))}
             </SortableContext>
@@ -367,7 +367,6 @@ export const CodeDisplay = () => {
           </div>
 
           <div className="flex items-center gap-1">
-            {/* Description toggle button */}
             <button
               onClick={toggleDescription}
               className={`relative p-1.5 rounded-sm transition-colors duration-150 hover:bg-[#2a2d2e] ${descriptionVisible ? "bg-[#2a2d2e]" : ""
@@ -378,7 +377,6 @@ export const CodeDisplay = () => {
                 className={`w-4 h-4 transition-all duration-150 ${descriptionVisible ? "text-[#4ec9b0] scale-110" : "text-[#cccccc]"
                   }`}
               />
-              {/* Dot indicator when there's saved content */}
               <span
                 className={`absolute top-0.75 right-0.75 w-1.25 h-1.25 rounded-full bg-[#4ec9b0] transition-all duration-200 ${snippet.description?.trim()
                   ? "opacity-100 scale-100"
@@ -393,7 +391,6 @@ export const CodeDisplay = () => {
               {copied ? <BiCheck className="w-4 h-4 text-[#4ec9b0]" /> : <BiCopy className="w-4 h-4" />}
             </button>
 
-            {/* Download — icon slides down then crossfades to a checkmark */}
             <button
               onClick={handleDownload}
               className="relative p-1.5 hover:bg-[#2a2d2e] rounded-sm text-[#cccccc] overflow-hidden"
@@ -411,7 +408,6 @@ export const CodeDisplay = () => {
               </span>
             </button>
 
-            {/* Save — icon shrinks away, checkmark pops in with slight overshoot */}
             <button
               onClick={handleManualSave}
               className="relative p-1.5 hover:bg-[#2a2d2e] rounded-sm text-[#cccccc] overflow-hidden"
@@ -429,7 +425,6 @@ export const CodeDisplay = () => {
 
             <div className="h-4 w-px bg-[#3e3e42] mx-1" />
 
-            {/* Fullscreen — scales up on hover, turns amber when active */}
             <button
               onClick={() => setIsFullscreen(!isFullscreen)}
               className="p-1.5 hover:bg-[#2a2d2e] rounded-sm group"
@@ -448,7 +443,7 @@ export const CodeDisplay = () => {
           </div>
         </div>
 
-        {/* Animated Description Panel — grid-rows trick for smooth height */}
+        {/* Animated Description Panel */}
         <div
           className={`grid border-b border-[#3e3e42] bg-[#252526] transition-all duration-200 ease-in-out ${descriptionVisible ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
             }`}
