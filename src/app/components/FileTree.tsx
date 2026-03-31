@@ -36,7 +36,6 @@ const RootDropZone = ({
             className="flex-1 overflow-auto"
             style={{
                 outline: isDropTarget ? "1px solid #007fd4" : undefined,
-                borderRadius: isDropTarget ? 2 : undefined,
             }}
             onClick={onClick}
         >
@@ -54,10 +53,6 @@ const FileTreeInner = () => {
         setSelectedItem,
         addingSnippet,
         addingLibrary,
-        isEditingFolder,
-        setIsEditingFolder,
-        isEditingSnippet,
-        setIsEditingSnippet,
         selectedParentId,
         setAddingSnippet,
         setAddingLibrary,
@@ -70,7 +65,6 @@ const FileTreeInner = () => {
     const libraries = rootContents?.libs ?? [];
     const snippets = rootContents?.snips ?? [];
 
-    // Show skeleton only on first ever load (no cache at all)
     const loading = rootContents === undefined;
     const isSelected = selectedItem == null;
 
@@ -85,7 +79,6 @@ const FileTreeInner = () => {
             setFolder(ROOT_KEY, { libs: libs ?? [], snips: snips ?? [] });
         } catch (err) {
             console.error("Failed to fetch tree:", err);
-            // Only wipe cache if we had nothing to show
             if (!rootContents) {
                 setFolder(ROOT_KEY, { libs: [], snips: [] });
             }
@@ -96,8 +89,6 @@ const FileTreeInner = () => {
 
     useEffect(() => {
         if (!session) return;
-        // Always revalidate on mount — if cache exists it renders immediately
-        // and this update happens silently in the background
         revalidateRoot();
     }, [session]);
 
@@ -141,9 +132,8 @@ const FileTreeInner = () => {
     return (
         <>
             <div className="h-8.75 flex items-center justify-between px-3 border-b border-[#3e3e42]">
-                <h3 className="text-[11px] font-medium text-[#cccccc] uppercase tracking-wider">
+                <h3 className="flex justify-center items-center text-[11px] font-medium text-[#cccccc] uppercase tracking-wider">
                     Explorer
-                    {/* Subtle revalidation indicator — only shows when refreshing in background */}
                     {isRevalidating && rootContents && (
                         <span className="ml-2 inline-block w-1.5 h-1.5 rounded-full bg-[#007acc] animate-pulse" />
                     )}
@@ -151,8 +141,8 @@ const FileTreeInner = () => {
                 <div className="flex items-center gap-1">
                     <button
                         onClick={() => {
-                            if (selectedParentId !== undefined) {
-                                setSelectedItem(selectedParentId, ExplorerItemType.Folder);
+                            if (selectedItem === null) {
+                                setSelectedItem(null);
                             }
                             setAddingSnippet(true);
                         }}
@@ -161,10 +151,11 @@ const FileTreeInner = () => {
                     >
                         <VscNewFile className="w-4 h-4" />
                     </button>
+
                     <button
                         onClick={() => {
-                            if (selectedParentId !== undefined) {
-                                setSelectedItem(selectedParentId, ExplorerItemType.Folder);
+                            if (selectedItem === null) {
+                                setSelectedItem(null);
                             }
                             setAddingLibrary(true);
                         }}
@@ -175,115 +166,87 @@ const FileTreeInner = () => {
                     </button>
                 </div>
             </div>
-
-            <DragDropProvider onDragEnd={handleDragEnd}>
-                <RootDropZone onClick={() => setSelectedItem(null)}>
-                    {loading ? (
-                        <div className="p-2">
-                            <TreeSkeleton count={6} />
-                        </div>
-                    ) : (
-                        <>
-                            {addingLibrary && isSelected && (
-                                <TreeItemCreation
-                                    type={ExplorerItemType.Folder}
-                                    onSuccess={(newItem) =>
-                                        setFolder(ROOT_KEY, {
-                                            libs: [...libraries, newItem as any],
-                                            snips: snippets,
-                                        })
-                                    }
-                                />
-                            )}
-
-                            {libraries.map((lib) => (
-                                <div key={lib.id} onClick={(e) => e.stopPropagation()}>
-                                    {isEditingFolder && selectedItem === lib.id ? (
-                                        <TreeItemEdit
-                                            type={ExplorerItemType.Folder}
-                                            item={lib}
-                                            onSuccess={() => {
-                                                setIsEditingFolder(false);
-                                                setFolder(ROOT_KEY, {
-                                                    libs: libraries.map((l) =>
-                                                        l.id === lib.id ? { ...l, title: lib.title } : l
-                                                    ),
-                                                    snips: snippets,
-                                                });
-                                            }}
-                                        />
-                                    ) : (
-                                        <TreeItemDropContainer dto={lib} type={ExplorerItemType.Folder}>
-                                            <TreeItem
-                                                item={{ id: lib.id, userid: session?.user.id!, title: lib.title } as Library}
-                                                type={ExplorerItemType.Folder}
-                                                onDelete={(id) =>
-                                                    setFolder(ROOT_KEY, {
-                                                        libs: libraries.filter((l) => l.id !== id),
-                                                        snips: snippets,
-                                                    })
-                                                }
-                                            />
-                                        </TreeItemDropContainer>
-                                    )}
+            <div className="flex flex-col h-full">
+                <DragDropProvider onDragEnd={handleDragEnd}>
+                    <RootDropZone onClick={() => setSelectedItem(null)}>
+                        <div className="border-t border-transparent ">
+                            {loading ? (
+                                <div className="p-2">
+                                    <TreeSkeleton count={6} />
                                 </div>
-                            ))}
+                            ) : (
+                                <div className="flex flex-col ">
+                                    {addingLibrary && isSelected && (
+                                        <TreeItemCreation
+                                            type={ExplorerItemType.Folder}
+                                            onSuccess={(newItem) =>
+                                                setFolder(ROOT_KEY, {
+                                                    libs: [...libraries, newItem as any],
+                                                    snips: snippets,
+                                                })
+                                            }
+                                        />
+                                    )}
 
-                            {addingSnippet && isSelected && (
-                                <TreeItemCreation
-                                    type={ExplorerItemType.File}
-                                    onSuccess={(newItem) =>
-                                        setFolder(ROOT_KEY, {
-                                            libs: libraries,
-                                            snips: [...snippets, newItem as any],
-                                        })
-                                    }
-                                />
-                            )}
+                                    {libraries.map((lib) => (
+                                        <div key={lib.id} onClick={(e) => e.stopPropagation()}>
+                                            <TreeItemDropContainer dto={lib} type={ExplorerItemType.Folder}>
+                                                <TreeItem
+                                                    item={{ id: lib.id, userid: session?.user.id!, title: lib.title } as Library}
+                                                    type={ExplorerItemType.Folder}
+                                                    onDelete={(id) =>
+                                                        setFolder(ROOT_KEY, {
+                                                            libs: libraries.filter((l) => l.id !== id),
+                                                            snips: snippets,
+                                                        })
+                                                    }
+                                                />
+                                            </TreeItemDropContainer>
+                                        </div>
+                                    ))}
 
-                            {snippets.map((snip) => (
-                                <div key={snip.id} onClick={(e) => e.stopPropagation()}>
-                                    {isEditingSnippet && selectedItem === snip.id ? (
-                                        <TreeItemEdit
+                                    {addingSnippet && isSelected && (
+                                        <TreeItemCreation
                                             type={ExplorerItemType.File}
-                                            item={snip}
-                                            onSuccess={() => {
-                                                setIsEditingSnippet(false);
+                                            onSuccess={(newItem) =>
                                                 setFolder(ROOT_KEY, {
                                                     libs: libraries,
-                                                    snips: snippets.map((s) =>
-                                                        s.id === snip.id ? { ...s, title: snip.title } : s
-                                                    ),
-                                                });
-                                            }}
+                                                    snips: [...snippets, newItem as any],
+                                                })
+                                            }
                                         />
-                                    ) : (
-                                        <TreeItemDropContainer dto={snip} type={ExplorerItemType.File}>
-                                            <TreeItem
-                                                item={{ id: snip.id, title: snip.title, userId: session?.user.id! } as Snippet}
-                                                type={ExplorerItemType.File}
-                                                onDelete={(id) =>
-                                                    setFolder(ROOT_KEY, {
-                                                        libs: libraries,
-                                                        snips: snippets.filter((s) => s.id !== id),
-                                                    })
-                                                }
-                                            />
-                                        </TreeItemDropContainer>
+                                    )}
+
+                                    {snippets.map((snip) => (
+                                        <div key={snip.id} onClick={(e) => e.stopPropagation()}>
+                                            <TreeItemDropContainer dto={snip} type={ExplorerItemType.File}>
+                                                <TreeItem
+                                                    item={{ id: snip.id, title: snip.title, userId: session?.user.id! } as Snippet}
+                                                    type={ExplorerItemType.File}
+                                                    onDelete={(id) =>
+                                                        setFolder(ROOT_KEY, {
+                                                            libs: libraries,
+                                                            snips: snippets.filter((s) => s.id !== id),
+                                                        })
+                                                    }
+                                                />
+                                            </TreeItemDropContainer>
+                                        </div>
+                                    ))}
+
+                                    {libraries.length === 0 && snippets.length === 0 && (
+                                        <div className="text-center py-12 px-4">
+                                            <p className="text-[#858585] text-[13px]">No files or folders</p>
+                                            <p className="text-[#6e6e6e] text-[11px] mt-1">Click the icons above to get started</p>
+                                        </div>
                                     )}
                                 </div>
-                            ))}
-
-                            {libraries.length === 0 && snippets.length === 0 && (
-                                <div className="text-center py-12 px-4">
-                                    <p className="text-[#858585] text-[13px]">No files or folders</p>
-                                    <p className="text-[#6e6e6e] text-[11px] mt-1">Click the icons above to get started</p>
-                                </div>
                             )}
-                        </>
-                    )}
-                </RootDropZone>
-            </DragDropProvider>
+                        </div>
+
+                    </RootDropZone>
+                </DragDropProvider>
+            </div>
         </>
     );
 };

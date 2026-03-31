@@ -14,10 +14,16 @@ type LibraryStore = {
   selectedItem: string | null;
   selectedItemType: ExplorerItemType | null;
 
-  /// array of item <--------
-
+  // The folder that newly created items should land in.
+  // null  → root
+  // <id>  → that folder
   selectedParentId: string | null;
-  setSelectedItem: (item: string | null, type?: ExplorerItemType, parentId?: string | null) => void;
+
+  setSelectedItem: (
+    item: string | null,
+    type?: ExplorerItemType,
+    parentId?: string | null,
+  ) => void;
 
   addingSnippet: boolean;
   setAddingSnippet: (val: boolean) => void;
@@ -44,27 +50,36 @@ export const useLibraryStore = create<LibraryStore>()(
       selectedItem: null,
       selectedItemType: null,
       selectedParentId: null,
-      setSelectedItem: (item: string | null, type?: ExplorerItemType, parentId?: string | null) => {
+
+      setSelectedItem: (
+        item: string | null,
+        type?: ExplorerItemType,
+        parentId?: string | null,
+      ) => {
         const tabStore = useTabStore.getState();
         const state = get();
+
         if (item && type === ExplorerItemType.File) {
           tabStore.addTab(item);
         }
+
         const isChangingItem = item !== state.selectedItem;
 
-        // If it's a file, parentId is the folder containing it.
-        // If it's a folder, it is its own parent context for adding children.
-        // If null (root), parentId is null.
+        // selectedParentId = "where should a new item be created?"
+        //
+        // • Clicking a File   → parent is the folder that contains it (passed in as parentId)
+        // • Clicking a Folder → parent IS that folder (item itself)
+        // • Clicking nothing  → root (null)
         const resolvedParentId =
           type === ExplorerItemType.File
-            ? (parentId ?? null)
+            ? (parentId ?? null)          // file's containing folder
             : type === ExplorerItemType.Folder
-            ? item
-            : null;
+            ? item                         // the folder itself
+            : null;                        // root
 
         set(() => ({
-          selectedItemType: type,
           selectedItem: item,
+          selectedItemType: type ?? null,
           selectedParentId: resolvedParentId,
           addingSnippet: false,
           addingLibrary: false,
@@ -78,26 +93,28 @@ export const useLibraryStore = create<LibraryStore>()(
         set(() => ({ addingSnippet: val, addingLibrary: false })),
 
       addingLibrary: false,
+      // When triggering "New Folder/File" from the header buttons WITHOUT an
+      // active selection we want creation at root. The header buttons already
+      // call setSelectedItem(selectedParentId, ...) before calling
+      // setAddingLibrary, so selectedParentId is already correct here.
       setAddingLibrary: (val: boolean) =>
         set(() => ({ addingLibrary: val, addingSnippet: false })),
 
       isEditingSnippet: false,
-      setIsEditingSnippet: (val: boolean) => {
+      setIsEditingSnippet: (val: boolean) =>
         set(() => ({
           isEditingSnippet: val,
           addingSnippet: false,
           addingLibrary: false,
-        }));
-      },
+        })),
 
       isEditingFolder: false,
-      setIsEditingFolder: (val: boolean) => {
+      setIsEditingFolder: (val: boolean) =>
         set(() => ({
           isEditingFolder: val,
           addingSnippet: false,
           addingLibrary: false,
-        }));
-      },
+        })),
 
       dragItem: null,
       pendingRemove: null,

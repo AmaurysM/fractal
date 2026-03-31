@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { BiFolder } from "react-icons/bi";
+import { BiFolder, BiChevronRight } from "react-icons/bi";
 import { ExplorerItemType } from "../../../types/types";
 import { AiOutlineFileText } from "react-icons/ai";
 import { LibraryDTO } from "../api/libraries/parents/route";
@@ -43,7 +43,7 @@ export const TreeItemCreation = ({
     } = useLibraryStore();
 
     const isFolder = type === ExplorerItemType.Folder;
-    const paddingLeft = level * 16 + 6;
+    const paddingLeft = level * 12;
 
     const add = async (title: string) => {
         if (!title.trim()) {
@@ -108,18 +108,24 @@ export const TreeItemCreation = ({
         <div>
             <div
                 className={`
-                    group flex items-center border-l-2  py-0
-                    border-[#1D232A] transition-colors
-                    ${isHovered ? "bg-gray-700 border-gray-700" : ""}
+                    flex items-center py-0
+                    transition-colors
+                    ${isHovered ? "bg-gray-700" : ""}
                     ${isCreating ? "opacity-75" : ""}
                 `}
                 style={{ paddingLeft }}
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
             >
-                <div className="flex-none">
+                <div className="flex w-9 justify-center items-center">
                     {isFolder ? (
-                        <BiFolder className="w-4 h-4 mr-1.5 text-blue-500" />
+                        <>
+                            <BiChevronRight
+                                className={`w-3 h-3 text-transparent transition-transform mr-0.5 shrink-0`}
+                            />
+                            <BiFolder className="w-4 h-4 mr-1.5 text-blue-500" />
+                        </>
+
                     ) : (
                         <AiOutlineFileText className="w-4 h-4 mr-1.5 text-gray-500" />
                     )}
@@ -136,22 +142,18 @@ export const TreeItemCreation = ({
                     onKeyDown={handleKeyDown}
                     onBlur={handleBlur}
                     disabled={isCreating}
-                    placeholder={isFolder ? "New folder" : "New file"}
                     className={`
                         flex-1 text-sm bg-transparent text-white
-                        border-b placeholder-gray-400 focus:outline-none
+                        border-b min-w-10 placeholder-gray-400 focus:outline-none
                         transition-transform duration-200 ease-out
                         origin-left
-                        scale-x-[0.96]
-                        group-hover:scale-x-100
-                        focus:scale-x-100
                         ${error ? "border-red-500" : "border-gray-500 focus:border-blue-500"}
                         ${isCreating ? "cursor-not-allowed" : ""}
                     `}
                 />
 
                 {isCreating && (
-                    <div className="flex-none ml-2 w-3 h-3 border-2 border-gray-500 border-t-blue-500 rounded-full animate-spin" />
+                    <div className="flex-none ml-2 w-3 h-3 rounded-full animate-spin" />
                 )}
             </div>
 

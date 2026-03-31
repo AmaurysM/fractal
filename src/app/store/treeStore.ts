@@ -13,6 +13,8 @@ export type FolderContents = {
 type TreeStore = {
   cache: Record<string, FolderContents>;
   isRevalidating: boolean;
+  expandedFolders: Set<string>;
+
   setFolder: (folderId: string, contents: FolderContents) => void;
   moveItem: (
     itemId: string,
@@ -23,13 +25,19 @@ type TreeStore = {
   invalidate: (folderId: string) => void;
   invalidateAll: () => void;
   setRevalidating: (val: boolean) => void;
+
+  expandFolder: (folderId: string) => void;
+  collapseFolder: (folderId: string) => void;
+  toggleFolder: (folderId: string) => void;
+  isFolderExpanded: (folderId: string) => boolean;
 };
 
 export const useTreeStore = create<TreeStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       cache: {},
       isRevalidating: false,
+      expandedFolders: new Set<string>(),
 
       setFolder(folderId, contents) {
         set((s) => ({ cache: { ...s.cache, [folderId]: contents } }));
@@ -37,6 +45,38 @@ export const useTreeStore = create<TreeStore>()(
 
       setRevalidating(val: boolean) {
         set({ isRevalidating: val });
+      },
+
+      expandFolder(folderId: string) {
+        set((s) => {
+          const next = new Set(s.expandedFolders);
+          next.add(folderId);
+          return { expandedFolders: next };
+        });
+      },
+
+      collapseFolder(folderId: string) {
+        set((s) => {
+          const next = new Set(s.expandedFolders);
+          next.delete(folderId);
+          return { expandedFolders: next };
+        });
+      },
+
+      toggleFolder(folderId: string) {
+        set((s) => {
+          const next = new Set(s.expandedFolders);
+          if (next.has(folderId)) {
+            next.delete(folderId);
+          } else {
+            next.add(folderId);
+          }
+          return { expandedFolders: next };
+        });
+      },
+
+      isFolderExpanded(folderId: string) {
+        return get().expandedFolders.has(folderId);
       },
 
       moveItem(itemId, fromFolderId, toFolderId, isFolder) {
@@ -86,7 +126,15 @@ export const useTreeStore = create<TreeStore>()(
     }),
     {
       name: "tree-store",
-      partialize: (state) => ({ cache: state.cache }),
+      partialize: (state) => ({
+        cache: state.cache,
+        expandedFolders: [...state.expandedFolders],
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state && Array.isArray((state as any).expandedFolders)) {
+          state.expandedFolders = new Set((state as any).expandedFolders);
+        }
+      },
     },
   ),
 );

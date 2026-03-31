@@ -78,22 +78,27 @@ export const useLibrary = () => {
     try {
       const res = await fetch(`/api/libraries`, {
         method: "POST",
-        body: JSON.stringify({
-          parentId,
-          title,
-        }),
+        headers: { "Content-Type": "application/json" }, // ← was missing
+        body: JSON.stringify({ parentId, title }),
         signal: addController.signal,
       });
 
       if (!res.ok) throw new Error("Failed to add folder");
 
       const newLibrary: LibraryDTO = await res.json();
+
+      // Guard: if the server returned something malformed, throw instead of
+      // silently propagating a broken object into the tree cache.
+      if (!newLibrary?.id || !newLibrary?.title) {
+        throw new Error(`Server returned invalid library: ${JSON.stringify(newLibrary)}`);
+      }
+
       return newLibrary;
     } catch (e) {
       if (e instanceof Error && e.name === "AbortError") {
-        console.log("Add librarie cancelled");
+        console.log("Add library cancelled");
       } else {
-        console.error("Failed to add libraries:", e);
+        console.error("Failed to add library:", e);
       }
       return;
     } finally {
@@ -110,6 +115,7 @@ export const useLibrary = () => {
     try {
       const res = await fetch(`/api/libraries`, {
         method: "DELETE",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ libraryId }),
         signal: deleteController.signal,
       });
@@ -122,9 +128,9 @@ export const useLibrary = () => {
       return oldLibrary;
     } catch (e) {
       if (e instanceof Error && e.name === "AbortError") {
-        console.log("Delete librarie cancelled");
+        console.log("Delete library cancelled");
       } else {
-        console.error("Failed to delete libraries:", e);
+        console.error("Failed to delete library:", e);
       }
       return;
     } finally {
@@ -155,9 +161,9 @@ export const useLibrary = () => {
       return updatedFolder;
     } catch (e) {
       if (e instanceof Error && e.name === "AbortError") {
-        console.log("Edit libraries cancelled");
+        console.log("Edit library cancelled");
       } else {
-        console.error("Failed to Edit libraries:", e);
+        console.error("Failed to edit library:", e);
       }
       return;
     } finally {
