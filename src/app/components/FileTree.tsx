@@ -79,7 +79,6 @@ const FileTreeInner = () => {
             setFolder(ROOT_KEY, { libs: libs ?? [], snips: snips ?? [] });
         } catch (err) {
             console.error("Failed to fetch tree:", err);
-            // Only wipe cache if we had nothing to show
             if (!rootContents) {
                 setFolder(ROOT_KEY, { libs: [], snips: [] });
             }
@@ -133,9 +132,8 @@ const FileTreeInner = () => {
     return (
         <>
             <div className="h-8.75 flex items-center justify-between px-3 border-b border-[#3e3e42]">
-                <h3 className="text-[11px] font-medium text-[#cccccc] uppercase tracking-wider">
+                <h3 className="flex justify-center items-center text-[11px] font-medium text-[#cccccc] uppercase tracking-wider">
                     Explorer
-                    {/* Subtle revalidation indicator — only shows when refreshing in background */}
                     {isRevalidating && rootContents && (
                         <span className="ml-2 inline-block w-1.5 h-1.5 rounded-full bg-[#007acc] animate-pulse" />
                     )}
@@ -143,8 +141,8 @@ const FileTreeInner = () => {
                 <div className="flex items-center gap-1">
                     <button
                         onClick={() => {
-                            if (selectedParentId !== undefined) {
-                                setSelectedItem(selectedParentId, ExplorerItemType.Folder);
+                            if (selectedItem === null) {
+                                setSelectedItem(null);
                             }
                             setAddingSnippet(true);
                         }}
@@ -153,10 +151,11 @@ const FileTreeInner = () => {
                     >
                         <VscNewFile className="w-4 h-4" />
                     </button>
+
                     <button
                         onClick={() => {
-                            if (selectedParentId !== undefined) {
-                                setSelectedItem(selectedParentId, ExplorerItemType.Folder);
+                            if (selectedItem === null) {
+                                setSelectedItem(null);
                             }
                             setAddingLibrary(true);
                         }}

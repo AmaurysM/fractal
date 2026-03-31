@@ -47,11 +47,10 @@ export const TreeItem = ({
         isEditingFolder,
     } = useLibraryStore();
 
-    const { cache, setFolder } = useTreeStore();
+    const { cache, setFolder, expandFolder, collapseFolder, isFolderExpanded } = useTreeStore();
     const { data: session } = useSession();
 
     const [currentItem, setCurrentItem] = useState<Library | Snippet>(item);
-    const [isExpanded, setIsExpanded] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -62,6 +61,7 @@ export const TreeItem = ({
 
     const isSelected = selectedItem === item.id;
     const isFolder = type === ExplorerItemType.Folder;
+    const isExpanded = isFolder ? isFolderExpanded(item.id) : false;
 
     const isEditingThis =
         isSelected &&
@@ -136,7 +136,6 @@ export const TreeItem = ({
             } else {
                 await editSnippetTitle(item.id, editTitle);
             }
-            // Update local state so the label reflects the new title immediately
             setCurrentItem((prev) => ({ ...prev, title: editTitle }));
             exitEditMode();
         } catch (err) {
@@ -203,8 +202,8 @@ export const TreeItem = ({
                 icon: <VscNewFolder className="w-4 h-4" />,
                 onClick: () => {
                     setSelectedItem(item.id, ExplorerItemType.Folder);
+                    expandFolder(item.id);
                     setAddingLibrary(true);
-                    setIsExpanded(true);
                 },
             });
             items.push({
@@ -212,8 +211,8 @@ export const TreeItem = ({
                 icon: <VscNewFile className="w-4 h-4" />,
                 onClick: () => {
                     setSelectedItem(item.id, ExplorerItemType.Folder);
+                    expandFolder(item.id);
                     setAddingSnippet(true);
-                    setIsExpanded(true);
                 },
             });
             items.push({
@@ -225,6 +224,19 @@ export const TreeItem = ({
                 },
             });
         } else {
+            items.push({
+                label: "New File",
+                icon: <VscNewFile className="w-4 h-4" />,
+                onClick: () => {
+                    if (parentId) {
+                        setSelectedItem(parentId, ExplorerItemType.Folder);
+                        expandFolder(parentId);
+                    } else {
+                        setSelectedItem(null);
+                    }
+                    setAddingSnippet(true);
+                },
+            });
             items.push({
                 label: "Change Name",
                 icon: <CgRename className="w-4 h-4" />,
@@ -259,7 +271,7 @@ export const TreeItem = ({
                     if (isEditingThis) return;
                     if (loadingChildren) return;
                     if (isFolder) {
-                        setIsExpanded((x) => !x);
+                        isExpanded ? collapseFolder(item.id) : expandFolder(item.id);
                         setAddingLibrary(false);
                     }
                     setSelectedItem(currentItem.id, type, parentId);

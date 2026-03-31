@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     const result = await db.query(
       `INSERT INTO "Library" (userid, title) 
        VALUES ($1, $2) 
-       RETURNING id`,
+       RETURNING id, title`,  // ← also return title
       [userId, title],
     );
 
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
       parentId: parentId ?? null,
     };
 
-    return NextResponse.json({ dto });
+    return NextResponse.json(dto);
   } catch (error) {
     console.error(error);
     return NextResponse.json(
