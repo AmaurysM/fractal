@@ -1,25 +1,18 @@
 "use client"
 
 import { useEffect, useState } from "react";
-import { ExplorerItemType, Library, Snippet } from "../../types/types";
 import { BiUser, BiCode } from "react-icons/bi";
 import { VscNewFile, VscNewFolder, VscFiles, VscSearch } from "react-icons/vsc";
 import { CodeDisplay } from "./components/CodeDisplay";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
-import { TreeItem } from "./components/TreeItem";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { signOut } from "next-auth/react"
 import { TreeSkeleton } from "./components/SkeletonLoading";
-import { TreeItemEdit } from "./components/TreeItemEdit";
 import { FileTree } from "./components/FileTree";
-import { useLibraryStore } from "./store/libraryStore";
 import { useTabStore } from "./store/tabStore";
 import { useAuthStore } from "./store/authStore";
-import { useLibrary } from "./hooks/useLibrary";
-import { useSnippet } from "./hooks/useSnippet";
-import { LibraryDTO } from "./api/libraries/parents/route";
-import { SnippetDTO } from "./api/snippets/parents/route";
+import { SearchSidebar } from "./components/SearchSidebar";
 
 enum ActivityItem {
   Explorer = "Explorer",
@@ -30,61 +23,17 @@ export default function Home() {
   const { data: session } = useSession();
 
   const { user, setUser } = useAuthStore();
-
-  const {
-    selectedItem,
-    setSelectedItem,
-    selectedParentId,
-    setAddingSnippet,
-    setAddingLibrary,
-    isEditingFolder,
-    setIsEditingFolder,
-    isEditingSnippet,
-    setIsEditingSnippet,
-  } = useLibraryStore();
-
   const { tabs, clearTabs } = useTabStore();
-
-  const { searchLibraries } = useLibrary();
-  const { searchSnippets } = useSnippet();
 
   const [hoveringResizer, setHoveringResizer] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [activity, setActivity] = useState<ActivityItem>(ActivityItem.Explorer);
-  const [searchValue, setSearchValue] = useState("");
-
-  const [foundLibraries, setFoundLibraries] = useState<LibraryDTO[]>([]);
-  const [foundSnippets, setFoundSnippets] = useState<SnippetDTO[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     if (session?.user && (!user || session.user.id !== user.id)) {
       setUser(session.user);
     }
   }, [session, user, setUser]);
-
-  const handleSearch = async (query: string) => {
-    setSearchValue(query);
-    if (!query.trim()) {
-      setFoundLibraries([]);
-      setFoundSnippets([]);
-      return;
-    }
-
-    setIsSearching(true);
-    try {
-      const [libs, snips] = await Promise.all([
-        searchLibraries(query),
-        searchSnippets(query),
-      ]);
-
-      setFoundSnippets(snips ?? []);
-    } catch (e) {
-      console.error("Search failed:", e);
-    } finally {
-      setIsSearching(false);
-    }
-  };
 
   const isInitialLoading = !user;
 
@@ -188,121 +137,9 @@ export default function Home() {
               </div>
             </>
           ) : activity === ActivityItem.Explorer ? (
-            <>
-              {/* Explorer Header */}
-              <div className="h-8.75 flex items-center justify-between px-3 border-b border-[#3e3e42]">
-                <h3 className="text-[11px] font-medium text-[#cccccc] uppercase tracking-wider">Explorer</h3>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => {
-                      if (selectedParentId !== undefined) {
-                        setSelectedItem(selectedParentId, ExplorerItemType.Folder);
-                      }
-                      setAddingSnippet(true);
-                    }} className="p-1.5 rounded-sm hover:bg-[#2a2d2e] transition-colors text-[#cccccc]"
-                    title="New File"
-                  >
-                    <VscNewFile className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (selectedParentId !== undefined) {
-                        setSelectedItem(selectedParentId, ExplorerItemType.Folder);
-                      }
-                      setAddingLibrary(true);
-                    }} className="p-1.5 rounded-sm hover:bg-[#2a2d2e] transition-colors text-[#cccccc]"
-                    title="New Folder"
-                  >
-                    <VscNewFolder className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              <FileTree />
-            </>
+            <FileTree />
           ) : (
-            // Search View
-            <div className="flex flex-col h-full">
-              <div className="h-8.75 flex items-center px-3 border-b border-[#3e3e42]">
-                <h3 className="text-[11px] font-medium text-[#cccccc] uppercase tracking-wider">Search</h3>
-              </div>
-
-              <div className="p-3">
-                <input
-                  type="text"
-                  value={searchValue}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className="w-full px-2 py-1.5 bg-[#3c3c3c] border border-[#3e3e42] text-[#cccccc] text-[13px] rounded-sm focus:outline-none focus:border-[#007acc] placeholder-[#6e6e6e]"
-                  placeholder="Search files and folders..."
-                />
-              </div>
-
-              <div className="flex-1 overflow-auto">
-                {isSearching ? (
-                  <div className="p-2">
-                    <TreeSkeleton count={4} />
-                  </div>
-                ) : (
-                  <>
-                    {foundLibraries.map((lib) => (
-                      <div
-                        key={lib.id}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {isEditingFolder && selectedItem === lib.id ? (
-                          <TreeItemEdit
-                            type={ExplorerItemType.Folder}
-                            item={lib}
-                            onSuccess={() => {
-                              setIsEditingFolder(false);
-                              setFoundLibraries(prev => prev.map(l =>
-                                l.id === lib.id ? { ...l, title: lib.title } : l
-                              ));
-                            }}
-                          />
-                        ) : (
-                          <TreeItem
-                            item={{ id: lib.id, userid: session?.user.id!, title: lib.title } as Library}
-                            type={ExplorerItemType.Folder}
-                          />
-                        )}
-                      </div>
-                    ))}
-
-                    {foundSnippets.map((snip) => (
-                      <div
-                        key={snip.id}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {isEditingSnippet && selectedItem === snip.id ? (
-                          <TreeItemEdit
-                            type={ExplorerItemType.File}
-                            item={snip}
-                            onSuccess={() => {
-                              setIsEditingSnippet(false);
-                              setFoundSnippets(prev => prev.map(s =>
-                                s.id === snip.id ? { ...s, title: snip.title } : s
-                              ));
-                            }}
-                          />
-                        ) : (
-                          <TreeItem
-                            item={{ id: snip.id, title: snip.title, userId: session?.user.id! } as Snippet}
-                            type={ExplorerItemType.File}
-                          />
-                        )}
-                      </div>
-                    ))}
-
-                    {searchValue && foundLibraries.length === 0 && foundSnippets.length === 0 && (
-                      <div className="text-center py-12 px-4">
-                        <p className="text-[#858585] text-[13px]">No results found</p>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
+            <SearchSidebar />
           )}
         </Panel>
 
