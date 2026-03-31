@@ -15,6 +15,8 @@ type TabStore = {
   updateTab: (snippet: Snippet) => void;
   moveTabToIndex: (snipId: string, index: number) => void;
   clearTabs: () => void;
+  isRehydrating: boolean;
+  rehydrateTabs: () => Promise<void>;
 };
 
 const pickFallback = (tabs: Snippet[]): string | null =>
@@ -25,11 +27,53 @@ export const useTabStore = create<TabStore>()(
     (set, get) => ({
       tabs: [],
       selectedTab: null,
+      isRehydrating: false,
+      rehydrateTabs: async () => {
+        const { tabs, selectedTab } = get();
+
+        if (tabs.length === 0) return;
+
+        set({ isRehydrating: true }); // <-- add this
+
+        const tabIds = tabs.map((t) => t.id);
+        const results = await Promise.allSettled(
+          tabIds.map((id) =>
+            fetch(`/api/snippet`, {
+              method: "GET",
+              headers: { "voronoi-snippet-id": id },
+            }).then((res) => {
+              if (!res.ok) return null;
+              return res.json() as Promise<Snippet>;
+            }),
+          ),
+        );
+
+        const freshTabs: Snippet[] = [];
+        for (const result of results) {
+          if (result.status === "fulfilled" && result.value) {
+            freshTabs.push(result.value);
+          }
+        }
+
+        const orderedFreshTabs = tabIds
+          .map((id) => freshTabs.find((t) => t.id === id))
+          .filter((t): t is Snippet => !!t);
+
+        const nextSelected =
+          selectedTab && orderedFreshTabs.some((t) => t.id === selectedTab)
+            ? selectedTab
+            : pickFallback(orderedFreshTabs);
+
+        set({
+          tabs: orderedFreshTabs,
+          selectedTab: nextSelected,
+          isRehydrating: false,
+        }); // <-- add flag
+      },
 
       addTab: (snipId: string) => {
         const state = get();
 
-        // Already open — just focus it
         if (state.tabs.some((t) => t.id === snipId)) {
           set({ selectedTab: snipId });
           return;
@@ -71,7 +115,6 @@ export const useTabStore = create<TabStore>()(
         });
       },
 
-      // Close every tab and clear selection
       closeAllTabs: () => {
         useLibraryStore.getState().setSelectedItem(null);
         set({ tabs: [], selectedTab: null });
@@ -109,6 +152,6 @@ export const useTabStore = create<TabStore>()(
         tabs: state.tabs,
         selectedTab: state.selectedTab,
       }),
-    }
-  )
+    },
+  ),
 );

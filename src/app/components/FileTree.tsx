@@ -15,7 +15,7 @@ import { DragDropProvider, useDroppable } from "@dnd-kit/react";
 import { TreeItemDropContainer } from "./TreeItemDropContainer";
 import { directionBiased } from "@dnd-kit/collision";
 import { ROOT_KEY, useTreeStore } from "../store/treeStore";
-import { VscNewFile, VscNewFolder, VscFiles, VscSearch } from "react-icons/vsc";
+import { VscNewFile, VscNewFolder } from "react-icons/vsc";
 
 const RootDropZone = ({
     children,
@@ -63,33 +63,43 @@ const FileTreeInner = () => {
         setAddingLibrary,
     } = useLibraryStore();
 
-    const { cache, setFolder, moveItem } = useTreeStore();
+    const { cache, setFolder, moveItem, isRevalidating, setRevalidating } = useTreeStore();
     const { data: session } = useSession();
 
     const rootContents = cache[ROOT_KEY];
     const libraries = rootContents?.libs ?? [];
     const snippets = rootContents?.snips ?? [];
+
+    // Show skeleton only on first ever load (no cache at all)
     const loading = rootContents === undefined;
     const isSelected = selectedItem == null;
 
-    useEffect(() => {
-        if (!session || rootContents !== undefined) return;
-
-        const load = async () => {
-            try {
-                const [libs, snips] = await Promise.all([
-                    fetchParentLibraries(),
-                    fetchParentSnippets(),
-                ]);
-                setFolder(ROOT_KEY, { libs: libs ?? [], snips: snips ?? [] });
-            } catch (err) {
-                console.error("Failed to fetch tree:", err);
+    const revalidateRoot = async () => {
+        if (!session) return;
+        try {
+            setRevalidating(true);
+            const [libs, snips] = await Promise.all([
+                fetchParentLibraries(),
+                fetchParentSnippets(),
+            ]);
+            setFolder(ROOT_KEY, { libs: libs ?? [], snips: snips ?? [] });
+        } catch (err) {
+            console.error("Failed to fetch tree:", err);
+            // Only wipe cache if we had nothing to show
+            if (!rootContents) {
                 setFolder(ROOT_KEY, { libs: [], snips: [] });
             }
-        };
+        } finally {
+            setRevalidating(false);
+        }
+    };
 
-        load();
-    }, [session, rootContents]);
+    useEffect(() => {
+        if (!session) return;
+        // Always revalidate on mount — if cache exists it renders immediately
+        // and this update happens silently in the background
+        revalidateRoot();
+    }, [session]);
 
     const refreshFolder = async (folderId: string) => {
         const [libs, snips] = await Promise.all([
@@ -117,24 +127,27 @@ const FileTreeInner = () => {
         const toKey = target.id ?? ROOT_KEY;
         if (fromKey === toKey) return;
 
-        // 1. Optimistic update — UI responds instantly
         moveItem(source.id, fromKey, toKey, source.type === ExplorerItemType.Folder);
 
-        // 2. Persist to server
         if (source.type === ExplorerItemType.Folder) {
             await moveLibrary(source.id, target.id ?? null);
         } else {
             await moveSnippet(source.id, target.id ?? null);
         }
 
-        // 3. Reconcile both affected folders with the DB
         await Promise.all([refreshFolder(fromKey), refreshFolder(toKey)]);
     };
 
     return (
         <>
             <div className="h-8.75 flex items-center justify-between px-3 border-b border-[#3e3e42]">
-                <h3 className="text-[11px] font-medium text-[#cccccc] uppercase tracking-wider">Explorer</h3>
+                <h3 className="text-[11px] font-medium text-[#cccccc] uppercase tracking-wider">
+                    Explorer
+                    {/* Subtle revalidation indicator — only shows when refreshing in background */}
+                    {isRevalidating && rootContents && (
+                        <span className="ml-2 inline-block w-1.5 h-1.5 rounded-full bg-[#007acc] animate-pulse" />
+                    )}
+                </h3>
                 <div className="flex items-center gap-1">
                     <button
                         onClick={() => {
@@ -142,7 +155,8 @@ const FileTreeInner = () => {
                                 setSelectedItem(selectedParentId, ExplorerItemType.Folder);
                             }
                             setAddingSnippet(true);
-                        }} className="p-1.5 rounded-sm hover:bg-[#2a2d2e] transition-colors text-[#cccccc]"
+                        }}
+                        className="p-1.5 rounded-sm hover:bg-[#2a2d2e] transition-colors text-[#cccccc]"
                         title="New File"
                     >
                         <VscNewFile className="w-4 h-4" />
@@ -153,7 +167,8 @@ const FileTreeInner = () => {
                                 setSelectedItem(selectedParentId, ExplorerItemType.Folder);
                             }
                             setAddingLibrary(true);
-                        }} className="p-1.5 rounded-sm hover:bg-[#2a2d2e] transition-colors text-[#cccccc]"
+                        }}
+                        className="p-1.5 rounded-sm hover:bg-[#2a2d2e] transition-colors text-[#cccccc]"
                         title="New Folder"
                     >
                         <VscNewFolder className="w-4 h-4" />
@@ -188,7 +203,6 @@ const FileTreeInner = () => {
                                             type={ExplorerItemType.Folder}
                                             item={lib}
                                             onSuccess={() => {
-                                                // TreeItemEdit mutates item.title in place before calling onSuccess
                                                 setIsEditingFolder(false);
                                                 setFolder(ROOT_KEY, {
                                                     libs: libraries.map((l) =>
@@ -234,7 +248,6 @@ const FileTreeInner = () => {
                                             type={ExplorerItemType.File}
                                             item={snip}
                                             onSuccess={() => {
-                                                // TreeItemEdit mutates item.title in place before calling onSuccess
                                                 setIsEditingSnippet(false);
                                                 setFolder(ROOT_KEY, {
                                                     libs: libraries,
@@ -272,7 +285,6 @@ const FileTreeInner = () => {
                 </RootDropZone>
             </DragDropProvider>
         </>
-
     );
 };
 
