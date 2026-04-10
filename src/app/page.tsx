@@ -35,8 +35,6 @@ export default function Home() {
     if (session?.user && (!user || session.user.id !== user.id)) {
       setUser(session.user);
     }
-    console.log("session.user:", session?.user);
-    console.log("store user:", user);
   }, [session, user, setUser]);
 
   const isInitialLoading = !user;

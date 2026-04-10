@@ -29,8 +29,6 @@ export const ContextMenu = ({
         document.addEventListener('mousedown', handleClickOutside);
         document.addEventListener('keydown', handleEscape);
 
-        console.log("")
-
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
             document.removeEventListener('keydown', handleEscape);

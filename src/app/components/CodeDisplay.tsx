@@ -109,7 +109,7 @@ export const CodeDisplay = () => {
       smoothScrolling: e.smoothScrolling,
       cursorBlinking: e.cursorBlinking,
       cursorStyle: e.cursorStyle,
-      //cursorSmoothCaretAnimation: e.cursorSmoothCaretAnimation,
+      cursorSmoothCaretAnimation: e.cursorSmoothCaretAnimation,
       scrollBeyondLastLine: e.scrollBeyondLastLine,
       folding: e.folding,
       showFoldingControls: e.showFoldingControls,

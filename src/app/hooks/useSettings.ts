@@ -13,20 +13,20 @@ async function apiFetchSettings(): Promise<AppSettings> {
 async function apiSaveUserSettings(
   patch: Partial<Omit<UserSettings, "id" | "email" | "image">>
 ): Promise<void> {
-  await fetch("/api/settings/user", {
+  await fetch("/api/settings", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(patch),
+    body: JSON.stringify({ table: "user", patch }),
   });
 }
 
 async function apiSaveEditorSettings(
   patch: Partial<Omit<EditorSettings, "id">>
 ): Promise<void> {
-  await fetch("/api/settings/editor", {
+  await fetch("/api/settings", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(patch),
+    body: JSON.stringify({ table: "editor", patch }),
   });
 }
 

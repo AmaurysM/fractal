@@ -135,7 +135,7 @@ export interface EditorSettings {
 
   cursorBlinking: CursorBlinkingValue;
   cursorStyle: CursorStyleValue;
-  cursorSmoothCaretAnimation: boolean;
+  cursorSmoothCaretAnimation: "on" | "off" | "explicit";
 
   folding: boolean;
   showFoldingControls: ShowFoldingControlsValue;
@@ -177,7 +177,7 @@ export const DEFAULT_EDITOR_SETTINGS: Omit<EditorSettings, "id"> = {
 
   cursorBlinking: "blink",
   cursorStyle: "line",
-  cursorSmoothCaretAnimation: false,
+  cursorSmoothCaretAnimation: "off",
 
   folding: true,
   showFoldingControls: "mouseover",

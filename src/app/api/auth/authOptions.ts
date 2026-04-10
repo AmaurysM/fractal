@@ -117,17 +117,12 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
-      console.log("SESSION CALLBACK token:", JSON.stringify(token, null, 2));
       if (session.user) {
         session.user.id = token.id as string;
         session.user.username = token.username as string;
         session.user.first_name = token.first_name as string | null;
         session.user.last_name = token.last_name as string | null;
       }
-      console.log(
-        "SESSION CALLBACK session.user:",
-        JSON.stringify(session.user, null, 2),
-      );
       return session;
     },
     async redirect({ url, baseUrl }) {

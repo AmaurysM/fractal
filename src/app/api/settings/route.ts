@@ -152,7 +152,11 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (table === "editor") {
+      const d = DEFAULT_EDITOR_SETTINGS;
       const e = patch as Record<string, unknown>;
+
+      // Merge defaults with the incoming patch so no column is ever null
+      const merged = { ...d, ...e };
 
       await db.query(
         `INSERT INTO "editor_settings" (
@@ -198,33 +202,33 @@ export async function PATCH(req: NextRequest) {
           updated_at                = now()`,
         [
           userId,
-          e.fontFamily,
-          e.fontSize,
-          e.lineHeight,
-          e.fontLigatures,
-          e.tabSize,
-          e.insertSpaces,
-          e.wordWrap,
-          e.autoClosingBrackets,
-          e.autoClosingQuotes,
-          e.formatOnPaste,
-          e.formatOnType,
-          e.theme,
-          e.lineNumbers,
-          e.renderWhitespace,
-          e.showMinimap,
-          e.minimapSide,
-          e.renderLineHighlight,
-          e.bracketPairColorization,
-          e.indentGuides,
-          e.smoothScrolling,
-          e.cursorBlinking,
-          e.cursorStyle,
-          e.cursorSmoothCaretAnimation,
-          e.scrollBeyondLastLine,
-          e.folding,
-          e.showFoldingControls,
-          e.autoSaveDelay,
+          merged.fontFamily,
+          merged.fontSize,
+          merged.lineHeight,
+          merged.fontLigatures,
+          merged.tabSize,
+          merged.insertSpaces,
+          merged.wordWrap,
+          merged.autoClosingBrackets,
+          merged.autoClosingQuotes,
+          merged.formatOnPaste,
+          merged.formatOnType,
+          merged.theme,
+          merged.lineNumbers,
+          merged.renderWhitespace,
+          merged.showMinimap,
+          merged.minimapSide,
+          merged.renderLineHighlight,
+          merged.bracketPairColorization,
+          merged.indentGuides,
+          merged.smoothScrolling,
+          merged.cursorBlinking,
+          merged.cursorStyle,
+          merged.cursorSmoothCaretAnimation,
+          merged.scrollBeyondLastLine,
+          merged.folding,
+          merged.showFoldingControls,
+          merged.autoSaveDelay,
         ],
       );
 

@@ -84,7 +84,7 @@ const selectCls = `
   transition-colors duration-150 cursor-pointer
 `;
 
-interface TextInputProps extends React.InputHTMLAttributes<HTMLInputElement> {}
+interface TextInputProps extends React.InputHTMLAttributes<HTMLInputElement> { }
 const TextInput = (props: TextInputProps) => <input {...props} className={inputCls} />;
 
 interface ToggleProps {
@@ -367,7 +367,15 @@ export function buildOptionResolver(
       />
     ),
     [CodeSettings.CURSOR_SMOOTH_CARET]: () => (
-      <Toggle checked={bool(e?.cursorSmoothCaretAnimation)} onChange={(v) => updatePendingEditor({ cursorSmoothCaretAnimation: v })} />
+      <ControlledSelect<"on" | "off" | "explicit">
+        value={e?.cursorSmoothCaretAnimation ?? "off"}
+        options={[
+          { label: "Off", value: "off" },
+          { label: "On", value: "on" },
+          { label: "Explicit", value: "explicit" },
+        ]}
+        onChange={(v) => updatePendingEditor({ cursorSmoothCaretAnimation: v })}
+      />
     ),
 
     [CodeSettings.FOLDING]: () => (
