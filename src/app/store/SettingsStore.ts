@@ -62,8 +62,6 @@ export const useSettingsStore = create<SettingsStore>()(
     {
       name: "voronoi-settings",
       storage: createJSONStorage(() => localStorage),
-      // Only persist the settings data — status, errors, and the transient
-      // flash state are always reset fresh on page load.
       partialize: (state) => ({ settings: state.settings }),
     }
   )

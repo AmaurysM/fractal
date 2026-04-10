@@ -13,6 +13,7 @@ import { useTabStore } from "./store/tabStore";
 import { useAuthStore } from "./store/authStore";
 import { SearchSidebar } from "./components/SearchSidebar";
 import { SettingWindow } from "./components/SettingWindow";
+import { useSettingsStore } from "./store/SettingsStore";
 
 enum ActivityItem {
   Explorer = "Explorer",
@@ -28,6 +29,8 @@ export default function Home() {
   const [isDragging, setIsDragging] = useState(false);
   const [activity, setActivity] = useState<ActivityItem>(ActivityItem.Explorer);
   const [showSettings, setShowSettings] = useState<boolean>(false);
+  const { settings } = useSettingsStore();
+  const userSettings = settings?.user;
 
   useEffect(() => {
     if (session?.user && (!user || session.user.id !== user.id)) {
@@ -74,7 +77,9 @@ export default function Home() {
                       <BiUser className="w-3 h-3 text-[#cccccc]" />
                     )}
                   </div>
-                  <div className="text-[11px] text-[#cccccc]  truncate">{user?.username?.trim() ? `${user.username}` : `${user.email}`}</div>
+                  <div className="text-[11px] text-[#cccccc] truncate">
+                    {userSettings?.username?.trim() ? userSettings.username : user?.email}
+                  </div>
                 </button>
 
                 <div className="absolute right-0 top-full mt-1 bg-[#252526] border border-[#454545] rounded-sm shadow-2xl py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
@@ -82,7 +87,7 @@ export default function Home() {
                   <div className="px-3 py-1.5 text-[12px] text-[#cccccc]  border-b border-[#3e3e42]">
                     {user?.email}
                   </div>
-                  <div className="px-3 py-1.5 text-[12px] text-[#cccccc]  border-b border-[#3e3e42] hover:cursor-pointer" onClick={() => { setShowSettings(true) }}>Settings</div>
+                  <div className="px-3 py-1.5 text-[12px] text-[#cccccc]  border-b border-[#3e3e42] hover:cursor-pointer hover:bg-[#4c4c4c]/10" onClick={() => { setShowSettings(true) }}>Settings</div>
                   <button
                     onClick={handleSignout}
                     className="w-full px-3 py-1.5 text-[12px] text-left text-[#f48771] hover:bg-[#f48771]/20 transition-colors"

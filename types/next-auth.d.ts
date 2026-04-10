@@ -1,28 +1,21 @@
 import NextAuth, { DefaultSession } from "next-auth";
 
-// next-auth.d.ts
+import NextAuth, { DefaultSession } from "next-auth";
+
 declare module "next-auth" {
   interface User {
-    username?: string;
-    first_name?: string | null;
-    last_name?: string | null;
+    // Auth identity only — profile data lives in user_settings
   }
 
   interface Session {
     user: {
       id: string;
-      username?: string;
-      first_name?: string | null;
-      last_name?: string | null;
-    } & DefaultSession["user"]; // DefaultSession["user"] already has name, email, image
+    } & DefaultSession["user"]; // carries name, email, image from OAuth
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
     id: string;
-    username?: string;
-    first_name?: string | null;
-    last_name?: string | null;
   }
 }

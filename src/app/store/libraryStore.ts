@@ -65,11 +65,6 @@ export const useLibraryStore = create<LibraryStore>()(
 
         const isChangingItem = item !== state.selectedItem;
 
-        // selectedParentId = "where should a new item be created?"
-        //
-        // • Clicking a File   → parent is the folder that contains it (passed in as parentId)
-        // • Clicking a Folder → parent IS that folder (item itself)
-        // • Clicking nothing  → root (null)
         const resolvedParentId =
           type === ExplorerItemType.File
             ? (parentId ?? null)          // file's containing folder

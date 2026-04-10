@@ -14,27 +14,22 @@ const pool = new Pool({
 
 async function getOrCreateUser(user: User) {
   const res = await pool.query(
-    'SELECT id, username, first_name, last_name FROM "User" WHERE email = $1 LIMIT 1',
+    `SELECT id FROM "User" WHERE email = $1 LIMIT 1`,
     [user.email],
   );
 
   if (res.rows.length > 0) return res.rows[0];
 
   const insert = await pool.query(
-    `INSERT INTO "User" (email, username, first_name, last_name, image)
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING id, username, first_name, last_name`,
-    [
-      user.email,
-      user.username ?? "",
-      user.first_name ?? null,
-      user.last_name ?? null,
-      user.image,
-    ],
+    `INSERT INTO "User" (email, image)
+     VALUES ($1, $2)
+     RETURNING id`,
+    [user.email, user.image],
   );
 
   return insert.rows[0];
 }
+
 export const authOptions: NextAuthOptions = {
   providers: [
     GithubProvider({
@@ -46,7 +41,7 @@ export const authOptions: NextAuthOptions = {
         const [firstName, ...rest] = fullName.split(" ");
         return {
           id: String(profile.id),
-          //name: fullName, // ← keep this so next-auth doesn't break
+          name: fullName,
           first_name: firstName ?? null,
           last_name: rest.join(" ") || null,
           email: profile.email,
@@ -61,7 +56,7 @@ export const authOptions: NextAuthOptions = {
       profile(profile) {
         return {
           id: profile.sub,
-          //name: profile.name, // ← keep this
+          name: profile.name,
           first_name: profile.given_name ?? null,
           last_name: profile.family_name ?? null,
           email: profile.email,
@@ -76,7 +71,7 @@ export const authOptions: NextAuthOptions = {
       profile(profile) {
         return {
           id: profile.id,
-          //name: profile.username, // ← keep this
+          name: profile.username,
           first_name: profile.username ?? null,
           last_name: null,
           email: profile.email,
@@ -105,11 +100,6 @@ export const authOptions: NextAuthOptions = {
         try {
           const dbUser = await getOrCreateUser(user as User);
           token.id = dbUser.id;
-          token.username = dbUser.username ?? "";
-          token.first_name =
-            dbUser.first_name ?? (user as User).first_name ?? null;
-          token.last_name =
-            dbUser.last_name ?? (user as User).last_name ?? null;
         } catch (error) {
           console.error("Error in JWT callback:", error);
         }
@@ -119,9 +109,6 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        session.user.username = token.username as string;
-        session.user.first_name = token.first_name as string | null;
-        session.user.last_name = token.last_name as string | null;
       }
       return session;
     },

@@ -1,33 +1,33 @@
 import { DefaultUser, DefaultSession } from "next-auth";
 import { DefaultJWT } from "next-auth/jwt";
 
-export interface User extends DefaultUser {
-  id: string;
-  username?: string;
-  first_name?: string | null;
-  last_name?: string | null;
-  email?: string | null;
-  image?: string | null;
-}
+// export interface User extends DefaultUser {
+//   id: string;
+//   username?: string;
+//   first_name?: string | null;
+//   last_name?: string | null;
+//   email?: string | null;
+//   image?: string | null;
+// }
 
-export interface Session extends DefaultSession {
-  user: {
-    id: string;
-    username?: string;
-    first_name?: string | null;
-    last_name?: string | null;
-    email?: string | null;
-    image?: string | null;
-  } & DefaultSession["user"];
-}
+// export interface Session extends DefaultSession {
+//   user: {
+//     id: string;
+//     username?: string;
+//     first_name?: string | null;
+//     last_name?: string | null;
+//     email?: string | null;
+//     image?: string | null;
+//   } & DefaultSession["user"];
+// }
 
-export interface JWT extends DefaultJWT {
-  id: string;
-  username: string;
-  first_name?: string | null;
-  last_name?: string | null;
-  email: string;
-}
+// export interface JWT extends DefaultJWT {
+//   id: string;
+//   username: string;
+//   first_name?: string | null;
+//   last_name?: string | null;
+//   email: string;
+// }
 
 export type Snippet = {
   id: string;
@@ -87,11 +87,36 @@ export enum ActivityItem {
 
 export interface UserSettings {
   id: string;
-  username: string;
-  first_name?: string | null;
-  last_name?: string | null;
+  first_name: string;
+  last_name: string;
+  username: string | null;
+  avatar_url?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface User extends DefaultUser {
+  id: string;
+  email?: string | null;
+  image?: string | null;
+}
+
+export interface Session extends DefaultSession {
+  user: {
+    id: string;
+    email?: string | null;
+    image?: string | null;
+  } & DefaultSession["user"];
+}
+
+export interface JWT extends DefaultJWT {
+  id: string;
   email: string;
-  image: string | null;
+}
+
+export interface AppSettings {
+  user: UserSettings;
+  editor: EditorSettings;
 }
 
 export type ThemeValue = "vs-dark" | "vs-light" | "hc-black";
@@ -143,10 +168,10 @@ export interface EditorSettings {
   autoSaveDelay: number;
 }
 
-export interface AppSettings {
-  user: UserSettings;
-  editor: EditorSettings;
-}
+// export interface AppSettings {
+//   user: UserSettings;
+//   editor: EditorSettings;
+// }
 
 export const DEFAULT_EDITOR_SETTINGS: Omit<EditorSettings, "id"> = {
   fontFamily: "Cascadia Code",
