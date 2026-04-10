@@ -2,7 +2,7 @@ import { BiCopy, BiCheck, BiDownload, BiSave } from "react-icons/bi";
 import { VscCode, VscChevronDown } from "react-icons/vsc";
 import { MdNotes } from "react-icons/md";
 import { ExplorerItemType, Snippet } from "../../../types/types";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Editor, { Monaco } from "@monaco-editor/react";
 import * as monaco from "monaco-editor";
 import { useTabStore } from "../store/tabStore";
@@ -27,6 +27,7 @@ import {
   sortableKeyboardCoordinates,
   horizontalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import { useSettingsStore } from "../store/SettingsStore";
 
 export const CodeDisplay = () => {
   const { data: session } = useSession();
@@ -43,6 +44,7 @@ export const CodeDisplay = () => {
 
   const { editSnippet, fetchSnippet } = useSnippet();
   const { selectedItemType, setSelectedItem } = useLibraryStore();
+  const { settings } = useSettingsStore();
 
   const [descriptionVisible, setDescriptionVisible] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -62,8 +64,74 @@ export const CodeDisplay = () => {
   const tabContextMenuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Derive snippet directly from store — stays in sync automatically
   const snippet = tabs.find((t) => t.id === selectedItem) ?? null;
+
+  const editorOptions = useMemo((): monaco.editor.IStandaloneEditorConstructionOptions => {
+    if (!settings) {
+      return {
+        automaticLayout: true,
+        scrollBeyondLastLine: false,
+        fontSize: 13,
+        fontFamily: "'Cascadia Code', 'Fira Code', 'Consolas', 'Monaco', monospace",
+        lineHeight: 20,
+        minimap: { enabled: false },
+        scrollbar: {
+          vertical: "visible",
+          horizontal: "visible",
+          verticalScrollbarSize: 10,
+          horizontalScrollbarSize: 10,
+        },
+        renderLineHighlight: "all",
+        folding: true,
+        showFoldingControls: "always",
+        bracketPairColorization: { enabled: true },
+        guides: { bracketPairs: true, indentation: true },
+        padding: { top: 16, bottom: 16 },
+      };
+    }
+
+    const e = settings.editor;
+    return {
+      automaticLayout: true,
+      fontSize: e.fontSize,
+      fontFamily: `'${e.fontFamily}', monospace`,
+      fontLigatures: e.fontLigatures,
+      lineHeight: e.lineHeight,
+      tabSize: e.tabSize,
+      insertSpaces: e.insertSpaces,
+      wordWrap: e.wordWrap,
+      lineNumbers: e.lineNumbers,
+      renderWhitespace: e.renderWhitespace,
+      minimap: { enabled: e.showMinimap, side: e.minimapSide },
+      renderLineHighlight: e.renderLineHighlight,
+      bracketPairColorization: { enabled: e.bracketPairColorization },
+      guides: { indentation: e.indentGuides, bracketPairs: e.bracketPairColorization },
+      smoothScrolling: e.smoothScrolling,
+      cursorBlinking: e.cursorBlinking,
+      cursorStyle: e.cursorStyle,
+      //cursorSmoothCaretAnimation: e.cursorSmoothCaretAnimation,
+      scrollBeyondLastLine: e.scrollBeyondLastLine,
+      folding: e.folding,
+      showFoldingControls: e.showFoldingControls,
+      autoClosingBrackets: e.autoClosingBrackets ? "always" : "never",
+      autoClosingQuotes: e.autoClosingQuotes ? "always" : "never",
+      formatOnPaste: e.formatOnPaste,
+      formatOnType: e.formatOnType,
+      scrollbar: {
+        vertical: "visible",
+        horizontal: "visible",
+        verticalScrollbarSize: 10,
+        horizontalScrollbarSize: 10,
+      },
+      padding: { top: 16, bottom: 16 },
+    };
+  }, [settings?.editor]);
+
+  useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.updateOptions(editorOptions);
+    }
+  }, [editorOptions]);
 
   useEffect(() => {
     if (descriptionVisible && textareaRef.current) {
@@ -71,7 +139,6 @@ export const CodeDisplay = () => {
     }
   }, [descriptionVisible]);
 
-  // Rehydrate tabs from DB on mount, after persist has finished loading from localStorage
   useEffect(() => {
     const unsub = useTabStore.persist.onFinishHydration(() => {
       useTabStore.getState().rehydrateTabs();
@@ -84,13 +151,11 @@ export const CodeDisplay = () => {
     return () => unsub();
   }, []);
 
-  // Sync libraryStore selection when selectedItem changes
   useEffect(() => {
     if (!selectedItem || selectedItemType === ExplorerItemType.File) return;
     setSelectedItem(selectedItem, ExplorerItemType.File);
   }, [selectedItem]);
 
-  // Fetch fresh snippet from DB whenever selected tab changes
   useEffect(() => {
     if (!session || !selectedItem || selectedItemType !== ExplorerItemType.File) return;
     const refresh = async () => {
@@ -144,7 +209,7 @@ export const CodeDisplay = () => {
     saveTimeout.current = window.setTimeout(() => {
       editSnippet(updatedSnippet);
       setSaveStatus("saved");
-    }, 800);
+    }, settings?.editor.autoSaveDelay ?? 800);
   };
 
   const updateField = (field: keyof Snippet, value: string) => {
@@ -161,26 +226,7 @@ export const CodeDisplay = () => {
   ) => {
     editorRef.current = editor;
 
-    editor.updateOptions({
-      fontSize: 13,
-      fontFamily: "'Cascadia Code', 'Fira Code', 'Consolas', 'Monaco', monospace",
-      lineHeight: 20,
-      scrollBeyondLastLine: false,
-      automaticLayout: true,
-      minimap: { enabled: false },
-      scrollbar: {
-        vertical: "visible",
-        horizontal: "visible",
-        verticalScrollbarSize: 10,
-        horizontalScrollbarSize: 10,
-      },
-      renderLineHighlight: "all",
-      folding: true,
-      showFoldingControls: "always",
-      bracketPairColorization: { enabled: true },
-      guides: { bracketPairs: true, indentation: true },
-      padding: { top: 16, bottom: 16 },
-    });
+    editor.updateOptions(editorOptions);
 
     editor.addCommand(monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyS, () => {
       if (snippet) {
@@ -301,7 +347,6 @@ export const CodeDisplay = () => {
           </div>
         </DndContext>
 
-        {/* Tab Context Menu */}
         {tabContextMenu && (
           <div
             ref={tabContextMenuRef}
@@ -329,7 +374,6 @@ export const CodeDisplay = () => {
           </div>
         )}
 
-        {/* Toolbar */}
         <div className="h-8.75 bg-[#323233] border-b border-[#3e3e42] flex items-center justify-between px-4 shrink-0">
           <div className="flex items-center gap-3">
             <div className="relative">
@@ -443,7 +487,6 @@ export const CodeDisplay = () => {
           </div>
         </div>
 
-        {/* Animated Description Panel */}
         <div
           className={`grid border-b border-[#3e3e42] bg-[#252526] transition-all duration-200 ease-in-out ${descriptionVisible ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
             }`}
@@ -475,24 +518,17 @@ export const CodeDisplay = () => {
           </div>
         </div>
 
-        {/* Editor */}
         <div className="flex-1 min-h-0 relative">
           <div className="absolute inset-0">
             <Editor
               key={snippet.id}
               language={getMonacoLanguage(snippet.language)}
-              theme="vs-dark"
+              theme={settings?.editor.theme ?? "vs-dark"}
               value={snippet.text}
               onChange={handleEditorChange}
               onMount={handleEditorDidMount}
               height="100%"
-              options={{
-                automaticLayout: true,
-                scrollBeyondLastLine: false,
-                fontSize: 13,
-                fontFamily: "'Cascadia Code', 'Fira Code', 'Consolas', 'Monaco', monospace",
-                lineHeight: 20,
-              }}
+              options={editorOptions}
               loading={
                 <div className="flex items-center justify-center h-full bg-[#1e1e1e]">
                   <div className="flex flex-col items-center gap-4">
@@ -505,7 +541,6 @@ export const CodeDisplay = () => {
           </div>
         </div>
 
-        {/* Status Bar */}
         <div className="h-5.5 bg-[#007acc] flex items-center justify-between px-3 text-[11px] text-white shrink-0">
           <div className="flex items-center gap-4">
             {saveStatus === "saving" && (

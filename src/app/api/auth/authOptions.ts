@@ -1,8 +1,9 @@
-import { NextAuthOptions, User } from "next-auth";
+import { NextAuthOptions } from "next-auth";
 import GithubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
 import DiscordProvider from "next-auth/providers/discord";
 import { Pool } from "pg";
+import { User } from "../../../../types/types";
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -12,39 +13,77 @@ const pool = new Pool({
 });
 
 async function getOrCreateUser(user: User) {
-  try {
-    const res = await pool.query(
-      'SELECT id, username FROM "User" WHERE email = $1 LIMIT 1',
-      [user.email],
-    );
+  const res = await pool.query(
+    'SELECT id, username, first_name, last_name FROM "User" WHERE email = $1 LIMIT 1',
+    [user.email],
+  );
 
-    if (res.rows.length > 0) return res.rows[0];
+  if (res.rows.length > 0) return res.rows[0];
 
-    const insert = await pool.query(
-      'INSERT INTO "User" (email, username, image) VALUES ($1, $2, $3) RETURNING id, username',
-      [user.email, user.name ?? "", user.image],
-    );
+  const insert = await pool.query(
+    `INSERT INTO "User" (email, username, first_name, last_name, image)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id, username, first_name, last_name`,
+    [
+      user.email,
+      user.username ?? "",
+      user.first_name ?? null,
+      user.last_name ?? null,
+      user.image,
+    ],
+  );
 
-    return insert.rows[0];
-  } catch (error) {
-    console.error("Database error in getOrCreateUser:", error);
-    throw error;
-  }
+  return insert.rows[0];
 }
-
 export const authOptions: NextAuthOptions = {
   providers: [
     GithubProvider({
       clientId: process.env.GITHUB_ID ?? "",
       clientSecret: process.env.GITHUB_SECRET ?? "",
+      issuer: "https://github.com/login/oauth",
+      profile(profile) {
+        const fullName = profile.name ?? profile.login ?? "";
+        const [firstName, ...rest] = fullName.split(" ");
+        return {
+          id: String(profile.id),
+          name: fullName, // ← keep this so next-auth doesn't break
+          first_name: firstName ?? null,
+          last_name: rest.join(" ") || null,
+          email: profile.email,
+          image: profile.avatar_url,
+          username: profile.login,
+        };
+      },
     }),
     GoogleProvider({
       clientId: process.env.GOOGLE_ID ?? "",
       clientSecret: process.env.GOOGLE_SECRET ?? "",
+      profile(profile) {
+        return {
+          id: profile.sub,
+          name: profile.name, // ← keep this
+          first_name: profile.given_name ?? null,
+          last_name: profile.family_name ?? null,
+          email: profile.email,
+          image: profile.picture,
+          username: profile.email.split("@")[0],
+        };
+      },
     }),
     DiscordProvider({
       clientId: process.env.DISCORD_ID ?? "",
       clientSecret: process.env.DISCORD_SECRET ?? "",
+      profile(profile) {
+        return {
+          id: profile.id,
+          name: profile.username, // ← keep this
+          first_name: profile.username ?? null,
+          last_name: null,
+          email: profile.email,
+          image: profile.avatar,
+          username: profile.username,
+        };
+      },
     }),
   ],
 
@@ -64,9 +103,13 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         try {
-          const dbUser = await getOrCreateUser(user);
+          const dbUser = await getOrCreateUser(user as User);
           token.id = dbUser.id;
-          token.username = dbUser.username;
+          token.username = dbUser.username ?? "";
+          token.first_name =
+            dbUser.first_name ?? (user as User).first_name ?? null;
+          token.last_name =
+            dbUser.last_name ?? (user as User).last_name ?? null;
         } catch (error) {
           console.error("Error in JWT callback:", error);
         }
@@ -74,10 +117,17 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
+      console.log("SESSION CALLBACK token:", JSON.stringify(token, null, 2));
       if (session.user) {
         session.user.id = token.id as string;
         session.user.username = token.username as string;
+        session.user.first_name = token.first_name as string | null;
+        session.user.last_name = token.last_name as string | null;
       }
+      console.log(
+        "SESSION CALLBACK session.user:",
+        JSON.stringify(session.user, null, 2),
+      );
       return session;
     },
     async redirect({ url, baseUrl }) {
@@ -88,9 +138,7 @@ export const authOptions: NextAuthOptions = {
   },
 
   pages: {
-    signIn: "/auth/signin", 
+    signIn: "/auth/signin",
     error: "/auth/error",
   },
-
-  // debug: process.env.NODE_ENV === "development",
 };
