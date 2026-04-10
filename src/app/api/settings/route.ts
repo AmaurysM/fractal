@@ -6,39 +6,29 @@ import { DEFAULT_EDITOR_SETTINGS } from "../../../../types/types";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-
-  if (!session) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
+  if (!session) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   const userId = session.user.id;
-  if (!userId) {
-    return NextResponse.json({ message: "Missing User" }, { status: 400 });
-  }
+  if (!userId) return NextResponse.json({ message: "Missing User" }, { status: 400 });
 
   try {
+    // Ensure User row exists (auth record only)
     await db.query(
       `INSERT INTO public."User" (id, email)
-   VALUES ($1, $2)
-   ON CONFLICT (id) DO NOTHING`,
+       VALUES ($1, $2)
+       ON CONFLICT (id) DO NOTHING`,
       [userId, session.user.email],
     );
 
-    const [userResult, editorResult] = await Promise.all([
-      db.query(`SELECT * FROM "user_settings" WHERE id = $1`, [userId]),
-      db.query(`SELECT * FROM "editor_settings" WHERE id = $1`, [userId]),
-    ]);
+    // Upsert both settings rows in parallel — eliminates the double-fetch
+    const d = DEFAULT_EDITOR_SETTINGS;
 
-    if (userResult.rows.length === 0) {
-      await db.query(
+    await Promise.all([
+      db.query(
         `INSERT INTO "user_settings" (id) VALUES ($1) ON CONFLICT (id) DO NOTHING`,
         [userId],
-      );
-    }
-
-    if (editorResult.rows.length === 0) {
-      const d = DEFAULT_EDITOR_SETTINGS;
-      await db.query(
+      ),
+      db.query(
         `INSERT INTO "editor_settings" (
           id, font_family, font_size, line_height, font_ligatures,
           tab_size, insert_spaces, word_wrap, auto_closing_brackets,
@@ -53,38 +43,19 @@ export async function GET() {
         ) ON CONFLICT (id) DO NOTHING`,
         [
           userId,
-          d.fontFamily,
-          d.fontSize,
-          d.lineHeight,
-          d.fontLigatures,
-          d.tabSize,
-          d.insertSpaces,
-          d.wordWrap,
-          d.autoClosingBrackets,
-          d.autoClosingQuotes,
-          d.formatOnPaste,
-          d.formatOnType,
-          d.theme,
-          d.lineNumbers,
-          d.renderWhitespace,
-          d.showMinimap,
-          d.minimapSide,
-          d.renderLineHighlight,
-          d.bracketPairColorization,
-          d.indentGuides,
-          d.smoothScrolling,
-          d.cursorBlinking,
-          d.cursorStyle,
-          d.cursorSmoothCaretAnimation,
-          d.scrollBeyondLastLine,
-          d.folding,
-          d.showFoldingControls,
-          d.autoSaveDelay,
+          d.fontFamily, d.fontSize, d.lineHeight, d.fontLigatures,
+          d.tabSize, d.insertSpaces, d.wordWrap, d.autoClosingBrackets,
+          d.autoClosingQuotes, d.formatOnPaste, d.formatOnType, d.theme,
+          d.lineNumbers, d.renderWhitespace, d.showMinimap, d.minimapSide,
+          d.renderLineHighlight, d.bracketPairColorization, d.indentGuides,
+          d.smoothScrolling, d.cursorBlinking, d.cursorStyle,
+          d.cursorSmoothCaretAnimation, d.scrollBeyondLastLine,
+          d.folding, d.showFoldingControls, d.autoSaveDelay,
         ],
-      );
-    }
+      ),
+    ]);
 
-    // Re-fetch after potential inserts
+    // Single fetch after upserts
     const [u, e] = await Promise.all([
       db.query(`SELECT * FROM "user_settings" WHERE id = $1`, [userId]),
       db.query(`SELECT * FROM "editor_settings" WHERE id = $1`, [userId]),
@@ -96,24 +67,16 @@ export async function GET() {
     });
   } catch (error) {
     console.error("GET /api/settings:", error);
-    return NextResponse.json(
-      { message: "Error fetching settings" },
-      { status: 500 },
-    );
+    return NextResponse.json({ message: "Error fetching settings" }, { status: 500 });
   }
 }
 
 export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions);
-
-  if (!session) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
+  if (!session) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   const userId = session.user.id;
-  if (!userId) {
-    return NextResponse.json({ message: "Missing User" }, { status: 400 });
-  }
+  if (!userId) return NextResponse.json({ message: "Missing User" }, { status: 400 });
 
   const body = await req.json();
   const { table, patch } = body as {
@@ -153,10 +116,7 @@ export async function PATCH(req: NextRequest) {
 
     if (table === "editor") {
       const d = DEFAULT_EDITOR_SETTINGS;
-      const e = patch as Record<string, unknown>;
-
-      // Merge defaults with the incoming patch so no column is ever null
-      const merged = { ...d, ...e };
+      const merged = { ...d, ...(patch as Record<string, unknown>) };
 
       await db.query(
         `INSERT INTO "editor_settings" (
@@ -202,33 +162,14 @@ export async function PATCH(req: NextRequest) {
           updated_at                = now()`,
         [
           userId,
-          merged.fontFamily,
-          merged.fontSize,
-          merged.lineHeight,
-          merged.fontLigatures,
-          merged.tabSize,
-          merged.insertSpaces,
-          merged.wordWrap,
-          merged.autoClosingBrackets,
-          merged.autoClosingQuotes,
-          merged.formatOnPaste,
-          merged.formatOnType,
-          merged.theme,
-          merged.lineNumbers,
-          merged.renderWhitespace,
-          merged.showMinimap,
-          merged.minimapSide,
-          merged.renderLineHighlight,
-          merged.bracketPairColorization,
-          merged.indentGuides,
-          merged.smoothScrolling,
-          merged.cursorBlinking,
-          merged.cursorStyle,
-          merged.cursorSmoothCaretAnimation,
-          merged.scrollBeyondLastLine,
-          merged.folding,
-          merged.showFoldingControls,
-          merged.autoSaveDelay,
+          merged.fontFamily, merged.fontSize, merged.lineHeight, merged.fontLigatures,
+          merged.tabSize, merged.insertSpaces, merged.wordWrap, merged.autoClosingBrackets,
+          merged.autoClosingQuotes, merged.formatOnPaste, merged.formatOnType, merged.theme,
+          merged.lineNumbers, merged.renderWhitespace, merged.showMinimap, merged.minimapSide,
+          merged.renderLineHighlight, merged.bracketPairColorization, merged.indentGuides,
+          merged.smoothScrolling, merged.cursorBlinking, merged.cursorStyle,
+          merged.cursorSmoothCaretAnimation, merged.scrollBeyondLastLine,
+          merged.folding, merged.showFoldingControls, merged.autoSaveDelay,
         ],
       );
 
@@ -242,9 +183,6 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ message: "Unknown table" }, { status: 400 });
   } catch (error) {
     console.error("PATCH /api/settings:", error);
-    return NextResponse.json(
-      { message: "Error saving settings" },
-      { status: 500 },
-    );
+    return NextResponse.json({ message: "Error saving settings" }, { status: 500 });
   }
 }

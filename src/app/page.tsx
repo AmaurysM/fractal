@@ -5,9 +5,8 @@ import { BiUser, BiCode } from "react-icons/bi";
 import { VscFiles, VscSearch } from "react-icons/vsc";
 import { CodeDisplay } from "./components/CodeDisplay";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
-import { useSession } from "next-auth/react";
 import Image from "next/image";
-import { signOut } from "next-auth/react"
+import { signOut, useSession } from "next-auth/react"
 import { TreeSkeleton } from "./components/SkeletonLoading";
 import { FileTree } from "./components/FileTree";
 import { useTabStore } from "./store/tabStore";
@@ -21,8 +20,7 @@ enum ActivityItem {
 }
 
 export default function Home() {
-  const { data: session } = useSession();
-
+  const { data: session, status } = useSession();
   const { user, setUser } = useAuthStore();
   const { tabs, clearTabs } = useTabStore();
 

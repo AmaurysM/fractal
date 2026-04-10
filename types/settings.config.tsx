@@ -23,8 +23,19 @@ import {
 
 export const TAB_SECTIONS: Record<SettingTabs, SettingSection[]> = {
   [SettingTabs.USER]: [
-    { label: "Account", settings: [UserSettings.USERNAME, UserSettings.EMAIL] },
-    { label: "Security", settings: [UserSettings.PASSWORD] },
+    {
+      label: "Profile",
+      settings: [
+        UserSettings.FIRST_NAME,
+        UserSettings.LAST_NAME,
+        UserSettings.USERNAME,
+      ],
+    },
+    // {
+    //   label: "Account",
+    //   settings: [UserSettings.EMAIL],
+    // },
+    // { label: "Security", settings: [UserSettings.PASSWORD] },
   ],
   [SettingTabs.CODE]: [
     {
@@ -124,19 +135,16 @@ function ControlledSelect<T extends string>({ value, options, onChange }: Select
   );
 }
 
-// Pending state types — partial patches that accumulate until the user saves
 export interface PendingChanges {
   user: Partial<Omit<AppUserSettings, "id" | "email" | "image">>;
   editor: Partial<Omit<EditorSettings, "id">>;
 }
 
 interface Callbacks {
-  // These now write to pending state, not directly to the store
   updatePendingUser: (patch: Partial<Omit<AppUserSettings, "id" | "email" | "image">>) => void;
   updatePendingEditor: (patch: Partial<Omit<EditorSettings, "id">>) => void;
 }
 
-// Merged view: committed settings overridden by any pending changes
 function mergedUser(
   u: AppUserSettings | undefined,
   pending: PendingChanges
@@ -175,26 +183,42 @@ export function buildOptionResolver(
         onChange={(ev) => updatePendingUser({ username: ev.target.value })}
       />
     ),
-    [UserSettings.EMAIL]: () => (
+    [UserSettings.FIRST_NAME]: () => (
       <TextInput
-        type="email"
-        placeholder="Email"
-        value={str(u?.email)}
+        placeholder="First name"
+        value={str(u?.first_name ?? undefined)}
         autoComplete="off"
-        disabled
-        title="Email cannot be changed"
+        onChange={(ev) => updatePendingUser({ first_name: ev.target.value } as any)}
       />
     ),
-    [UserSettings.PASSWORD]: () => (
+    [UserSettings.LAST_NAME]: () => (
       <TextInput
-        type="password"
-        placeholder="••••••••"
-        autoComplete="new-password"
-        readOnly
-        onFocus={(e) => (e.target.readOnly = false)}
-        onChange={(ev) => updatePendingUser({ password: ev.target.value } as any)}
+        placeholder="Last name"
+        value={str(u?.last_name ?? undefined)}
+        autoComplete="off"
+        onChange={(ev) => updatePendingUser({ last_name: ev.target.value } as any)}
       />
     ),
+    // [UserSettings.EMAIL]: () => (
+    //   <TextInput
+    //     type="email"
+    //     placeholder="Email"
+    //     value={str(u?.email)}
+    //     autoComplete="off"
+    //     disabled
+    //     title="Email cannot be changed"
+    //   />
+    // ),
+    // [UserSettings.PASSWORD]: () => (
+    //   <TextInput
+    //     type="password"
+    //     placeholder="••••••••"
+    //     autoComplete="new-password"
+    //     readOnly
+    //     onFocus={(e) => (e.target.readOnly = false)}
+    //     onChange={(ev) => updatePendingUser({ password: ev.target.value } as any)}
+    //   />
+    // ),
 
     [CodeSettings.FONT_FAMILY]: () => (
       <TextInput

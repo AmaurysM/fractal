@@ -46,7 +46,7 @@ export const authOptions: NextAuthOptions = {
         const [firstName, ...rest] = fullName.split(" ");
         return {
           id: String(profile.id),
-          name: fullName, // ← keep this so next-auth doesn't break
+          //name: fullName, // ← keep this so next-auth doesn't break
           first_name: firstName ?? null,
           last_name: rest.join(" ") || null,
           email: profile.email,
@@ -61,7 +61,7 @@ export const authOptions: NextAuthOptions = {
       profile(profile) {
         return {
           id: profile.sub,
-          name: profile.name, // ← keep this
+          //name: profile.name, // ← keep this
           first_name: profile.given_name ?? null,
           last_name: profile.family_name ?? null,
           email: profile.email,
@@ -76,7 +76,7 @@ export const authOptions: NextAuthOptions = {
       profile(profile) {
         return {
           id: profile.id,
-          name: profile.username, // ← keep this
+          //name: profile.username, // ← keep this
           first_name: profile.username ?? null,
           last_name: null,
           email: profile.email,

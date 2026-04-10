@@ -2,7 +2,11 @@
 
 import { useCallback } from "react";
 import { useSettingsStore } from "../store/SettingsStore";
-import { AppSettings, EditorSettings, UserSettings } from "../../../types/types";
+import {
+  AppSettings,
+  EditorSettings,
+  UserSettings,
+} from "../../../types/types";
 
 async function apiFetchSettings(): Promise<AppSettings> {
   const res = await fetch("/api/settings");
@@ -11,7 +15,7 @@ async function apiFetchSettings(): Promise<AppSettings> {
 }
 
 async function apiSaveUserSettings(
-  patch: Partial<Omit<UserSettings, "id" | "email" | "image">>
+  patch: Partial<Omit<UserSettings, "id" | "email" | "image">>,
 ): Promise<void> {
   await fetch("/api/settings", {
     method: "PATCH",
@@ -21,7 +25,7 @@ async function apiSaveUserSettings(
 }
 
 async function apiSaveEditorSettings(
-  patch: Partial<Omit<EditorSettings, "id">>
+  patch: Partial<Omit<EditorSettings, "id">>,
 ): Promise<void> {
   await fetch("/api/settings", {
     method: "PATCH",
@@ -43,8 +47,6 @@ export function useSettings() {
   } = useSettingsStore();
 
   const fetchSettings = useCallback(async () => {
-    if (settings !== null) return;
-
     setStatus("loading");
     try {
       const data = await apiFetchSettings();
@@ -54,10 +56,11 @@ export function useSettings() {
       setError(err instanceof Error ? err.message : "Unknown error");
       setStatus("error");
     }
-  }, [settings, setSettings, setStatus, setError]);
+  }, [setSettings, setStatus, setError]); // remove `settings` from deps too
 
   const updateUserSettings = useCallback(
     async (patch: Partial<Omit<UserSettings, "id" | "email" | "image">>) => {
+      const previous = settings;
       const updated = patchUserSettings(patch);
       if (!updated) return;
 
@@ -66,12 +69,12 @@ export function useSettings() {
         await apiSaveUserSettings(patch);
         setStatus("saved");
       } catch (err) {
-        setSettings(updated);
+        if (previous) setSettings(previous);
         setError(err instanceof Error ? err.message : "Unknown error");
         setStatus("error");
       }
     },
-    [patchUserSettings, setSettings, setStatus, setError]
+    [settings, patchUserSettings, setSettings, setStatus, setError],
   );
 
   const updateEditorSettings = useCallback(
@@ -89,11 +92,10 @@ export function useSettings() {
         setStatus("error");
       }
     },
-    [patchEditorSettings, setSettings, setStatus, setError]
+    [patchEditorSettings, setSettings, setStatus, setError],
   );
 
-  const resetEditorSettings = useCallback(async () => {
-  }, []);
+  const resetEditorSettings = useCallback(async () => {}, []);
 
   return {
     settings,

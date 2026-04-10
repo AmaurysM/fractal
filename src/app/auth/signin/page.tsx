@@ -1,6 +1,6 @@
 "use client";
 
-import { signIn } from "next-auth/react";
+import { getSession, signIn } from "next-auth/react";
 import { FaGithub, FaGoogle } from "react-icons/fa";
 import VoronoiBackground from "../../components/VoronoiBackground";
 
@@ -38,7 +38,9 @@ export default function SignInPage() {
             {providers.map((p) => (
               <button
                 key={p.id}
-                onClick={() => signIn(p.id, { callbackUrl: "/" })}
+                onClick={() => {
+                  signIn(p.id, { callbackUrl: "/" })
+                }}
                 className="flex items-center gap-2.5 w-full px-3 py-2.5 border border-[#3e3e42] bg-[#2a2d2e] text-[#cccccc] text-[12px] hover:bg-[#37373d] hover:border-[#007acc] hover:text-white transition-colors"
               >
                 {p.icon}

@@ -143,7 +143,7 @@ interface Props {
 }
 
 export const SettingsContent = ({ selectedTab, activeSection, search, onTabChangeRequest }: Props) => {
-  const { settings, updateUserSettings, updateEditorSettings } = useSettings();
+  const { settings, updateUserSettings, updateEditorSettings, fetchSettings} = useSettings();
 
   const [pending, setPending] = useState<PendingChanges>(EMPTY_PENDING);
   const isDirty = hasPendingChanges(pending);
