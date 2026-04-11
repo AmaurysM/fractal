@@ -14,6 +14,8 @@ import { useAuthStore } from "./store/authStore";
 import { SearchSidebar } from "./components/SearchSidebar";
 import { SettingWindow } from "./components/SettingWindow";
 import { useSettingsStore } from "./store/SettingsStore";
+import { AccountSwitcher } from "./components/AccountSwitcher";
+import { upsertSavedAccount } from "./store/saveAccountsStore";
 
 enum ActivityItem {
   Explorer = "Explorer",
@@ -30,7 +32,7 @@ export default function Home() {
   const [activity, setActivity] = useState<ActivityItem>(ActivityItem.Explorer);
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerHeight, setDrawerHeight] = useState(65); // percent of screen
+  const [drawerHeight, setDrawerHeight] = useState(65);
   const drawerRef = useRef<HTMLDivElement>(null);
   const dragStartY = useRef<number | null>(null);
   const dragStartHeight = useRef<number>(65);
@@ -39,9 +41,19 @@ export default function Home() {
   const { settings } = useSettingsStore();
   const userSettings = settings?.user;
 
+  // Sync session → authStore, and persist to saved accounts list
   useEffect(() => {
     if (session?.user && (!user || session.user.id !== user.id)) {
       setUser(session.user);
+
+      // Persist this account so the switcher can show it later
+      upsertSavedAccount({
+        id: session.user.id,
+        email: session.user.email ?? "",
+        name: session.user.name,
+        image: session.user.image,
+        provider: (session.user as any).provider ?? inferProvider(session.user.image),
+      });
     }
   }, [session, user, setUser]);
 
@@ -92,11 +104,14 @@ export default function Home() {
     <div className="h-screen w-screen flex flex-col bg-[#1e1e1e] overflow-hidden">
       <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
 
+        {/* ── Title bar ── */}
         <div className="h-8.75 bg-[#323233] border-b border-[#3e3e42] flex items-center justify-between px-4 shrink-0">
           <div className="flex items-center gap-3">
             <div className="text-[13px] font-medium text-[#cccccc] tracking-tight">Voronoi</div>
             <div className="text-[11px] text-[#858585] hidden sm:block">Code Library Manager</div>
           </div>
+
+          {/* Account button — wraps AccountSwitcher */}
           <div className="flex items-center">
             {isInitialLoading ? (
               <div className="flex items-center gap-2 px-2 py-1">
@@ -124,30 +139,18 @@ export default function Home() {
                   </div>
                 </button>
 
-                <div className="absolute right-0 top-full mt-1 bg-[#252526] border border-[#454545] rounded-sm shadow-2xl py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 min-w-40">
-                  <div className="px-3 py-1.5 text-[10px] text-[#858585] uppercase tracking-wider">Account</div>
-                  <div className="px-3 py-1.5 text-[12px] text-[#cccccc] border-b border-[#3e3e42]">
-                    {user?.email}
-                  </div>
-                  <div
-                    className="px-3 py-1.5 text-[12px] text-[#cccccc] border-b border-[#3e3e42] hover:cursor-pointer hover:bg-[#4c4c4c]/10"
-                    onClick={() => setShowSettings(true)}
-                  >
-                    Settings
-                  </div>
-                  <button
-                    onClick={handleSignout}
-                    className="w-full px-3 py-1.5 text-[12px] text-left text-[#f48771] hover:bg-[#f48771]/20 transition-colors"
-                  >
-                    Sign Out
-                  </button>
-                </div>
+                {/* Dropdown — now renders AccountSwitcher */}
+                <AccountSwitcher
+                  activeId={user?.id}
+                  onSignOut={handleSignout}
+                  onOpenSettings={() => setShowSettings(true)}
+                />
               </div>
             )}
           </div>
         </div>
 
-        {/* ── Desktop layout (sm+) ────────────────────────────────────── */}
+        {/* ── Desktop layout (sm+) ── */}
         <div className="hidden sm:flex flex-1 overflow-hidden">
           <PanelGroup direction="horizontal" className="flex-1">
             {/* Activity Bar */}
@@ -218,19 +221,12 @@ export default function Home() {
           </PanelGroup>
         </div>
 
-        {/* ── Mobile layout ───────────────────────────────────────────── */}
+        {/* ── Mobile layout ── */}
         <div className="flex sm:hidden flex-1 flex-col overflow-hidden relative">
-
-          {/* Main content area — full screen on mobile */}
           <div className="flex-1 flex flex-col bg-[#1e1e1e] overflow-hidden">
-            {tabs.length > 0 ? (
-              <CodeDisplay />
-            ) : (
-              <MobileEmptyState />
-            )}
+            {tabs.length > 0 ? <CodeDisplay /> : <MobileEmptyState />}
           </div>
 
-          {/* Bottom drawer backdrop */}
           {drawerOpen && (
             <div
               className="absolute inset-0 bg-black/40 z-20"
@@ -238,7 +234,6 @@ export default function Home() {
             />
           )}
 
-          {/* Bottom drawer */}
           <div
             ref={drawerRef}
             className="absolute left-0 right-0 bottom-12 z-30 bg-[#252526] border-t border-[#3e3e42] rounded-t-xl flex flex-col will-change-transform"
@@ -248,7 +243,6 @@ export default function Home() {
               transition: dragStartY.current !== null ? 'none' : 'transform 300ms ease-out',
             }}
           >
-            {/* Drag handle */}
             <div
               className="flex justify-center items-center py-3 shrink-0 select-none touch-none group/handle"
               style={{ cursor: dragStartY.current !== null ? 'grabbing' : 'ns-resize' }}
@@ -260,7 +254,6 @@ export default function Home() {
               <div className="w-10 h-1 rounded-full bg-[#555555] group-hover/handle:bg-[#007acc] transition-colors duration-150" />
             </div>
 
-            {/* Drawer label */}
             <div className="px-4 pb-2 shrink-0 flex items-center justify-between">
               <span className="text-[11px] text-[#858585] uppercase tracking-wider font-medium">
                 {activity === ActivityItem.Explorer ? 'Explorer' : 'Search'}
@@ -273,12 +266,9 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Drawer content */}
             <div className="flex-1 overflow-auto">
               {isInitialLoading ? (
-                <div className="p-3">
-                  <TreeSkeleton count={6} />
-                </div>
+                <div className="p-3"><TreeSkeleton count={6} /></div>
               ) : activity === ActivityItem.Explorer ? (
                 <FileTree />
               ) : (
@@ -287,7 +277,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Mobile bottom tab bar */}
           <div className="h-12 bg-[#333333] border-t border-[#3e3e42] flex items-center shrink-0 z-40 relative">
             <button
               onClick={() => handleActivityChange(ActivityItem.Explorer)}
@@ -318,12 +307,27 @@ export default function Home() {
 
       </div>
 
-      {showSettings && (
-        <SettingWindow onClick={setShowSettings} />
-      )}
+      {showSettings && <SettingWindow onClick={setShowSettings} />}
     </div>
   );
 }
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Best-effort inference of OAuth provider from the avatar URL.
+ * NextAuth doesn't expose the provider in the session payload by default.
+ * If you add `token.provider` in your JWT callback you can use that instead.
+ */
+function inferProvider(image?: string | null): string | null {
+  if (!image) return null;
+  if (image.includes("githubusercontent") || image.includes("avatars.githubusercontent")) return "github";
+  if (image.includes("googleusercontent")) return "google";
+  if (image.includes("cdn.discordapp")) return "discord";
+  return null;
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
 
 function DesktopMainContent({ tabs }: { tabs: any[] }) {
   if (tabs.length > 0) return <CodeDisplay />;
