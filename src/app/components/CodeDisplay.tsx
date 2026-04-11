@@ -27,7 +27,7 @@ import {
   sortableKeyboardCoordinates,
   horizontalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { useSettingsStore } from "../store/SettingsStore";
+import { useSettings } from "../hooks/useSettings";
 
 export const CodeDisplay = () => {
   const { data: session } = useSession();
@@ -41,10 +41,10 @@ export const CodeDisplay = () => {
     updateTab,
     moveTabToIndex,
   } = useTabStore();
+  const { settings, fetchSettings } = useSettings();
 
   const { editSnippet, fetchSnippet } = useSnippet();
   const { selectedItemType, setSelectedItem } = useLibraryStore();
-  const { settings } = useSettingsStore();
 
   const [descriptionVisible, setDescriptionVisible] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -65,6 +65,11 @@ export const CodeDisplay = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const snippet = tabs.find((t) => t.id === selectedItem) ?? null;
+
+  useEffect(() => {
+    if (!session) return;
+    fetchSettings();
+  }, []);
 
   const editorOptions = useMemo((): monaco.editor.IStandaloneEditorConstructionOptions => {
     if (!settings) {
@@ -93,30 +98,30 @@ export const CodeDisplay = () => {
     const e = settings.editor;
     return {
       automaticLayout: true,
-      fontSize: e.fontSize,
-      fontFamily: `'${e.fontFamily}', monospace`,
-      fontLigatures: e.fontLigatures,
-      lineHeight: e.lineHeight,
-      tabSize: e.tabSize,
-      insertSpaces: e.insertSpaces,
-      wordWrap: e.wordWrap,
-      lineNumbers: e.lineNumbers,
-      renderWhitespace: e.renderWhitespace,
-      minimap: { enabled: e.showMinimap, side: e.minimapSide },
-      renderLineHighlight: e.renderLineHighlight,
-      bracketPairColorization: { enabled: e.bracketPairColorization },
-      guides: { indentation: e.indentGuides, bracketPairs: e.bracketPairColorization },
-      smoothScrolling: e.smoothScrolling,
-      cursorBlinking: e.cursorBlinking,
-      cursorStyle: e.cursorStyle,
-      cursorSmoothCaretAnimation: e.cursorSmoothCaretAnimation,
-      scrollBeyondLastLine: e.scrollBeyondLastLine,
+      fontSize: e.font_size,
+      fontFamily: `'${e.font_family}', monospace`,
+      fontLigatures: e.font_ligatures,
+      lineHeight: e.line_height,
+      tabSize: e.tab_size,
+      insertSpaces: e.insert_spaces,
+      wordWrap: e.word_wrap,
+      lineNumbers: e.line_numbers,
+      renderWhitespace: e.render_whitespace,
+      minimap: { enabled: e.show_minimap, side: e.minimap_side },
+      renderLineHighlight: e.render_line_highlight,
+      bracketPairColorization: { enabled: e.bracket_pair_colorization },
+      guides: { indentation: e.indent_guides, bracketPairs: e.bracket_pair_colorization },
+      smoothScrolling: e.smooth_scrolling,
+      cursorBlinking: e.cursor_blinking,
+      cursorStyle: e.cursor_style,
+      cursorSmoothCaretAnimation: e.cursor_smooth_caret_animation,
+      scrollBeyondLastLine: e.scroll_beyond_last_line,
       folding: e.folding,
-      showFoldingControls: e.showFoldingControls,
-      autoClosingBrackets: e.autoClosingBrackets ? "always" : "never",
-      autoClosingQuotes: e.autoClosingQuotes ? "always" : "never",
-      formatOnPaste: e.formatOnPaste,
-      formatOnType: e.formatOnType,
+      showFoldingControls: e.show_folding_controls,
+      autoClosingBrackets: e.auto_closing_brackets ? "always" : "never",
+      autoClosingQuotes: e.auto_closing_quotes ? "always" : "never",
+      formatOnPaste: e.format_on_paste,
+      formatOnType: e.format_on_type,
       scrollbar: {
         vertical: "visible",
         horizontal: "visible",
@@ -209,7 +214,7 @@ export const CodeDisplay = () => {
     saveTimeout.current = window.setTimeout(() => {
       editSnippet(updatedSnippet);
       setSaveStatus("saved");
-    }, settings?.editor.autoSaveDelay ?? 800);
+    }, settings?.editor.auto_save_delay ?? 800);
   };
 
   const updateField = (field: keyof Snippet, value: string) => {

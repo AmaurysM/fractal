@@ -31,6 +31,7 @@ export const SettingWindow = ({ onClick }: Props) => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
 
   const { fetchSettings, status, resetEditorSettings } = useSettings();
+  const { settings, updateUserSettings, updateEditorSettings} = useSettings();
 
   useEffect(() => {
     fetchSettings();

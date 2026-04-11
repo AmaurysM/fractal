@@ -6,10 +6,12 @@ import { DEFAULT_EDITOR_SETTINGS } from "../../../../types/types";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  if (!session)
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   const userId = session.user.id;
-  if (!userId) return NextResponse.json({ message: "Missing User" }, { status: 400 });
+  if (!userId)
+    return NextResponse.json({ message: "Missing User" }, { status: 400 });
 
   try {
     // Ensure User row exists (auth record only)
@@ -43,14 +45,33 @@ export async function GET() {
         ) ON CONFLICT (id) DO NOTHING`,
         [
           userId,
-          d.fontFamily, d.fontSize, d.lineHeight, d.fontLigatures,
-          d.tabSize, d.insertSpaces, d.wordWrap, d.autoClosingBrackets,
-          d.autoClosingQuotes, d.formatOnPaste, d.formatOnType, d.theme,
-          d.lineNumbers, d.renderWhitespace, d.showMinimap, d.minimapSide,
-          d.renderLineHighlight, d.bracketPairColorization, d.indentGuides,
-          d.smoothScrolling, d.cursorBlinking, d.cursorStyle,
-          d.cursorSmoothCaretAnimation, d.scrollBeyondLastLine,
-          d.folding, d.showFoldingControls, d.autoSaveDelay,
+          d.font_family,
+          d.font_size,
+          d.line_height,
+          d.font_ligatures,
+          d.tab_size,
+          d.insert_spaces,
+          d.word_wrap,
+          d.auto_closing_brackets,
+          d.auto_closing_quotes,
+          d.format_on_paste,
+          d.format_on_type,
+          d.theme,
+          d.line_numbers,
+          d.render_whitespace,
+          d.show_minimap,
+          d.minimap_side,
+          d.render_line_highlight,
+          d.bracket_pair_colorization,
+          d.indent_guides,
+          d.smooth_scrolling,
+          d.cursor_blinking,
+          d.cursor_style,
+          d.cursor_smooth_caret_animation,
+          d.scroll_beyond_last_line,
+          d.folding,
+          d.show_folding_controls,
+          d.auto_save_delay,
         ],
       ),
     ]);
@@ -67,16 +88,21 @@ export async function GET() {
     });
   } catch (error) {
     console.error("GET /api/settings:", error);
-    return NextResponse.json({ message: "Error fetching settings" }, { status: 500 });
+    return NextResponse.json(
+      { message: "Error fetching settings" },
+      { status: 500 },
+    );
   }
 }
 
 export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  if (!session)
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   const userId = session.user.id;
-  if (!userId) return NextResponse.json({ message: "Missing User" }, { status: 400 });
+  if (!userId)
+    return NextResponse.json({ message: "Missing User" }, { status: 400 });
 
   const body = await req.json();
   const { table, patch } = body as {
@@ -162,14 +188,33 @@ export async function PATCH(req: NextRequest) {
           updated_at                = now()`,
         [
           userId,
-          merged.fontFamily, merged.fontSize, merged.lineHeight, merged.fontLigatures,
-          merged.tabSize, merged.insertSpaces, merged.wordWrap, merged.autoClosingBrackets,
-          merged.autoClosingQuotes, merged.formatOnPaste, merged.formatOnType, merged.theme,
-          merged.lineNumbers, merged.renderWhitespace, merged.showMinimap, merged.minimapSide,
-          merged.renderLineHighlight, merged.bracketPairColorization, merged.indentGuides,
-          merged.smoothScrolling, merged.cursorBlinking, merged.cursorStyle,
-          merged.cursorSmoothCaretAnimation, merged.scrollBeyondLastLine,
-          merged.folding, merged.showFoldingControls, merged.autoSaveDelay,
+          merged.font_family,
+          merged.font_size,
+          merged.line_height,
+          merged.font_ligatures,
+          merged.tab_size,
+          merged.insert_spaces,
+          merged.word_wrap,
+          merged.auto_closing_brackets,
+          merged.auto_closing_quotes,
+          merged.format_on_paste,
+          merged.format_on_type,
+          merged.theme,
+          merged.line_numbers,
+          merged.render_whitespace,
+          merged.show_minimap,
+          merged.minimap_side,
+          merged.render_line_highlight,
+          merged.bracket_pair_colorization,
+          merged.indent_guides,
+          merged.smooth_scrolling,
+          merged.cursor_blinking,
+          merged.cursor_style,
+          merged.cursor_smooth_caret_animation,
+          merged.scroll_beyond_last_line,
+          merged.folding,
+          merged.show_folding_controls,
+          merged.auto_save_delay,
         ],
       );
 
@@ -183,6 +228,9 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ message: "Unknown table" }, { status: 400 });
   } catch (error) {
     console.error("PATCH /api/settings:", error);
-    return NextResponse.json({ message: "Error saving settings" }, { status: 500 });
+    return NextResponse.json(
+      { message: "Error saving settings" },
+      { status: 500 },
+    );
   }
 }

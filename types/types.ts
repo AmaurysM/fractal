@@ -132,80 +132,75 @@ export type ShowFoldingControlsValue = "always" | "mouseover";
 export interface EditorSettings {
   id: string;
 
-  fontFamily: string;
-  fontSize: number;
-  lineHeight: number;
-  fontLigatures: boolean;
-  tabSize: number;
+  font_family: string;
+  font_size: number;
+  line_height: number;
+  font_ligatures: boolean;
+  tab_size: number;
 
-  insertSpaces: boolean;
-  wordWrap: WordWrapValue;
-  autoClosingBrackets: boolean;
-  autoClosingQuotes: boolean;
+  insert_spaces: boolean;
+  word_wrap: WordWrapValue;
+  auto_closing_brackets: boolean;
+  auto_closing_quotes: boolean;
 
-  formatOnPaste: boolean;
-  formatOnType: boolean;
+  format_on_paste: boolean;
+  format_on_type: boolean;
 
   theme: ThemeValue;
-  lineNumbers: LineNumbersValue;
-  renderWhitespace: RenderWhitespaceValue;
-  showMinimap: boolean;
-  minimapSide: MinimapSideValue;
-  renderLineHighlight: RenderLineHighlightValue;
-  bracketPairColorization: boolean;
-  indentGuides: boolean;
+  line_numbers: LineNumbersValue;
+  render_whitespace: RenderWhitespaceValue;
+  show_minimap: boolean;
+  minimap_side: MinimapSideValue;
+  render_line_highlight: RenderLineHighlightValue;
+  bracket_pair_colorization: boolean;
+  indent_guides: boolean;
 
-  smoothScrolling: boolean;
-  scrollBeyondLastLine: boolean;
+  smooth_scrolling: boolean;
+  scroll_beyond_last_line: boolean;
 
-  cursorBlinking: CursorBlinkingValue;
-  cursorStyle: CursorStyleValue;
-  cursorSmoothCaretAnimation: "on" | "off" | "explicit";
+  cursor_blinking: CursorBlinkingValue;
+  cursor_style: CursorStyleValue;
+  cursor_smooth_caret_animation: "on" | "off" | "explicit";
 
   folding: boolean;
-  showFoldingControls: ShowFoldingControlsValue;
+  show_folding_controls: ShowFoldingControlsValue;
 
-  autoSaveDelay: number;
+  auto_save_delay: number;
 }
 
-// export interface AppSettings {
-//   user: UserSettings;
-//   editor: EditorSettings;
-// }
-
 export const DEFAULT_EDITOR_SETTINGS: Omit<EditorSettings, "id"> = {
-  fontFamily: "Cascadia Code",
-  fontSize: 13,
-  lineHeight: 20,
-  fontLigatures: true,
-  tabSize: 2,
+  font_family: "Cascadia Code",
+  font_size: 13,
+  line_height: 20,
+  font_ligatures: true,
+  tab_size: 2,
 
-  insertSpaces: true,
-  wordWrap: "off",
-  autoClosingBrackets: true,
-  autoClosingQuotes: true,
+  insert_spaces: true,
+  word_wrap: "off",
+  auto_closing_brackets: true,
+  auto_closing_quotes: true,
 
-  formatOnPaste: false,
-  formatOnType: false,
+  format_on_paste: false,
+  format_on_type: false,
 
   theme: "vs-dark",
-  lineNumbers: "on",
-  renderWhitespace: "none",
-  showMinimap: false,
-  minimapSide: "right",
-  renderLineHighlight: "all",
-  bracketPairColorization: true,
-  indentGuides: true,
+  line_numbers: "on",
+  render_whitespace: "none",
+  show_minimap: false,
+  minimap_side: "right",
+  render_line_highlight: "all",
+  bracket_pair_colorization: true,
+  indent_guides: true,
 
-  smoothScrolling: true,
-  scrollBeyondLastLine: false,
+  smooth_scrolling: true,
+  scroll_beyond_last_line: false,
 
-  cursorBlinking: "blink",
-  cursorStyle: "line",
-  cursorSmoothCaretAnimation: "off",
+  cursor_blinking: "blink",
+  cursor_style: "line",
+  cursor_smooth_caret_animation: "off",
 
   folding: true,
-  showFoldingControls: "mouseover",
+  show_folding_controls: "mouseover",
 
-  autoSaveDelay: 800,
+  auto_save_delay: 800,
 };

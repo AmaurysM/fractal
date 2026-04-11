@@ -31,11 +31,6 @@ export const TAB_SECTIONS: Record<SettingTabs, SettingSection[]> = {
         UserSettings.USERNAME,
       ],
     },
-    // {
-    //   label: "Account",
-    //   settings: [UserSettings.EMAIL],
-    // },
-    // { label: "Security", settings: [UserSettings.PASSWORD] },
   ],
   [SettingTabs.CODE]: [
     {
@@ -178,7 +173,7 @@ export function buildOptionResolver(
     [UserSettings.USERNAME]: () => (
       <TextInput
         placeholder="Username"
-        value={str(u?.username)}
+        value={str(u?.username ?? "")}
         autoComplete="off"
         onChange={(ev) => updatePendingUser({ username: ev.target.value })}
       />
@@ -199,40 +194,20 @@ export function buildOptionResolver(
         onChange={(ev) => updatePendingUser({ last_name: ev.target.value } as any)}
       />
     ),
-    // [UserSettings.EMAIL]: () => (
-    //   <TextInput
-    //     type="email"
-    //     placeholder="Email"
-    //     value={str(u?.email)}
-    //     autoComplete="off"
-    //     disabled
-    //     title="Email cannot be changed"
-    //   />
-    // ),
-    // [UserSettings.PASSWORD]: () => (
-    //   <TextInput
-    //     type="password"
-    //     placeholder="••••••••"
-    //     autoComplete="new-password"
-    //     readOnly
-    //     onFocus={(e) => (e.target.readOnly = false)}
-    //     onChange={(ev) => updatePendingUser({ password: ev.target.value } as any)}
-    //   />
-    // ),
 
     [CodeSettings.FONT_FAMILY]: () => (
       <TextInput
         placeholder="e.g. Fira Code"
-        value={str(e?.fontFamily)}
-        onChange={(ev) => updatePendingEditor({ fontFamily: ev.target.value })}
+        value={str(e?.font_family)}
+        onChange={(ev) => updatePendingEditor({ font_family: ev.target.value })}
       />
     ),
     [CodeSettings.FONT_SIZE]: () => (
       <TextInput
         type="number"
         placeholder="13"
-        value={num(e?.fontSize)}
-        onChange={(ev) => updatePendingEditor({ fontSize: Number(ev.target.value) })}
+        value={num(e?.font_size)}
+        onChange={(ev) => updatePendingEditor({ font_size: Number(ev.target.value) })}
       />
     ),
     [CodeSettings.LINE_HEIGHT]: () => (
@@ -240,52 +215,52 @@ export function buildOptionResolver(
         type="number"
         step="0.1"
         placeholder="20"
-        value={num(e?.lineHeight)}
-        onChange={(ev) => updatePendingEditor({ lineHeight: Number(ev.target.value) })}
+        value={num(e?.line_height)}
+        onChange={(ev) => updatePendingEditor({ line_height: Number(ev.target.value) })}
       />
     ),
     [CodeSettings.FONT_LIGATURES]: () => (
       <Toggle
-        checked={bool(e?.fontLigatures)}
-        onChange={(v) => updatePendingEditor({ fontLigatures: v })}
+        checked={bool(e?.font_ligatures)}
+        onChange={(v) => updatePendingEditor({ font_ligatures: v })}
       />
     ),
     [CodeSettings.TAB_SIZE]: () => (
       <TextInput
         type="number"
         placeholder="2"
-        value={num(e?.tabSize)}
-        onChange={(ev) => updatePendingEditor({ tabSize: Number(ev.target.value) })}
+        value={num(e?.tab_size)}
+        onChange={(ev) => updatePendingEditor({ tab_size: Number(ev.target.value) })}
       />
     ),
 
     [CodeSettings.INSERT_SPACES]: () => (
-      <Toggle checked={bool(e?.insertSpaces)} onChange={(v) => updatePendingEditor({ insertSpaces: v })} />
+      <Toggle checked={bool(e?.insert_spaces)} onChange={(v) => updatePendingEditor({ insert_spaces: v })} />
     ),
     [CodeSettings.WORD_WRAP]: () => (
       <ControlledSelect<WordWrapValue>
-        value={e?.wordWrap ?? "off"}
+        value={e?.word_wrap ?? "off"}
         options={[
           { label: "Off", value: "off" },
           { label: "On", value: "on" },
           { label: "Word Wrap Column", value: "wordWrapColumn" },
           { label: "Bounded", value: "bounded" },
         ]}
-        onChange={(v) => updatePendingEditor({ wordWrap: v })}
+        onChange={(v) => updatePendingEditor({ word_wrap: v })}
       />
     ),
     [CodeSettings.AUTO_CLOSING_BRACKETS]: () => (
-      <Toggle checked={bool(e?.autoClosingBrackets)} onChange={(v) => updatePendingEditor({ autoClosingBrackets: v })} />
+      <Toggle checked={bool(e?.auto_closing_brackets)} onChange={(v) => updatePendingEditor({ auto_closing_brackets: v })} />
     ),
     [CodeSettings.AUTO_CLOSING_QUOTES]: () => (
-      <Toggle checked={bool(e?.autoClosingQuotes)} onChange={(v) => updatePendingEditor({ autoClosingQuotes: v })} />
+      <Toggle checked={bool(e?.auto_closing_quotes)} onChange={(v) => updatePendingEditor({ auto_closing_quotes: v })} />
     ),
 
     [CodeSettings.FORMAT_ON_PASTE]: () => (
-      <Toggle checked={bool(e?.formatOnPaste)} onChange={(v) => updatePendingEditor({ formatOnPaste: v })} />
+      <Toggle checked={bool(e?.format_on_paste)} onChange={(v) => updatePendingEditor({ format_on_paste: v })} />
     ),
     [CodeSettings.FORMAT_ON_TYPE]: () => (
-      <Toggle checked={bool(e?.formatOnType)} onChange={(v) => updatePendingEditor({ formatOnType: v })} />
+      <Toggle checked={bool(e?.format_on_type)} onChange={(v) => updatePendingEditor({ format_on_type: v })} />
     ),
 
     [CodeSettings.THEME]: () => (
@@ -301,19 +276,19 @@ export function buildOptionResolver(
     ),
     [CodeSettings.LINE_NUMBERS]: () => (
       <ControlledSelect<LineNumbersValue>
-        value={e?.lineNumbers ?? "on"}
+        value={e?.line_numbers ?? "on"}
         options={[
           { label: "On", value: "on" },
           { label: "Off", value: "off" },
           { label: "Relative", value: "relative" },
           { label: "Interval", value: "interval" },
         ]}
-        onChange={(v) => updatePendingEditor({ lineNumbers: v })}
+        onChange={(v) => updatePendingEditor({ line_numbers: v })}
       />
     ),
     [CodeSettings.RENDER_WHITESPACE]: () => (
       <ControlledSelect<RenderWhitespaceValue>
-        value={e?.renderWhitespace ?? "none"}
+        value={e?.render_whitespace ?? "none"}
         options={[
           { label: "None", value: "none" },
           { label: "Boundary", value: "boundary" },
@@ -321,51 +296,51 @@ export function buildOptionResolver(
           { label: "Trailing", value: "trailing" },
           { label: "All", value: "all" },
         ]}
-        onChange={(v) => updatePendingEditor({ renderWhitespace: v })}
+        onChange={(v) => updatePendingEditor({ render_whitespace: v })}
       />
     ),
     [CodeSettings.SHOW_MINIMAP]: () => (
-      <Toggle checked={bool(e?.showMinimap)} onChange={(v) => updatePendingEditor({ showMinimap: v })} />
+      <Toggle checked={bool(e?.show_minimap)} onChange={(v) => updatePendingEditor({ show_minimap: v })} />
     ),
     [CodeSettings.MINIMAP_SIDE]: () => (
       <ControlledSelect<MinimapSideValue>
-        value={e?.minimapSide ?? "right"}
+        value={e?.minimap_side ?? "right"}
         options={[
           { label: "Left", value: "left" },
           { label: "Right", value: "right" },
         ]}
-        onChange={(v) => updatePendingEditor({ minimapSide: v })}
+        onChange={(v) => updatePendingEditor({ minimap_side: v })}
       />
     ),
     [CodeSettings.RENDER_LINE_HIGHLIGHT]: () => (
       <ControlledSelect<RenderLineHighlightValue>
-        value={e?.renderLineHighlight ?? "all"}
+        value={e?.render_line_highlight ?? "all"}
         options={[
           { label: "None", value: "none" },
           { label: "Gutter", value: "gutter" },
           { label: "Line", value: "line" },
           { label: "All", value: "all" },
         ]}
-        onChange={(v) => updatePendingEditor({ renderLineHighlight: v })}
+        onChange={(v) => updatePendingEditor({ render_line_highlight: v })}
       />
     ),
     [CodeSettings.BRACKET_PAIR_COLORIZATION]: () => (
-      <Toggle checked={bool(e?.bracketPairColorization)} onChange={(v) => updatePendingEditor({ bracketPairColorization: v })} />
+      <Toggle checked={bool(e?.bracket_pair_colorization)} onChange={(v) => updatePendingEditor({ bracket_pair_colorization: v })} />
     ),
     [CodeSettings.INDENT_GUIDES]: () => (
-      <Toggle checked={bool(e?.indentGuides)} onChange={(v) => updatePendingEditor({ indentGuides: v })} />
+      <Toggle checked={bool(e?.indent_guides)} onChange={(v) => updatePendingEditor({ indent_guides: v })} />
     ),
 
     [CodeSettings.SMOOTH_SCROLLING]: () => (
-      <Toggle checked={bool(e?.smoothScrolling)} onChange={(v) => updatePendingEditor({ smoothScrolling: v })} />
+      <Toggle checked={bool(e?.smooth_scrolling)} onChange={(v) => updatePendingEditor({ smooth_scrolling: v })} />
     ),
     [CodeSettings.SCROLL_BEYOND_LAST_LINE]: () => (
-      <Toggle checked={bool(e?.scrollBeyondLastLine)} onChange={(v) => updatePendingEditor({ scrollBeyondLastLine: v })} />
+      <Toggle checked={bool(e?.scroll_beyond_last_line)} onChange={(v) => updatePendingEditor({ scroll_beyond_last_line: v })} />
     ),
 
     [CodeSettings.CURSOR_BLINKING]: () => (
       <ControlledSelect<CursorBlinkingValue>
-        value={e?.cursorBlinking ?? "blink"}
+        value={e?.cursor_blinking ?? "blink"}
         options={[
           { label: "Blink", value: "blink" },
           { label: "Smooth", value: "smooth" },
@@ -373,12 +348,12 @@ export function buildOptionResolver(
           { label: "Expand", value: "expand" },
           { label: "Solid", value: "solid" },
         ]}
-        onChange={(v) => updatePendingEditor({ cursorBlinking: v })}
+        onChange={(v) => updatePendingEditor({ cursor_blinking: v })}
       />
     ),
     [CodeSettings.CURSOR_STYLE]: () => (
       <ControlledSelect<CursorStyleValue>
-        value={e?.cursorStyle ?? "line"}
+        value={e?.cursor_style ?? "line"}
         options={[
           { label: "Line", value: "line" },
           { label: "Block", value: "block" },
@@ -387,18 +362,18 @@ export function buildOptionResolver(
           { label: "Block Outline", value: "block-outline" },
           { label: "Underline Thin", value: "underline-thin" },
         ]}
-        onChange={(v) => updatePendingEditor({ cursorStyle: v })}
+        onChange={(v) => updatePendingEditor({ cursor_style: v })}
       />
     ),
     [CodeSettings.CURSOR_SMOOTH_CARET]: () => (
       <ControlledSelect<"on" | "off" | "explicit">
-        value={e?.cursorSmoothCaretAnimation ?? "off"}
+        value={e?.cursor_smooth_caret_animation ?? "off"}
         options={[
           { label: "Off", value: "off" },
           { label: "On", value: "on" },
           { label: "Explicit", value: "explicit" },
         ]}
-        onChange={(v) => updatePendingEditor({ cursorSmoothCaretAnimation: v })}
+        onChange={(v) => updatePendingEditor({ cursor_smooth_caret_animation: v })}
       />
     ),
 
@@ -407,12 +382,12 @@ export function buildOptionResolver(
     ),
     [CodeSettings.SHOW_FOLDING_CONTROLS]: () => (
       <ControlledSelect<ShowFoldingControlsValue>
-        value={e?.showFoldingControls ?? "mouseover"}
+        value={e?.show_folding_controls ?? "mouseover"}
         options={[
           { label: "Always", value: "always" },
           { label: "Mouse Over", value: "mouseover" },
         ]}
-        onChange={(v) => updatePendingEditor({ showFoldingControls: v })}
+        onChange={(v) => updatePendingEditor({ show_folding_controls: v })}
       />
     ),
 
@@ -420,8 +395,8 @@ export function buildOptionResolver(
       <TextInput
         type="number"
         placeholder="800"
-        value={num(e?.autoSaveDelay)}
-        onChange={(ev) => updatePendingEditor({ autoSaveDelay: Number(ev.target.value) })}
+        value={num(e?.auto_save_delay)}
+        onChange={(ev) => updatePendingEditor({ auto_save_delay: Number(ev.target.value) })}
       />
     ),
   };

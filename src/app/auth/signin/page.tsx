@@ -5,8 +5,8 @@ import { FaGithub, FaGoogle } from "react-icons/fa";
 import VoronoiBackground from "../../components/VoronoiBackground";
 
 const providers = [
-  { name: "GitHub", id: "github", icon: <FaGithub className="w-[15px] h-[15px] opacity-70" /> },
-  { name: "Google", id: "google", icon: <FaGoogle className="w-[15px] h-[15px] opacity-70" /> },
+  { name: "GitHub", id: "github", icon: <FaGithub className="w-3.75 h-3.75 opacity-70" /> },
+  { name: "Google", id: "google", icon: <FaGoogle className="w-3.75 h-3.75 opacity-70" /> },
 ];
 
 export default function SignInPage() {
@@ -21,7 +21,7 @@ export default function SignInPage() {
       </div>
 
       <div className="relative z-10 flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-[340px]">
+        <div className="w-full max-w-85">
           <p className="text-[10px] text-[#858585] uppercase tracking-[0.08em] mb-2.5">
             Get started
           </p>

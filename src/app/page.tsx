@@ -52,7 +52,6 @@ export default function Home() {
     signOut({ callbackUrl: "/landing" });
   }
 
-  // When switching activity on mobile, open the drawer
   function handleActivityChange(item: ActivityItem) {
     if (activity === item && drawerOpen) {
       setDrawerOpen(false);
@@ -62,7 +61,6 @@ export default function Home() {
     }
   }
 
-  // Drawer drag-to-resize — works for both mouse and touch via pointer events
   function onDrawerHandlePointerDown(e: React.PointerEvent) {
     e.currentTarget.setPointerCapture(e.pointerId);
     dragStartY.current = e.clientY;
@@ -81,7 +79,6 @@ export default function Home() {
 
   function onDrawerHandlePointerUp() {
     dragStartY.current = null;
-    // Snap closed if dragged below threshold, snap open to 65% if dragged above close zone
     if (drawerHeight < 20) {
       setDrawerOpen(false);
       setDrawerHeight(65);
@@ -95,8 +92,7 @@ export default function Home() {
     <div className="h-screen w-screen flex flex-col bg-[#1e1e1e] overflow-hidden">
       <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
 
-        {/* ── Header ─────────────────────────────────────────────────── */}
-        <div className="h-[35px] bg-[#323233] border-b border-[#3e3e42] flex items-center justify-between px-4 shrink-0">
+        <div className="h-8.75 bg-[#323233] border-b border-[#3e3e42] flex items-center justify-between px-4 shrink-0">
           <div className="flex items-center gap-3">
             <div className="text-[13px] font-medium text-[#cccccc] tracking-tight">Voronoi</div>
             <div className="text-[11px] text-[#858585] hidden sm:block">Code Library Manager</div>
@@ -123,12 +119,12 @@ export default function Home() {
                       <BiUser className="w-3 h-3 text-[#cccccc]" />
                     )}
                   </div>
-                  <div className="text-[11px] text-[#cccccc] truncate max-w-[120px] hidden sm:block">
+                  <div className="text-[11px] text-[#cccccc] truncate max-w-30 hidden sm:block">
                     {userSettings?.username?.trim() ? userSettings.username : user?.email}
                   </div>
                 </button>
 
-                <div className="absolute right-0 top-full mt-1 bg-[#252526] border border-[#454545] rounded-sm shadow-2xl py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 min-w-[160px]">
+                <div className="absolute right-0 top-full mt-1 bg-[#252526] border border-[#454545] rounded-sm shadow-2xl py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 min-w-40">
                   <div className="px-3 py-1.5 text-[10px] text-[#858585] uppercase tracking-wider">Account</div>
                   <div className="px-3 py-1.5 text-[12px] text-[#cccccc] border-b border-[#3e3e42]">
                     {user?.email}
@@ -188,7 +184,7 @@ export default function Home() {
             <Panel defaultSize={20} minSize={15} maxSize={40} className="bg-[#252526] border-r border-[#3e3e42]">
               {isInitialLoading ? (
                 <>
-                  <div className="h-[35px] flex items-center justify-between px-3 border-b border-[#3e3e42]">
+                  <div className="h-8.75 flex items-center justify-between px-3 border-b border-[#3e3e42]">
                     <div className="h-3 w-16 bg-[#3e3e42] rounded animate-pulse"></div>
                     <div className="flex items-center gap-1">
                       <div className="w-7 h-7 bg-[#3e3e42] rounded animate-pulse"></div>
@@ -245,7 +241,7 @@ export default function Home() {
           {/* Bottom drawer */}
           <div
             ref={drawerRef}
-            className="absolute left-0 right-0 bottom-[48px] z-30 bg-[#252526] border-t border-[#3e3e42] rounded-t-xl flex flex-col will-change-transform"
+            className="absolute left-0 right-0 bottom-12 z-30 bg-[#252526] border-t border-[#3e3e42] rounded-t-xl flex flex-col will-change-transform"
             style={{
               height: `${drawerHeight}vh`,
               transform: drawerOpen ? 'translateY(0)' : 'translateY(110%)',

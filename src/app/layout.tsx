@@ -4,6 +4,7 @@ import "./globals.css";
 import { getServerSession } from "next-auth/next";
 import SessionProvider from "./components/SessionProvider";
 import { authOptions } from "./api/auth/authOptions";
+import { AppInitializer } from "./components/AppInitializer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,11 +23,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Voronoi',
     description: 'Manage your code snippets efficiently',
-    url: 'https://www.voronoi.notes/', 
+    url: 'https://www.voronoi.notes/',
     siteName: 'Voronoi',
     images: [
       {
-        url: '/logo.svg', 
+        url: '/logo.svg',
         width: 1200,
         height: 630,
         alt: 'Voronoi screenshot',
@@ -36,7 +37,7 @@ export const metadata: Metadata = {
   },
 
   twitter: {
-    card: 'summary_large_image', 
+    card: 'summary_large_image',
     title: 'Voronoi',
     description: 'Manage your code snippets efficiently',
     images: ['/logo.svg'],
@@ -47,7 +48,7 @@ export const metadata: Metadata = {
     shortcut: '/logo.svg',
     apple: '/logo.svg',
   },
-  
+
 
   authors: [
     {
@@ -77,23 +78,22 @@ export function generateViewport() {
       maximumScale: 1,
       userScalable: false,
     },
-    themeColor: '#1d222a', 
+    themeColor: '#1d222a',
   };
 }
 
 
-export default async function RootLayout({
-  children,
-}: Readonly<{
+export default async function RootLayout({ children }: Readonly<{
   children: React.ReactNode;
 }>) {
   const session = await getServerSession(authOptions);
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <SessionProvider session={session}>{children}</SessionProvider>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <SessionProvider session={session}>
+          <AppInitializer />
+          {children}
+        </SessionProvider>
       </body>
     </html>
   );
