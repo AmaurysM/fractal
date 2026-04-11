@@ -150,7 +150,7 @@ const createTabStore = (userId: string) =>
       {
         name: `tab-store-${userId}`,  // ← scoped to user
         partialize: (state) => ({
-          tabIds: state.tabs,
+          tabs: state.tabs,
           selectedTab: state.selectedTab,
         }),
       },

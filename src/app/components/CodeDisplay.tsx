@@ -147,16 +147,18 @@ export const CodeDisplay = () => {
   }, [descriptionVisible]);
 
   useEffect(() => {
-    const unsub = useTabStore.persist.onFinishHydration(() => {
-      useTabStore.getState().rehydrateTabs();
+    const store = getTabStore(session?.user?.id ?? "guest");
+
+    const unsub = store.persist.onFinishHydration(() => {
+      store.getState().rehydrateTabs();
     });
 
-    if (useTabStore.persist.hasHydrated()) {
-      useTabStore.getState().rehydrateTabs();
+    if (store.persist.hasHydrated()) {
+      store.getState().rehydrateTabs();
     }
 
     return () => unsub();
-  }, []);
+  }, [session?.user?.id]);
 
   useEffect(() => {
     if (!selectedItem || selectedItemType === ExplorerItemType.File) return;
