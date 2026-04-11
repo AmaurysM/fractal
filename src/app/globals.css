@@ -41,3 +41,33 @@ body {
   animation: fractalMove 20s ease infinite;
 }
 
+
+/* VSCode-style scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #424242 transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: #424242;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #686868;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
