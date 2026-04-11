@@ -28,7 +28,7 @@ export const Tab = ({
 
   const tabSnip = useTabStore((state) => state.tabs.find((t) => t.id === tabId));
   const { setSelectedItem } = useLibraryStore();
-  const { closeTab } = useTabStore();
+  const { closeTab, selectTab } = useTabStore();
 
   const Icon = getLanguageIcon(tabSnip?.language);
 
@@ -55,7 +55,8 @@ export const Tab = ({
         }`}
       onClick={(e) => {
         e.stopPropagation();
-        setSelectedItem(tabSnip.id, ExplorerItemType.File);
+        selectTab(tabSnip.id);
+        setSelectedItem(tabSnip.id, ExplorerItemType.File); 
       }}
     >
       <Icon

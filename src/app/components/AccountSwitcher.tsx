@@ -6,7 +6,6 @@ import Image from "next/image";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { BiUser, BiPlus, BiCheck, BiTrash } from "react-icons/bi";
 import { SavedAccount, getSavedAccounts, removeSavedAccount } from "../store/saveAccountsStore";
-import { getTabStore } from "../store/tabStore";
 
 interface Props {
   activeId: string | undefined;

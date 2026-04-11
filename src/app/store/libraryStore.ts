@@ -57,16 +57,16 @@ export const useLibraryStore = create<LibraryStore>()(
         type?: ExplorerItemType,
         parentId?: string | null,
       ) => {
-        const { data: session } = useSession();
-        const useTabStore = getTabStore(session?.user?.id ?? "guest");
-        const tabStore = useTabStore.getState();
+        // const { data: session } = useSession();
+        // const useTabStore = getTabStore(session?.user?.id ?? "guest");
+        // const tabStore = useTabStore.getState();
         const state = get();
-
-        if (item && type === ExplorerItemType.File) {
-          tabStore.addTab(item);
-        }
-
         const isChangingItem = item !== state.selectedItem;
+
+        // if (item && type === ExplorerItemType.File) {
+        //   tabStore.addTab(item);
+        // }
+
 
         const resolvedParentId =
           type === ExplorerItemType.File

@@ -27,7 +27,7 @@ export default function Home() {
 
   const useTabStore = getTabStore(session?.user?.id ?? "guest");
   const { user, setUser } = useAuthStore();
-  const { tabs, closeAllTabs } = useTabStore();
+  const { tabs } = useTabStore();
 
   const [hoveringResizer, setHoveringResizer] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -60,7 +60,7 @@ export default function Home() {
   const isInitialLoading = !user;
 
   function handleSignout() {
-    closeAllTabs();
+    //closeAllTabs();
     signOut({ callbackUrl: "/landing" });
   }
 

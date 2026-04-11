@@ -17,6 +17,7 @@ import { getLanguageConfig } from "../../../types/languages";
 import { ContextMenu } from "./ContextMenu";
 import { TreeItemDropContainer } from "./TreeItemDropContainer";
 import { useTreeStore } from "../store/treeStore";
+import { getTabStore } from "../store/tabStore";
 
 export const TreeItem = ({
     item,
@@ -47,8 +48,11 @@ export const TreeItem = ({
         isEditingFolder,
     } = useLibraryStore();
 
-    const { cache, setFolder, expandFolder, collapseFolder, isFolderExpanded } = useTreeStore();
     const { data: session } = useSession();
+    const useTabStore = getTabStore(session?.user?.id ?? "guest");
+    const { addTab } = useTabStore();
+
+    const { cache, setFolder, expandFolder, collapseFolder, isFolderExpanded } = useTreeStore();
 
     const [currentItem, setCurrentItem] = useState<Library | Snippet>(item);
     const [isHovered, setIsHovered] = useState(false);
@@ -263,9 +267,8 @@ export const TreeItem = ({
         <div className={isDeleting ? "opacity-40 pointer-events-none" : ""}>
             <div
                 style={{ paddingLeft }}
-                className={`flex items-center h-5.5 cursor-pointer transition-colors select-none ${
-                    isSelected ? "bg-[#37373d]" : isHovered ? "bg-[#2a2d2e]" : ""
-                }`}
+                className={`flex items-center h-5.5 cursor-pointer transition-colors select-none ${isSelected ? "bg-[#37373d]" : isHovered ? "bg-[#2a2d2e]" : ""
+                    }`}
                 onClick={(e) => {
                     e.stopPropagation();
                     if (isEditingThis) return;
@@ -273,6 +276,8 @@ export const TreeItem = ({
                     if (isFolder) {
                         isExpanded ? collapseFolder(item.id) : expandFolder(item.id);
                         setAddingLibrary(false);
+                    } else {
+                        addTab(currentItem.id); // ← add this for files
                     }
                     setSelectedItem(currentItem.id, type, parentId);
                 }}
@@ -283,9 +288,8 @@ export const TreeItem = ({
                 <div className="flex w-9 justify-center items-center">
                     {isFolder && (
                         <BiChevronRight
-                            className={`w-3 h-3 text-[#cccccc] transition-transform mr-0.5 shrink-0 ${
-                                isExpanded ? "rotate-90" : ""
-                            } ${loadingChildren ? "opacity-50" : ""}`}
+                            className={`w-3 h-3 text-[#cccccc] transition-transform mr-0.5 shrink-0 ${isExpanded ? "rotate-90" : ""
+                                } ${loadingChildren ? "opacity-50" : ""}`}
                         />
                     )}
                     {isFolder ? (
@@ -451,3 +455,7 @@ export const TreeItem = ({
         </div>
     );
 };
+
+function useTabStore(): { addTab: any; } {
+    throw new Error("Function not implemented.");
+}
