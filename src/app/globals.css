@@ -42,7 +42,6 @@ body {
 }
 
 
-/* VSCode-style scrollbars */
 * {
   scrollbar-width: thin;
   scrollbar-color: #424242 transparent;

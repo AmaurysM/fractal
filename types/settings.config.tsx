@@ -77,20 +77,20 @@ export const getAllSettings = (): AllSettings[] => [
 ];
 
 const inputCls = `
-  w-44 bg-[#1a1a1a] border border-[#3a3a3a] rounded
+  w-full sm:w-44 bg-[#1a1a1a] border border-[#3a3a3a] rounded
   text-[12px] text-[#d4d4d4] placeholder-[#555]
-  px-2 py-1 focus:outline-none focus:border-[#6a9fd8]
+  px-2 py-2 sm:py-1 focus:outline-none focus:border-[#6a9fd8]
   transition-colors duration-150
 `;
 
 const selectCls = `
-  w-44 bg-[#1a1a1a] border border-[#3a3a3a] rounded
+  w-full sm:w-44 bg-[#1a1a1a] border border-[#3a3a3a] rounded
   text-[12px] text-[#d4d4d4]
-  px-2 py-1 focus:outline-none focus:border-[#6a9fd8]
+  px-2 py-2 sm:py-1 focus:outline-none focus:border-[#6a9fd8]
   transition-colors duration-150 cursor-pointer
 `;
 
-interface TextInputProps extends React.InputHTMLAttributes<HTMLInputElement> { }
+interface TextInputProps extends React.InputHTMLAttributes<HTMLInputElement> {}
 const TextInput = (props: TextInputProps) => <input {...props} className={inputCls} />;
 
 interface ToggleProps {
@@ -114,6 +114,58 @@ const Toggle = ({ checked, onChange }: ToggleProps) => (
     " />
   </label>
 );
+
+interface StepperProps {
+  value: number;
+  onChange: (value: number) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+}
+const Stepper = ({ value, onChange, min, max, step = 1 }: StepperProps) => {
+  const decrement = () => {
+    const next = Math.round((value - step) * 1000) / 1000;
+    if (min !== undefined && next < min) return;
+    onChange(next);
+  };
+  const increment = () => {
+    const next = Math.round((value + step) * 1000) / 1000;
+    if (max !== undefined && next > max) return;
+    onChange(next);
+  };
+
+  return (
+    <div className="flex items-center w-full sm:w-44 bg-[#1a1a1a] border border-[#3a3a3a] rounded overflow-hidden focus-within:border-[#6a9fd8] transition-colors duration-150">
+      <button
+        type="button"
+        onClick={decrement}
+        className="w-7 py-2 sm:py-1 flex items-center justify-center text-[#555] hover:text-[#ccc] hover:bg-[#252525] active:bg-[#2f2f2f] transition-colors duration-100 shrink-0 border-r border-[#3a3a3a] cursor-pointer select-none text-[15px] leading-none"
+      >
+        −
+      </button>
+      <input
+        type="number"
+        value={value}
+        step={step}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="
+          flex-1 min-w-0 bg-transparent text-[12px] text-[#d4d4d4]
+          text-center py-2 sm:py-1 focus:outline-none
+          [appearance:textfield]
+          [&::-webkit-outer-spin-button]:appearance-none
+          [&::-webkit-inner-spin-button]:appearance-none
+        "
+      />
+      <button
+        type="button"
+        onClick={increment}
+        className="w-7 py-2 sm:py-1 flex items-center justify-center text-[#555] hover:text-[#ccc] hover:bg-[#252525] active:bg-[#2f2f2f] transition-colors duration-100 shrink-0 border-l border-[#3a3a3a] cursor-pointer select-none text-[15px] leading-none"
+      >
+        +
+      </button>
+    </div>
+  );
+};
 
 interface SelectProps<T extends string> {
   value: T;
@@ -203,20 +255,21 @@ export function buildOptionResolver(
       />
     ),
     [CodeSettings.FONT_SIZE]: () => (
-      <TextInput
-        type="number"
-        placeholder="13"
-        value={num(e?.font_size)}
-        onChange={(ev) => updatePendingEditor({ font_size: Number(ev.target.value) })}
+      <Stepper
+        value={num(e?.font_size, 13)}
+        min={8}
+        max={32}
+        step={1}
+        onChange={(v) => updatePendingEditor({ font_size: v })}
       />
     ),
     [CodeSettings.LINE_HEIGHT]: () => (
-      <TextInput
-        type="number"
-        step="0.1"
-        placeholder="20"
-        value={num(e?.line_height)}
-        onChange={(ev) => updatePendingEditor({ line_height: Number(ev.target.value) })}
+      <Stepper
+        value={num(e?.line_height, 20)}
+        min={10}
+        max={60}
+        step={1}
+        onChange={(v) => updatePendingEditor({ line_height: v })}
       />
     ),
     [CodeSettings.FONT_LIGATURES]: () => (
@@ -226,11 +279,12 @@ export function buildOptionResolver(
       />
     ),
     [CodeSettings.TAB_SIZE]: () => (
-      <TextInput
-        type="number"
-        placeholder="2"
-        value={num(e?.tab_size)}
-        onChange={(ev) => updatePendingEditor({ tab_size: Number(ev.target.value) })}
+      <Stepper
+        value={num(e?.tab_size, 2)}
+        min={1}
+        max={8}
+        step={1}
+        onChange={(v) => updatePendingEditor({ tab_size: v })}
       />
     ),
 
@@ -392,11 +446,12 @@ export function buildOptionResolver(
     ),
 
     [CodeSettings.AUTO_SAVE_DELAY]: () => (
-      <TextInput
-        type="number"
-        placeholder="800"
-        value={num(e?.auto_save_delay)}
-        onChange={(ev) => updatePendingEditor({ auto_save_delay: Number(ev.target.value) })}
+      <Stepper
+        value={num(e?.auto_save_delay, 800)}
+        min={100}
+        max={10000}
+        step={100}
+        onChange={(v) => updatePendingEditor({ auto_save_delay: v })}
       />
     ),
   };

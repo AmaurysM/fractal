@@ -45,25 +45,24 @@ const UnsavedDialog = ({ onConfirm, onCancel }: { onConfirm: () => void; onCance
 
 
 const SaveBar = ({ onSave, onDiscard }: { onSave: () => void; onDiscard: () => void }) => (
-  <div className="sticky bottom-0 z-10 flex items-center justify-between px-5 py-3 bg-[#1a1b1c] border-t border-[#2a2b2c]">
-    <span className="text-[11px] text-[#888]">You have unsaved changes</span>
-    <div className="flex gap-2">
+  <div className="sticky bottom-0 z-10 flex items-center justify-between px-4 sm:px-5 py-3 sm:py-3 bg-[#1a1b1c] border-t border-[#2a2b2c]">
+    <span className="text-[11px] text-[#888] hidden sm:block">You have unsaved changes</span>
+    <div className="flex gap-2 w-full sm:w-auto">
       <button
         onClick={onDiscard}
-        className="px-3 py-1.5 text-[12px] text-[#9a9a9a] hover:text-[#ccc] rounded border border-[#3a3a3a] hover:border-[#555] transition-colors duration-100"
+        className="flex-1 sm:flex-none px-3 py-2.5 sm:py-1.5 text-[12px] text-[#9a9a9a] hover:text-[#ccc] rounded border border-[#3a3a3a] hover:border-[#555] transition-colors duration-100"
       >
         Discard
       </button>
       <button
         onClick={onSave}
-        className="px-3 py-1.5 text-[12px] text-white bg-[#6a9fd8] hover:bg-[#5b8ec7] rounded transition-colors duration-100"
+        className="flex-1 sm:flex-none px-3 py-2.5 sm:py-1.5 text-[12px] text-white bg-[#6a9fd8] hover:bg-[#5b8ec7] rounded transition-colors duration-100"
       >
         Save changes
       </button>
     </div>
   </div>
 );
-
 
 const EMPTY_PENDING: PendingChanges = { user: {}, editor: {} };
 const hasPendingChanges = (p: PendingChanges) =>
@@ -96,18 +95,18 @@ const SettingRow = ({
       setFlashedSetting(null);
     }, 700);
     return () => clearTimeout(t);
-  }, [flashedSetting]); 
+  }, [flashedSetting]);
 
   return (
     <div
       ref={rowRef}
-      className={`group flex items-center justify-between px-5 py-2 gap-4 transition-colors duration-100 ${isPulsing ? "row-pulse" : "hover:bg-[#252627]"
+      className={`group flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-3 sm:py-2 gap-2 sm:gap-4 transition-colors duration-100 ${isPulsing ? "row-pulse" : "hover:bg-[#252627]"
         }`}
     >
-      <label className="text-[12px] text-[#9a9a9a] group-hover:text-[#ccc] transition-colors duration-100 capitalize flex-1 min-w-0 truncate">
+      <label className="text-[12px] text-[#9a9a9a] group-hover:text-[#ccc] transition-colors duration-100 capitalize sm:flex-1 sm:min-w-0 sm:truncate">
         {setting}
       </label>
-      <div className="shrink-0">
+      <div className="shrink-0 w-full sm:w-auto">
         {Component()}
       </div>
     </div>
@@ -143,7 +142,7 @@ interface Props {
 }
 
 export const SettingsContent = ({ selectedTab, activeSection, search, onTabChangeRequest }: Props) => {
-  const { settings, updateUserSettings, updateEditorSettings, fetchSettings} = useSettings();
+  const { settings, updateUserSettings, updateEditorSettings, fetchSettings } = useSettings();
 
   const [pending, setPending] = useState<PendingChanges>(EMPTY_PENDING);
   const isDirty = hasPendingChanges(pending);
