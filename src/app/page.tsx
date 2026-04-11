@@ -1,10 +1,9 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { BiUser, BiCode } from "react-icons/bi";
 import { VscFiles, VscSearch } from "react-icons/vsc";
 import { CodeDisplay } from "./components/CodeDisplay";
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import Image from "next/image";
 import { signOut, useSession } from "next-auth/react"
 import { TreeSkeleton } from "./components/SkeletonLoading";
@@ -16,6 +15,11 @@ import { useSettingsStore } from "./store/SettingsStore";
 import { AccountSwitcher } from "./components/AccountSwitcher";
 import { upsertSavedAccount } from "./store/saveAccountsStore";
 import { getTabStore } from "./store/tabStore";
+
+const SIDEBAR_MIN = 180;
+const SIDEBAR_MAX = 600;
+const SIDEBAR_DEFAULT = 260;
+const SNAP_THRESHOLD = 80; // px — drag below this width to snap closed
 
 enum ActivityItem {
   Explorer = "Explorer",
@@ -29,12 +33,19 @@ export default function Home() {
   const { user, setUser } = useAuthStore();
   const { tabs } = useTabStore();
 
-  const [hoveringResizer, setHoveringResizer] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
   const [activity, setActivity] = useState<ActivityItem>(ActivityItem.Explorer);
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerHeight, setDrawerHeight] = useState(65);
+
+  // Sidebar resize/collapse state
+  const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeStartX = useRef(0);
+  const resizeStartWidth = useRef(SIDEBAR_DEFAULT);
+  const lastOpenWidth = useRef(SIDEBAR_DEFAULT);
+
   const drawerRef = useRef<HTMLDivElement>(null);
   const dragStartY = useRef<number | null>(null);
   const dragStartHeight = useRef<number>(65);
@@ -46,7 +57,6 @@ export default function Home() {
   useEffect(() => {
     if (session?.user && (!user || session.user.id !== user.id)) {
       setUser(session.user);
-
       upsertSavedAccount({
         id: session.user.id,
         email: session.user.email ?? "",
@@ -59,9 +69,64 @@ export default function Home() {
 
   const isInitialLoading = !user;
 
-  function handleSignout() {
-    //closeAllTabs();
-    signOut({ callbackUrl: "/landing" });
+  // ── Sidebar resize handlers ────────────────────────────────────────────────
+
+  const onResizerMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    resizeStartX.current = e.clientX;
+    resizeStartWidth.current = sidebarCollapsed ? 0 : sidebarWidth;
+    setIsResizing(true);
+
+    function onMouseMove(e: MouseEvent) {
+      const delta = e.clientX - resizeStartX.current;
+      const raw = resizeStartWidth.current + delta;
+
+      if (raw < SNAP_THRESHOLD) {
+        // Floor to snap threshold visually while dragging so it doesn't flicker to 0 mid-drag
+        setSidebarWidth(SNAP_THRESHOLD);
+      } else {
+        const clamped = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, raw));
+        setSidebarWidth(clamped);
+        setSidebarCollapsed(false);
+        lastOpenWidth.current = clamped;
+      }
+    }
+
+    function onMouseUp(e: MouseEvent) {
+      const delta = e.clientX - resizeStartX.current;
+      const raw = resizeStartWidth.current + delta;
+
+      if (raw < SNAP_THRESHOLD) {
+        // Snap closed
+        setSidebarCollapsed(true);
+        setSidebarWidth(SIDEBAR_DEFAULT);
+        lastOpenWidth.current = SIDEBAR_DEFAULT;
+      }
+
+      setIsResizing(false);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    }
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+  }, [sidebarCollapsed, sidebarWidth]);
+
+  function openSidebar(item: ActivityItem) {
+    setActivity(item);
+    setSidebarCollapsed(false);
+    setSidebarWidth(lastOpenWidth.current);
+  }
+
+  function handleActivityBarClick(item: ActivityItem) {
+    if (sidebarCollapsed) {
+      openSidebar(item);
+    } else if (activity === item) {
+      lastOpenWidth.current = sidebarWidth;
+      setSidebarCollapsed(true);
+    } else {
+      setActivity(item);
+    }
   }
 
   function handleActivityChange(item: ActivityItem) {
@@ -100,8 +165,19 @@ export default function Home() {
     isDraggingDrawer.current = false;
   }
 
+  function handleSignout() {
+    signOut({ callbackUrl: "/landing" });
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+
+  const effectiveSidebarWidth = sidebarCollapsed ? 0 : sidebarWidth;
+
   return (
-    <div className="h-screen w-screen flex flex-col bg-[#1e1e1e] overflow-hidden">
+    <div
+      className="h-screen w-screen flex flex-col bg-[#1e1e1e] overflow-hidden"
+      style={{ cursor: isResizing ? "col-resize" : undefined }}
+    >
       <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
 
         {/* ── Title bar ── */}
@@ -111,7 +187,6 @@ export default function Home() {
             <div className="text-[11px] text-[#858585] hidden sm:block">Code Library Manager</div>
           </div>
 
-          {/* Account button — wraps AccountSwitcher */}
           <div className="flex items-center">
             {isInitialLoading ? (
               <div className="flex items-center gap-2 px-2 py-1">
@@ -123,13 +198,7 @@ export default function Home() {
                 <button className="flex items-center gap-2 px-2 py-1 hover:bg-[#2a2d2e] rounded-sm transition-colors">
                   <div className="w-5 h-5 rounded-full overflow-hidden bg-[#505050] flex items-center justify-center">
                     {user?.image ? (
-                      <Image
-                        src={user.image}
-                        alt="Profile"
-                        width={20}
-                        height={20}
-                        className="object-cover"
-                      />
+                      <Image src={user.image} alt="Profile" width={20} height={20} className="object-cover" />
                     ) : (
                       <BiUser className="w-3 h-3 text-[#cccccc]" />
                     )}
@@ -138,8 +207,6 @@ export default function Home() {
                     {userSettings?.username?.trim() ? userSettings.username : user?.email}
                   </div>
                 </button>
-
-                {/* Dropdown — now renders AccountSwitcher */}
                 <AccountSwitcher
                   activeId={user?.id}
                   onSignOut={handleSignout}
@@ -152,70 +219,84 @@ export default function Home() {
 
         {/* ── Desktop layout (sm+) ── */}
         <div className="hidden sm:flex flex-1 overflow-hidden">
-          <PanelGroup direction="horizontal" className="flex-1">
-            {/* Activity Bar */}
-            <div className="w-12 bg-[#333333] border-r border-[#3e3e42] flex flex-col items-center py-2 shrink-0">
-              <div className="flex flex-col gap-0.5 flex-1">
-                <button
-                  onClick={() => setActivity(ActivityItem.Explorer)}
-                  className={`w-12 h-12 flex items-center justify-center transition-colors relative ${activity === ActivityItem.Explorer
-                      ? 'text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-white'
-                      : 'text-[#858585] hover:text-white'
-                    }`}
-                  title="Explorer"
-                  disabled={isInitialLoading}
-                >
-                  <VscFiles className="w-6 h-6" />
-                </button>
-                <button
-                  onClick={() => setActivity(ActivityItem.Search)}
-                  className={`w-12 h-12 flex items-center justify-center transition-colors relative ${activity === ActivityItem.Search
-                      ? 'text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-white'
-                      : 'text-[#858585] hover:text-white'
-                    }`}
-                  title="Search"
-                  disabled={isInitialLoading}
-                >
-                  <VscSearch className="w-6 h-6" />
-                </button>
-              </div>
+
+          {/* Activity Bar */}
+          <div className="w-12 bg-[#333333] border-r border-[#3e3e42] flex flex-col items-center py-2 shrink-0 z-10">
+            <div className="flex flex-col gap-0.5 flex-1">
+              <button
+                onClick={() => handleActivityBarClick(ActivityItem.Explorer)}
+                className={`w-12 h-12 flex items-center justify-center transition-colors relative ${activity === ActivityItem.Explorer && !sidebarCollapsed
+                  ? "text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-white"
+                  : "text-[#858585] hover:text-white"
+                  }`}
+                title="Explorer"
+                disabled={isInitialLoading}
+              >
+                <VscFiles className="w-6 h-6" />
+              </button>
+              <button
+                onClick={() => handleActivityBarClick(ActivityItem.Search)}
+                className={`w-12 h-12 flex items-center justify-center transition-colors relative ${activity === ActivityItem.Search && !sidebarCollapsed
+                  ? "text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-white"
+                  : "text-[#858585] hover:text-white"
+                  }`}
+                title="Search"
+                disabled={isInitialLoading}
+              >
+                <VscSearch className="w-6 h-6" />
+              </button>
             </div>
+          </div>
 
-            {/* Sidebar */}
-            <Panel defaultSize={20} minSize={15} maxSize={40} className="bg-[#252526] border-r border-[#3e3e42]">
-              {isInitialLoading ? (
-                <>
-                  <div className="h-8.75 flex items-center justify-between px-3 border-b border-[#3e3e42]">
-                    <div className="h-3 w-16 bg-[#3e3e42] rounded animate-pulse"></div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-7 h-7 bg-[#3e3e42] rounded animate-pulse"></div>
-                      <div className="w-7 h-7 bg-[#3e3e42] rounded animate-pulse"></div>
-                    </div>
+          {/* Sidebar — manual width with CSS transition when not actively resizing */}
+          <div
+            className="bg-[#252526] flex flex-col shrink-0 overflow-hidden"
+            style={{
+              width: effectiveSidebarWidth,
+              minWidth: 0,
+              transition: isResizing ? "none" : "width 150ms ease",
+              //borderRight: effectiveSidebarWidth > 0 ? "1px solid #3e3e42" : "none",
+            }}
+          >
+            {isInitialLoading ? (
+              <>
+                <div className="h-8.75 flex items-center justify-between px-3 border-b border-[#3e3e42]">
+                  <div className="h-3 w-16 bg-[#3e3e42] rounded animate-pulse"></div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-7 h-7 bg-[#3e3e42] rounded animate-pulse"></div>
+                    <div className="w-7 h-7 bg-[#3e3e42] rounded animate-pulse"></div>
                   </div>
-                  <div className="flex-1 overflow-auto p-2">
-                    <TreeSkeleton count={6} />
-                  </div>
-                </>
-              ) : activity === ActivityItem.Explorer ? (
-                <FileTree />
-              ) : (
-                <SearchSidebar />
-              )}
-            </Panel>
+                </div>
+                <div className="flex-1 overflow-auto p-2">
+                  <TreeSkeleton count={6} />
+                </div>
+              </>
+            ) : activity === ActivityItem.Explorer ? (
+              <FileTree />
+            ) : (
+              <SearchSidebar />
+            )}
+          </div>
 
-            <PanelResizeHandle
-              className={`transition-all duration-150 ${hoveringResizer || isDragging ? 'w-1 bg-[#007acc]' : 'w-px bg-[#3e3e42]'
-                } cursor-col-resize`}
-              onMouseEnter={() => setHoveringResizer(true)}
-              onMouseLeave={() => setHoveringResizer(false)}
-              onDragging={(d) => setIsDragging(d)}
+          {/* Resize handle */}
+          <div
+            className="relative shrink-0 w-px cursor-col-resize group"
+            onMouseDown={onResizerMouseDown}
+          >
+            {/* Expanded hit area — wider on right when collapsed */}
+            <div className={`absolute inset-y-0 -left-2 ${sidebarCollapsed ? "-right-4 z-10" : "-right-2"}`} />
+            <div
+              className={`h-full w-px transition-all duration-150 ${isResizing
+                  ? "bg-[#007acc]"
+                  : "bg-[#3e3e42] group-hover:bg-[#007acc]"
+                }`}
             />
+          </div>
 
-            {/* Main Content */}
-            <Panel defaultSize={80} minSize={15} className="flex-1 flex flex-col bg-[#1e1e1e]">
-              <DesktopMainContent tabs={tabs} />
-            </Panel>
-          </PanelGroup>
+          {/* Main Content */}
+          <div className="flex-1 flex flex-col bg-[#1e1e1e] overflow-hidden min-w-0">
+            <DesktopMainContent tabs={tabs} />
+          </div>
         </div>
 
         {/* ── Mobile layout ── */}
@@ -236,13 +317,13 @@ export default function Home() {
             className="absolute left-0 right-0 bottom-12 z-30 bg-[#252526] border-t border-[#3e3e42] rounded-t-xl flex flex-col will-change-transform"
             style={{
               height: `${drawerHeight}vh`,
-              transform: drawerOpen ? 'translateY(0)' : 'translateY(110%)',
-              transition: dragStartY.current !== null ? 'none' : 'transform 300ms ease-out',
+              transform: drawerOpen ? "translateY(0)" : "translateY(110%)",
+              transition: dragStartY.current !== null ? "none" : "transform 300ms ease-out",
             }}
           >
             <div
               className="flex justify-center items-center py-3 shrink-0 select-none touch-none group/handle"
-              style={{ cursor: dragStartY.current !== null ? 'grabbing' : 'ns-resize' }}
+              style={{ cursor: dragStartY.current !== null ? "grabbing" : "ns-resize" }}
               onPointerDown={onDrawerHandlePointerDown}
               onPointerMove={onDrawerHandlePointerMove}
               onPointerUp={onDrawerHandlePointerUp}
@@ -253,7 +334,7 @@ export default function Home() {
 
             <div className="px-4 pb-2 shrink-0 flex items-center justify-between">
               <span className="text-[11px] text-[#858585] uppercase tracking-wider font-medium">
-                {activity === ActivityItem.Explorer ? 'Explorer' : 'Search'}
+                {activity === ActivityItem.Explorer ? "Explorer" : "Search"}
               </span>
               <button
                 onClick={() => setDrawerOpen(false)}
@@ -279,8 +360,8 @@ export default function Home() {
               onClick={() => handleActivityChange(ActivityItem.Explorer)}
               disabled={isInitialLoading}
               className={`flex-1 h-full flex flex-col items-center justify-center gap-0.5 transition-colors ${activity === ActivityItem.Explorer && drawerOpen
-                  ? 'text-white'
-                  : 'text-[#858585] hover:text-[#cccccc]'
+                ? "text-white"
+                : "text-[#858585] hover:text-[#cccccc]"
                 }`}
             >
               <VscFiles className="w-5 h-5" />
@@ -290,8 +371,8 @@ export default function Home() {
               onClick={() => handleActivityChange(ActivityItem.Search)}
               disabled={isInitialLoading}
               className={`flex-1 h-full flex flex-col items-center justify-center gap-0.5 transition-colors ${activity === ActivityItem.Search && drawerOpen
-                  ? 'text-white'
-                  : 'text-[#858585] hover:text-[#cccccc]'
+                ? "text-white"
+                : "text-[#858585] hover:text-[#cccccc]"
                 }`}
             >
               <VscSearch className="w-5 h-5" />
@@ -307,13 +388,6 @@ export default function Home() {
   );
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-/**
- * Best-effort inference of OAuth provider from the avatar URL.
- * NextAuth doesn't expose the provider in the session payload by default.
- * If you add `token.provider` in your JWT callback you can use that instead.
- */
 function inferProvider(image?: string | null): string | null {
   if (!image) return null;
   if (image.includes("githubusercontent") || image.includes("avatars.githubusercontent")) return "github";
@@ -321,8 +395,6 @@ function inferProvider(image?: string | null): string | null {
   if (image.includes("cdn.discordapp")) return "discord";
   return null;
 }
-
-// ── Sub-components ────────────────────────────────────────────────────────────
 
 function DesktopMainContent({ tabs }: { tabs: any[] }) {
   if (tabs.length > 0) return <CodeDisplay />;
