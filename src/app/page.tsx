@@ -25,7 +25,7 @@ enum ActivityItem {
 export default function Home() {
   const { data: session, status } = useSession();
   const { user, setUser } = useAuthStore();
-  const { tabs, clearTabs } = useTabStore();
+  const { tabs, closeAllTabs } = useTabStore();
 
   const [hoveringResizer, setHoveringResizer] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -41,12 +41,12 @@ export default function Home() {
   const { settings } = useSettingsStore();
   const userSettings = settings?.user;
 
-  // Sync session → authStore, and persist to saved accounts list
+
+
   useEffect(() => {
     if (session?.user && (!user || session.user.id !== user.id)) {
       setUser(session.user);
 
-      // Persist this account so the switcher can show it later
       upsertSavedAccount({
         id: session.user.id,
         email: session.user.email ?? "",
@@ -60,7 +60,7 @@ export default function Home() {
   const isInitialLoading = !user;
 
   function handleSignout() {
-    clearTabs();
+    closeAllTabs();
     signOut({ callbackUrl: "/landing" });
   }
 

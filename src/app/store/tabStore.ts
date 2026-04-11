@@ -14,7 +14,7 @@ type TabStore = {
   closeOtherTabs: (snipId: string) => void;
   updateTab: (snippet: Snippet) => void;
   moveTabToIndex: (snipId: string, index: number) => void;
-  clearTabs: () => void;
+  //clearTabs: () => void;
   isRehydrating: boolean;
   rehydrateTabs: () => Promise<void>;
 };
@@ -144,7 +144,7 @@ export const useTabStore = create<TabStore>()(
           return { tabs };
         }),
 
-      clearTabs: () => set({ tabs: [], selectedTab: null }),
+      //clearTabs: () => set({ tabs: [], selectedTab: null }),
     }),
     {
       name: "tab-store",
