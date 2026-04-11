@@ -3,10 +3,10 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { signIn, signOut } from "next-auth/react";
+import { signIn, signOut, useSession } from "next-auth/react";
 import { BiUser, BiPlus, BiCheck, BiTrash } from "react-icons/bi";
 import { SavedAccount, getSavedAccounts, removeSavedAccount } from "../store/saveAccountsStore";
-import { useTabStore } from "../store/tabStore";
+import { getTabStore } from "../store/tabStore";
 
 interface Props {
   activeId: string | undefined;
@@ -22,8 +22,6 @@ const PROVIDER_LABELS: Record<string, string> = {
 export function AccountSwitcher({ activeId, onSignOut, onOpenSettings }: Props) {
   const [accounts, setAccounts] = useState<SavedAccount[]>([]);
   const [showAddProvider, setShowAddProvider] = useState(false);
-
-  const {closeAllTabs} = useTabStore();
 
   useEffect(() => {
     setAccounts(getSavedAccounts());
@@ -41,8 +39,6 @@ export function AccountSwitcher({ activeId, onSignOut, onOpenSettings }: Props) 
 
     const hint = account.email ?? undefined;
     const provider = account.provider ?? "google";
-
-    closeAllTabs();
 
     if (provider === "google") {
       signIn("google", { callbackUrl: "/" }, { login_hint: hint });

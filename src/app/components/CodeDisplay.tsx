@@ -5,7 +5,7 @@ import { ExplorerItemType, Snippet } from "../../../types/types";
 import { useState, useEffect, useRef, useMemo } from "react";
 import Editor, { Monaco } from "@monaco-editor/react";
 import * as monaco from "monaco-editor";
-import { useTabStore } from "../store/tabStore";
+import { getTabStore } from "../store/tabStore";
 import { useSnippet } from "../hooks/useSnippet";
 import { useLibraryStore } from "../store/libraryStore";
 import { useSession } from "next-auth/react";
@@ -31,6 +31,8 @@ import { useSettings } from "../hooks/useSettings";
 
 export const CodeDisplay = () => {
   const { data: session } = useSession();
+  const useTabStore = getTabStore(session?.user?.id ?? "guest");
+
   const {
     tabs,
     selectedTab: selectedItem,

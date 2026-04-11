@@ -1,10 +1,11 @@
 import { VscClose } from "react-icons/vsc";
 import { useLibraryStore } from "../store/libraryStore";
-import { useTabStore } from "../store/tabStore";
+import { getTabStore } from "../store/tabStore";
 import { getLanguageColor, getLanguageIcon } from "../../../types/languages";
 import { useSortable } from "@dnd-kit/sortable";
 import { ExplorerItemType } from "../../../types/types";
 import { useEffect } from "react";
+import { useSession } from "next-auth/react";
 
 export const Tab = ({
   tabId,
@@ -21,6 +22,9 @@ export const Tab = ({
     transition,
     isDragging,
   } = useSortable({ id: tabId });
+  const { data: session } = useSession();
+
+  const useTabStore = getTabStore(session?.user?.id ?? "guest");
 
   const tabSnip = useTabStore((state) => state.tabs.find((t) => t.id === tabId));
   const { setSelectedItem } = useLibraryStore();

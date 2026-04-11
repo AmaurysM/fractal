@@ -22,136 +22,146 @@ type TabStore = {
 const pickFallback = (tabs: Snippet[]): string | null =>
   tabs[tabs.length - 1]?.id ?? null;
 
-export const useTabStore = create<TabStore>()(
-  persist(
-    (set, get) => ({
-      tabs: [],
-      selectedTab: null,
-      isRehydrating: false,
-      rehydrateTabs: async () => {
-        const { tabs, selectedTab } = get();
+const createTabStore = (userId: string) =>
+  create<TabStore>()(
+    persist(
+      (set, get) => ({
+        tabs: [],
+        selectedTab: null,
+        isRehydrating: false,
+        rehydrateTabs: async () => {
+          const { tabs, selectedTab } = get();
 
-        if (tabs.length === 0) return;
+          if (tabs.length === 0) return;
 
-        set({ isRehydrating: true }); // <-- add this
+          set({ isRehydrating: true }); // <-- add this
 
-        const tabIds = tabs.map((t) => t.id);
-        const results = await Promise.allSettled(
-          tabIds.map((id) =>
-            fetch(`/api/snippet`, {
-              method: "GET",
-              headers: { "voronoi-snippet-id": id },
-            }).then((res) => {
-              if (!res.ok) return null;
-              return res.json() as Promise<Snippet>;
-            }),
-          ),
-        );
+          const tabIds = tabs.map((t) => t.id);
+          const results = await Promise.allSettled(
+            tabIds.map((id) =>
+              fetch(`/api/snippet`, {
+                method: "GET",
+                headers: { "voronoi-snippet-id": id },
+              }).then((res) => {
+                if (!res.ok) return null;
+                return res.json() as Promise<Snippet>;
+              }),
+            ),
+          );
 
-        const freshTabs: Snippet[] = [];
-        for (const result of results) {
-          if (result.status === "fulfilled" && result.value) {
-            freshTabs.push(result.value);
+          const freshTabs: Snippet[] = [];
+          for (const result of results) {
+            if (result.status === "fulfilled" && result.value) {
+              freshTabs.push(result.value);
+            }
           }
-        }
 
-        const orderedFreshTabs = tabIds
-          .map((id) => freshTabs.find((t) => t.id === id))
-          .filter((t): t is Snippet => !!t);
+          const orderedFreshTabs = tabIds
+            .map((id) => freshTabs.find((t) => t.id === id))
+            .filter((t): t is Snippet => !!t);
 
-        const nextSelected =
-          selectedTab && orderedFreshTabs.some((t) => t.id === selectedTab)
-            ? selectedTab
-            : pickFallback(orderedFreshTabs);
-
-        set({
-          tabs: orderedFreshTabs,
-          selectedTab: nextSelected,
-          isRehydrating: false,
-        }); // <-- add flag
-      },
-
-      addTab: (snipId: string) => {
-        const state = get();
-
-        if (state.tabs.some((t) => t.id === snipId)) {
-          set({ selectedTab: snipId });
-          return;
-        }
-
-        fetch(`/api/snippet`, {
-          method: "GET",
-          headers: { "voronoi-snippet-id": snipId },
-        })
-          .then((res) => {
-            if (!res.ok) return;
-            return res.json();
-          })
-          .then((snippet: Snippet | undefined) => {
-            if (!snippet) return;
-            set((s) => ({
-              tabs: [...s.tabs, snippet],
-              selectedTab: snipId,
-            }));
-          })
-          .catch((e) => console.error("Failed to add tab:", e));
-      },
-
-      selectTab: (snipId: string) => set({ selectedTab: snipId }),
-
-      closeTab: (snipId: string) => {
-        const libraryStore = useLibraryStore.getState();
-
-        set((state) => {
-          const newTabs = state.tabs.filter((t) => t.id !== snipId);
           const nextSelected =
-            state.selectedTab === snipId
-              ? pickFallback(newTabs)
-              : state.selectedTab;
+            selectedTab && orderedFreshTabs.some((t) => t.id === selectedTab)
+              ? selectedTab
+              : pickFallback(orderedFreshTabs);
 
-          libraryStore.setSelectedItem(nextSelected);
+          set({
+            tabs: orderedFreshTabs,
+            selectedTab: nextSelected,
+            isRehydrating: false,
+          }); // <-- add flag
+        },
 
-          return { tabs: newTabs, selectedTab: nextSelected };
-        });
-      },
+        addTab: (snipId: string) => {
+          const state = get();
 
-      closeAllTabs: () => {
-        useLibraryStore.getState().setSelectedItem(null);
-        set({ tabs: [], selectedTab: null });
-      },
+          if (state.tabs.some((t) => t.id === snipId)) {
+            set({ selectedTab: snipId });
+            return;
+          }
 
-      closeOtherTabs: (snipId: string) =>
-        set((state) => {
-          const tab = state.tabs.find((t) => t.id === snipId);
-          if (!tab) return state;
-          return { tabs: [tab], selectedTab: snipId };
-        }),
+          fetch(`/api/snippet`, {
+            method: "GET",
+            headers: { "voronoi-snippet-id": snipId },
+          })
+            .then((res) => {
+              if (!res.ok) return;
+              return res.json();
+            })
+            .then((snippet: Snippet | undefined) => {
+              if (!snippet) return;
+              set((s) => ({
+                tabs: [...s.tabs, snippet],
+                selectedTab: snipId,
+              }));
+            })
+            .catch((e) => console.error("Failed to add tab:", e));
+        },
 
-      updateTab: (snippet: Snippet) =>
-        set((state) => ({
-          tabs: state.tabs.map((t) => (t.id === snippet.id ? snippet : t)),
-        })),
+        selectTab: (snipId: string) => set({ selectedTab: snipId }),
 
-      moveTabToIndex: (snipId: string, index: number) =>
-        set((state) => {
-          const tabs = [...state.tabs];
-          const currentIndex = tabs.findIndex((t) => t.id === snipId);
-          if (currentIndex === -1) return state;
+        closeTab: (snipId: string) => {
+          const libraryStore = useLibraryStore.getState();
 
-          const [moved] = tabs.splice(currentIndex, 1);
-          tabs.splice(Math.max(0, Math.min(index, tabs.length)), 0, moved);
+          set((state) => {
+            const newTabs = state.tabs.filter((t) => t.id !== snipId);
+            const nextSelected =
+              state.selectedTab === snipId
+                ? pickFallback(newTabs)
+                : state.selectedTab;
 
-          return { tabs };
-        }),
+            libraryStore.setSelectedItem(nextSelected);
 
-      //clearTabs: () => set({ tabs: [], selectedTab: null }),
-    }),
-    {
-      name: "tab-store",
-      partialize: (state) => ({
-        tabs: state.tabs,
-        selectedTab: state.selectedTab,
+            return { tabs: newTabs, selectedTab: nextSelected };
+          });
+        },
+
+        closeAllTabs: () => {
+          useLibraryStore.getState().setSelectedItem(null);
+          set({ tabs: [], selectedTab: null });
+        },
+
+        closeOtherTabs: (snipId: string) =>
+          set((state) => {
+            const tab = state.tabs.find((t) => t.id === snipId);
+            if (!tab) return state;
+            return { tabs: [tab], selectedTab: snipId };
+          }),
+
+        updateTab: (snippet: Snippet) =>
+          set((state) => ({
+            tabs: state.tabs.map((t) => (t.id === snippet.id ? snippet : t)),
+          })),
+
+        moveTabToIndex: (snipId: string, index: number) =>
+          set((state) => {
+            const tabs = [...state.tabs];
+            const currentIndex = tabs.findIndex((t) => t.id === snipId);
+            if (currentIndex === -1) return state;
+
+            const [moved] = tabs.splice(currentIndex, 1);
+            tabs.splice(Math.max(0, Math.min(index, tabs.length)), 0, moved);
+
+            return { tabs };
+          }),
+
+        //clearTabs: () => set({ tabs: [], selectedTab: null }),
       }),
-    },
-  ),
-);
+      {
+        name: `tab-store-${userId}`,  // ← scoped to user
+        partialize: (state) => ({
+          tabIds: state.tabs,
+          selectedTab: state.selectedTab,
+        }),
+      },
+    ),
+  );
+
+const storeCache = new Map<string, ReturnType<typeof createTabStore>>();
+
+export const getTabStore = (userId: string) => {
+  if (!storeCache.has(userId)) {
+    storeCache.set(userId, createTabStore(userId));
+  }
+  return storeCache.get(userId)!;
+};

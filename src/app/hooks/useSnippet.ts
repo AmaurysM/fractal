@@ -1,13 +1,14 @@
-import { Library, Snippet } from "./../../../types/types";
-import { useState, useEffect, Dispatch, SetStateAction } from "react";
+import { Snippet } from "./../../../types/types";
+import { Dispatch, SetStateAction } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
-import React from "react";
 import { SnippetDTO } from "../api/snippets/parents/route";
-import { useTabStore } from "../store/tabStore";
+import { getTabStore } from "../store/tabStore";
 import { useLibraryStore } from "../store/libraryStore";
-import { abort } from "process";
 
 export const useSnippet = () => {
+  const { data: session } = useSession();
+  const useTabStore = getTabStore(session?.user?.id ?? "guest");
+
   const fetchParentController = new AbortController();
   const searchController = new AbortController();
   const addController = new AbortController();

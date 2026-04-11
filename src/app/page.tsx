@@ -9,13 +9,13 @@ import Image from "next/image";
 import { signOut, useSession } from "next-auth/react"
 import { TreeSkeleton } from "./components/SkeletonLoading";
 import { FileTree } from "./components/FileTree";
-import { useTabStore } from "./store/tabStore";
 import { useAuthStore } from "./store/authStore";
 import { SearchSidebar } from "./components/SearchSidebar";
 import { SettingWindow } from "./components/SettingWindow";
 import { useSettingsStore } from "./store/SettingsStore";
 import { AccountSwitcher } from "./components/AccountSwitcher";
 import { upsertSavedAccount } from "./store/saveAccountsStore";
+import { getTabStore } from "./store/tabStore";
 
 enum ActivityItem {
   Explorer = "Explorer",
@@ -24,6 +24,8 @@ enum ActivityItem {
 
 export default function Home() {
   const { data: session, status } = useSession();
+
+  const useTabStore = getTabStore(session?.user?.id ?? "guest");
   const { user, setUser } = useAuthStore();
   const { tabs, closeAllTabs } = useTabStore();
 
@@ -40,8 +42,6 @@ export default function Home() {
 
   const { settings } = useSettingsStore();
   const userSettings = settings?.user;
-
-
 
   useEffect(() => {
     if (session?.user && (!user || session.user.id !== user.id)) {
@@ -158,11 +158,10 @@ export default function Home() {
               <div className="flex flex-col gap-0.5 flex-1">
                 <button
                   onClick={() => setActivity(ActivityItem.Explorer)}
-                  className={`w-12 h-12 flex items-center justify-center transition-colors relative ${
-                    activity === ActivityItem.Explorer
+                  className={`w-12 h-12 flex items-center justify-center transition-colors relative ${activity === ActivityItem.Explorer
                       ? 'text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-white'
                       : 'text-[#858585] hover:text-white'
-                  }`}
+                    }`}
                   title="Explorer"
                   disabled={isInitialLoading}
                 >
@@ -170,11 +169,10 @@ export default function Home() {
                 </button>
                 <button
                   onClick={() => setActivity(ActivityItem.Search)}
-                  className={`w-12 h-12 flex items-center justify-center transition-colors relative ${
-                    activity === ActivityItem.Search
+                  className={`w-12 h-12 flex items-center justify-center transition-colors relative ${activity === ActivityItem.Search
                       ? 'text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-white'
                       : 'text-[#858585] hover:text-white'
-                  }`}
+                    }`}
                   title="Search"
                   disabled={isInitialLoading}
                 >
@@ -206,9 +204,8 @@ export default function Home() {
             </Panel>
 
             <PanelResizeHandle
-              className={`transition-all duration-150 ${
-                hoveringResizer || isDragging ? 'w-1 bg-[#007acc]' : 'w-px bg-[#3e3e42]'
-              } cursor-col-resize`}
+              className={`transition-all duration-150 ${hoveringResizer || isDragging ? 'w-1 bg-[#007acc]' : 'w-px bg-[#3e3e42]'
+                } cursor-col-resize`}
               onMouseEnter={() => setHoveringResizer(true)}
               onMouseLeave={() => setHoveringResizer(false)}
               onDragging={(d) => setIsDragging(d)}
@@ -281,11 +278,10 @@ export default function Home() {
             <button
               onClick={() => handleActivityChange(ActivityItem.Explorer)}
               disabled={isInitialLoading}
-              className={`flex-1 h-full flex flex-col items-center justify-center gap-0.5 transition-colors ${
-                activity === ActivityItem.Explorer && drawerOpen
+              className={`flex-1 h-full flex flex-col items-center justify-center gap-0.5 transition-colors ${activity === ActivityItem.Explorer && drawerOpen
                   ? 'text-white'
                   : 'text-[#858585] hover:text-[#cccccc]'
-              }`}
+                }`}
             >
               <VscFiles className="w-5 h-5" />
               <span className="text-[9px] tracking-wide">Explorer</span>
@@ -293,11 +289,10 @@ export default function Home() {
             <button
               onClick={() => handleActivityChange(ActivityItem.Search)}
               disabled={isInitialLoading}
-              className={`flex-1 h-full flex flex-col items-center justify-center gap-0.5 transition-colors ${
-                activity === ActivityItem.Search && drawerOpen
+              className={`flex-1 h-full flex flex-col items-center justify-center gap-0.5 transition-colors ${activity === ActivityItem.Search && drawerOpen
                   ? 'text-white'
                   : 'text-[#858585] hover:text-[#cccccc]'
-              }`}
+                }`}
             >
               <VscSearch className="w-5 h-5" />
               <span className="text-[9px] tracking-wide">Search</span>

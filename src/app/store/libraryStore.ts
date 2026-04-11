@@ -1,7 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { ExplorerItemType } from "../../../types/types";
-import { useTabStore } from "./tabStore";
+import { getTabStore } from "./tabStore";
+import { useSession } from "next-auth/react";
 
 export type DragItem = {
   id: string;
@@ -56,6 +57,8 @@ export const useLibraryStore = create<LibraryStore>()(
         type?: ExplorerItemType,
         parentId?: string | null,
       ) => {
+        const { data: session } = useSession();
+        const useTabStore = getTabStore(session?.user?.id ?? "guest");
         const tabStore = useTabStore.getState();
         const state = get();
 
@@ -67,10 +70,10 @@ export const useLibraryStore = create<LibraryStore>()(
 
         const resolvedParentId =
           type === ExplorerItemType.File
-            ? (parentId ?? null)          // file's containing folder
+            ? (parentId ?? null) // file's containing folder
             : type === ExplorerItemType.Folder
-            ? item                         // the folder itself
-            : null;                        // root
+              ? item // the folder itself
+              : null; // root
 
         set(() => ({
           selectedItem: item,

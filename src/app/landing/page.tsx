@@ -33,7 +33,7 @@ export default function LandingPage() {
       </div>
 
       {/* Features section */}
-      <section id="features" className="relative z-10 py-24 px-6 bg-gradient-to-b from-black/0 to-black/70">
+      <section id="features" className="relative z-10 py-24 px-6 bg-linear-to-b from-black/0 to-black/70">
         <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 text-center">
           <div className="bg-white/10 rounded-xs p-6 hover:bg-white/20 transition">
             <h3 className="text-xl font-bold mb-2 text-white">Organize Snippets</h3>
