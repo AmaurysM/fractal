@@ -6,23 +6,37 @@ import { LibraryDTO } from "../parents/route";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  if (!session)
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   const userId = session.user.id;
-  if (!userId) return NextResponse.json({ message: "Missing user ID" }, { status: 400 });
+  if (!userId)
+    return NextResponse.json({ message: "Missing user ID" }, { status: 400 });
 
   const libTitle = req.nextUrl.searchParams.get("folderTitle");
-  if (!libTitle) return NextResponse.json({ message: "Missing folderTitle" }, { status: 400 });
+  if (!libTitle)
+    return NextResponse.json(
+      { message: "Missing folderTitle" },
+      { status: 400 },
+    );
 
   try {
     const result = await db.query<LibraryDTO>(
-      'SELECT l.id, l.title FROM "Library" l WHERE l.title ILIKE $1 AND l.userid = $2',
-      [`%${libTitle}%`, userId]
+      `SELECT l.id, l.title, lj.parentlibrary AS "parentId"
+   FROM "Library" l
+   LEFT JOIN "LibraryJunction" lj 
+     ON lj.childlibrary = l.id 
+     AND lj.parentlibrary != l.id  -- exclude self-referencing rows
+   WHERE l.title ILIKE $1
+     AND l.userid = $2`,
+      [`%${libTitle}%`, userId],
     );
     return NextResponse.json(result.rows);
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ message: "Error fetching libraries" }, { status: 500 });
+    return NextResponse.json(
+      { message: "Error fetching libraries" },
+      { status: 500 },
+    );
   }
 }
-

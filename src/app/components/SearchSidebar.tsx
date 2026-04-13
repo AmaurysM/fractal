@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ExplorerItemType, Library, Snippet } from "../../../types/types";
 import { TreeItem } from "../components/TreeItem";
 import { useSession } from "next-auth/react";
 import { TreeSkeleton } from "../components/SkeletonLoading";
 import { TreeItemEdit } from "../components/TreeItemEdit";
 import { useLibraryStore } from "../store/libraryStore";
+import { useTreeStore } from "../store/treeStore";
 import { useLibrary } from "../hooks/useLibrary";
 import { useSnippet } from "../hooks/useSnippet";
 import { LibraryDTO } from "../api/libraries/parents/route";
@@ -22,18 +23,30 @@ export const SearchSidebar = () => {
         isEditingSnippet,
         setIsEditingSnippet,
     } = useLibraryStore();
+
+    const treeCache = useTreeStore((s) => s.cache);
+
     const { searchLibraries } = useLibrary();
     const { searchSnippets } = useSnippet();
 
     const [searchValue, setSearchValue] = useState("");
-
     const [foundLibraries, setFoundLibraries] = useState<LibraryDTO[]>([]);
     const [foundSnippets, setFoundSnippets] = useState<SnippetDTO[]>([]);
     const [isSearching, setIsSearching] = useState(false);
 
+    const searchValueRef = useRef(searchValue);
+    searchValueRef.current = searchValue;
 
-    const handleSearch = async (query: string) => {
-        setSearchValue(query);
+    // When the tree cache changes (items deleted/renamed elsewhere),
+    // re-run the current search to keep results fresh.
+    useEffect(() => {
+        const query = searchValueRef.current;
+        if (!query.trim()) return;
+        runSearch(query);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [treeCache]);
+
+    const runSearch = async (query: string) => {
         if (!query.trim()) {
             setFoundLibraries([]);
             setFoundSnippets([]);
@@ -46,13 +59,18 @@ export const SearchSidebar = () => {
                 searchLibraries(query),
                 searchSnippets(query),
             ]);
-
+            setFoundLibraries(libs ?? []);
             setFoundSnippets(snips ?? []);
         } catch (e) {
             console.error("Search failed:", e);
         } finally {
             setIsSearching(false);
         }
+    };
+
+    const handleSearch = async (query: string) => {
+        setSearchValue(query);
+        await runSearch(query);
     };
 
     return (
@@ -89,9 +107,8 @@ export const SearchSidebar = () => {
                                         item={lib}
                                         onSuccess={() => {
                                             setIsEditingFolder(false);
-                                            setFoundLibraries(prev => prev.map(l =>
-                                                l.id === lib.id ? { ...l, title: lib.title } : l
-                                            ));
+                                            // Re-fetch so renamed title reflects in results
+                                            runSearch(searchValueRef.current);
                                         }}
                                     />
                                 ) : (
@@ -114,9 +131,8 @@ export const SearchSidebar = () => {
                                         item={snip}
                                         onSuccess={() => {
                                             setIsEditingSnippet(false);
-                                            setFoundSnippets(prev => prev.map(s =>
-                                                s.id === snip.id ? { ...s, title: snip.title } : s
-                                            ));
+                                            // Re-fetch so renamed title reflects in results
+                                            runSearch(searchValueRef.current);
                                         }}
                                     />
                                 ) : (
