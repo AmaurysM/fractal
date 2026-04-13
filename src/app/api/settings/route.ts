@@ -14,7 +14,6 @@ export async function GET() {
     return NextResponse.json({ message: "Missing User" }, { status: 400 });
 
   try {
-    // Ensure User row exists (auth record only)
     await db.query(
       `INSERT INTO public."User" (id, email)
        VALUES ($1, $2)
@@ -22,7 +21,6 @@ export async function GET() {
       [userId, session.user.email],
     );
 
-    // Upsert both settings rows in parallel — eliminates the double-fetch
     const d = DEFAULT_EDITOR_SETTINGS;
 
     await Promise.all([
@@ -76,7 +74,6 @@ export async function GET() {
       ),
     ]);
 
-    // Single fetch after upserts
     const [u, e] = await Promise.all([
       db.query(`SELECT * FROM "user_settings" WHERE id = $1`, [userId]),
       db.query(`SELECT * FROM "editor_settings" WHERE id = $1`, [userId]),

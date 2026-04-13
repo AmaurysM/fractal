@@ -118,7 +118,6 @@ export default function VoronoiBackground() {
         ctx.closePath();
       }
 
-      // Apply alpha to stroke for fade-in effect
       const avgAlpha = pointsRef.current.reduce((sum, p) => sum + p.alpha, 0) / pointsRef.current.length;
       ctx.strokeStyle = `rgba(202, 213, 226, ${avgAlpha})`;
       ctx.lineWidth = 0.8 / ((sx + sy) / 2);
@@ -141,7 +140,7 @@ export default function VoronoiBackground() {
         pointsRef.current.push(createPoint(
           x0 + Math.random() * width,
           y0 + Math.random() * height,
-          false // Animate new points
+          false
         ));
       }
     };
@@ -188,7 +187,6 @@ export default function VoronoiBackground() {
       const margin = viewportH * 0.2;
 
       if (scrollDelta > 0) {
-        // Scrolling down
         pointsRef.current = pointsRef.current.filter(point => 
           point.y > -margin
         );
@@ -196,7 +194,6 @@ export default function VoronoiBackground() {
         const bottomY = viewportH;
         addRandomPointsInRect(0, bottomY - margin, worldW.current, bottomY + margin);
       } else {
-        // Scrolling up
         pointsRef.current = pointsRef.current.filter(point => 
           point.y < viewportH + margin
         );
@@ -204,7 +201,6 @@ export default function VoronoiBackground() {
         addRandomPointsInRect(0, -margin, worldW.current, margin);
       }
 
-      // Shift all points by the scroll delta
       pointsRef.current.forEach(point => {
         point.y -= scrollDelta;
         point.targetY -= scrollDelta;

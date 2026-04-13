@@ -14,10 +14,6 @@ export type DragItem = {
 type LibraryStore = {
   selectedItem: string | null;
   selectedItemType: ExplorerItemType | null;
-
-  // The folder that newly created items should land in.
-  // null  → root
-  // <id>  → that folder
   selectedParentId: string | null;
 
   setSelectedItem: (
@@ -57,23 +53,15 @@ export const useLibraryStore = create<LibraryStore>()(
         type?: ExplorerItemType,
         parentId?: string | null,
       ) => {
-        // const { data: session } = useSession();
-        // const useTabStore = getTabStore(session?.user?.id ?? "guest");
-        // const tabStore = useTabStore.getState();
         const state = get();
         const isChangingItem = item !== state.selectedItem;
 
-        // if (item && type === ExplorerItemType.File) {
-        //   tabStore.addTab(item);
-        // }
-
-
         const resolvedParentId =
           type === ExplorerItemType.File
-            ? (parentId ?? null) // file's containing folder
+            ? (parentId ?? null) 
             : type === ExplorerItemType.Folder
-              ? item // the folder itself
-              : null; // root
+              ? item 
+              : null;
 
         set(() => ({
           selectedItem: item,
@@ -91,10 +79,7 @@ export const useLibraryStore = create<LibraryStore>()(
         set(() => ({ addingSnippet: val, addingLibrary: false })),
 
       addingLibrary: false,
-      // When triggering "New Folder/File" from the header buttons WITHOUT an
-      // active selection we want creation at root. The header buttons already
-      // call setSelectedItem(selectedParentId, ...) before calling
-      // setAddingLibrary, so selectedParentId is already correct here.
+
       setAddingLibrary: (val: boolean) =>
         set(() => ({ addingLibrary: val, addingSnippet: false })),
 

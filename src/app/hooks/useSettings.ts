@@ -56,7 +56,7 @@ export function useSettings() {
       setError(err instanceof Error ? err.message : "Unknown error");
       setStatus("error");
     }
-  }, [setSettings, setStatus, setError]); // remove `settings` from deps too
+  }, [setSettings, setStatus, setError]);
 
   const updateUserSettings = useCallback(
     async (patch: Partial<Omit<UserSettings, "id" | "email" | "image">>) => {

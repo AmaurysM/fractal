@@ -15,8 +15,4 @@ pool.on('error', (err) => {
   console.error('Unexpected error on idle client', err);
 });
 
-// pool.on('connect', (client) => {
-//   ; 
-// });
-
 export default pool

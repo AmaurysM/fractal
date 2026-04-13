@@ -1,13 +1,11 @@
 // store/savedAccountsStore.ts
-// Persists multiple account sessions to localStorage so users can switch
-// between them without losing their account list.
 
 export interface SavedAccount {
   id: string;
   email: string;
   name?: string | null;
   image?: string | null;
-  provider?: string | null; // "github" | "google" | "discord"
+  provider?: string | null;
 }
 
 const STORAGE_KEY = "voronoi_saved_accounts";
@@ -27,7 +25,6 @@ function save(accounts: SavedAccount[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts));
 }
 
-/** Upsert an account into the saved list. Returns the new list. */
 export function upsertSavedAccount(account: SavedAccount): SavedAccount[] {
   const accounts = load();
   const idx = accounts.findIndex((a) => a.id === account.id);
@@ -40,14 +37,12 @@ export function upsertSavedAccount(account: SavedAccount): SavedAccount[] {
   return accounts;
 }
 
-/** Remove an account from the saved list. */
 export function removeSavedAccount(id: string): SavedAccount[] {
   const accounts = load().filter((a) => a.id !== id);
   save(accounts);
   return accounts;
 }
 
-/** Read all saved accounts. */
 export function getSavedAccounts(): SavedAccount[] {
   return load();
 }

@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     const result = await db.query(
       `INSERT INTO "Library" (userid, title) 
        VALUES ($1, $2) 
-       RETURNING id, title`,  // ← also return title
+       RETURNING id, title`,
       [userId, title],
     );
 
@@ -90,7 +90,6 @@ export async function DELETE(req: NextRequest) {
   try {
     await db.query("BEGIN");
 
-    // Step 1: Find all libraries in the tree (current + all descendants)
     const libraryTreeResult = await db.query(
       `WITH RECURSIVE library_tree AS (
         -- Start with the target library
@@ -113,7 +112,6 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Library not found" }, { status: 404 });
     }
 
-    // Step 2: Delete all snippets associated with these libraries
     await db.query(
       `DELETE FROM "Snippet"
        WHERE id IN (
@@ -124,8 +122,6 @@ export async function DELETE(req: NextRequest) {
       [libraryIds],
     );
 
-    // Step 3: Delete all libraries in the tree
-    // CASCADE will automatically delete LibraryJunction and SnippetJunction records
     const oldLibrary = await db.query(
       `DELETE FROM "Library" WHERE id = ANY($1)`,
       [libraryIds],

@@ -104,8 +104,7 @@ export const authOptions: NextAuthOptions = {
           console.error("Error in JWT callback:", error);
         }
       }
-      // Persist the OAuth provider name into the token so the client
-      // can use it for account-switcher hints without URL sniffing.
+
       if (account?.provider) {
         token.provider = account.provider;
       }
@@ -114,7 +113,6 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        // Expose provider to the client session
         (session.user as any).provider = token.provider ?? null;
       }
       return session;

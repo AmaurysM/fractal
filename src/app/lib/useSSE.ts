@@ -8,7 +8,7 @@ type Action = "INSERT" | "UPDATE" | "DELETE";
 interface UseSSEOptions<T extends { id: string | number }> {
   endpoint: string;
   setState: React.Dispatch<React.SetStateAction<T[]>>;
-  topLevelKey: string; // new
+  topLevelKey: string;
 }
 
 export function useSSE<T extends { id: string | number }>({

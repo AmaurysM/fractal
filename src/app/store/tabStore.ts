@@ -34,7 +34,7 @@ const createTabStore = (userId: string) =>
 
           if (tabs.length === 0) return;
 
-          set({ isRehydrating: true }); // <-- add this
+          set({ isRehydrating: true });
 
           const tabIds = tabs.map((t) => t.id);
           const results = await Promise.allSettled(
@@ -69,7 +69,7 @@ const createTabStore = (userId: string) =>
             tabs: orderedFreshTabs,
             selectedTab: nextSelected,
             isRehydrating: false,
-          }); // <-- add flag
+          });
         },
 
         addTab: (snipId: string) => {
@@ -145,10 +145,9 @@ const createTabStore = (userId: string) =>
             return { tabs };
           }),
 
-        //clearTabs: () => set({ tabs: [], selectedTab: null }),
       }),
       {
-        name: `tab-store-${userId}`,  // ← scoped to user
+        name: `tab-store-${userId}`,  
         partialize: (state) => ({
           tabs: state.tabs,
           selectedTab: state.selectedTab,

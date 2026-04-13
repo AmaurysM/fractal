@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Library, Snippet, ExplorerItemType } from "../../../types/types";
 import { BiChevronRight, BiFolder, BiTrash } from "react-icons/bi";
 import { VscNewFolder, VscNewFile } from "react-icons/vsc";
@@ -13,11 +13,21 @@ import { useSnippet } from "../hooks/useSnippet";
 import { useSession } from "next-auth/react";
 import { LibraryDTO } from "../api/libraries/parents/route";
 import { SnippetDTO } from "../api/snippets/parents/route";
-import { getLanguageConfig } from "../../../types/languages";
+import { LanguageConfig, getLanguageConfig, inferLanguageFromTitle } from "../../../types/languages";
 import { ContextMenu } from "./ContextMenu";
 import { TreeItemDropContainer } from "./TreeItemDropContainer";
-import { useTreeStore } from "../store/treeStore";
+import { useTreeStore, validateItemName } from "../store/treeStore";
 import { getTabStore } from "../store/tabStore";
+
+function stripExtension(title: string): string {
+    const dot = title.lastIndexOf(".");
+    return dot > 0 ? title.slice(0, dot) : title;
+}
+
+function getExtension(title: string): string {
+    const dot = title.lastIndexOf(".");
+    return dot > 0 ? title.slice(dot + 1) : "";
+}
 
 export const TreeItem = ({
     item,
@@ -33,7 +43,7 @@ export const TreeItem = ({
     onDelete?: (id: string) => void;
 }) => {
     const { fetchParentLibraries, deleteLibrary, editLibraryTitle } = useLibrary();
-    const { fetchParentSnippets, fetchSnippet, deleteSnippet, editSnippetTitle } = useSnippet();
+    const { fetchParentSnippets, fetchSnippet, deleteSnippet, editSnippetTitle, editSnippet } = useSnippet();
 
     const {
         addingSnippet,
@@ -50,14 +60,23 @@ export const TreeItem = ({
 
     const { data: session } = useSession();
     const useTabStore = getTabStore(session?.user?.id ?? "guest");
-    const { addTab } = useTabStore();
+    const { addTab, updateTab } = useTabStore();
 
-    const { cache, setFolder, expandFolder, collapseFolder, isFolderExpanded } = useTreeStore();
+    const {
+        cache,
+        setFolder,
+        expandFolder,
+        collapseFolder,
+        isFolderExpanded,
+        getSiblingNames,
+        renameItem,
+    } = useTreeStore();
 
     const [currentItem, setCurrentItem] = useState<Library | Snippet>(item);
     const [isHovered, setIsHovered] = useState(false);
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+
     const [editTitle, setEditTitle] = useState(item.title);
     const [isSaving, setIsSaving] = useState(false);
     const [editError, setEditError] = useState<string | null>(null);
@@ -77,10 +96,12 @@ export const TreeItem = ({
     const snippets = folderContents?.snips ?? [];
     const loadingChildren = isFolder && isExpanded && folderContents === undefined;
 
-    const langConfig = !isFolder
-        ? getLanguageConfig((currentItem as Snippet).language)
+    const langConfig: LanguageConfig | null = !isFolder
+        ? (getLanguageConfig((currentItem as Snippet).language) ??
+            inferLanguageFromTitle(currentItem.title) ??
+            null)
         : null;
-    const FileIcon = langConfig?.icon || AiOutlineFileText;
+    const FileIcon = langConfig?.icon ?? AiOutlineFileText;
 
     useEffect(() => {
         if (!session) return;
@@ -117,7 +138,16 @@ export const TreeItem = ({
         if (isEditingThis) {
             setEditTitle(currentItem.title);
             setEditError(null);
-            setTimeout(() => inputRef.current?.focus(), 0);
+            setTimeout(() => {
+                if (!inputRef.current) return;
+                inputRef.current.focus();
+                if (!isFolder) {
+                    const bare = stripExtension(currentItem.title);
+                    inputRef.current.setSelectionRange(0, bare.length);
+                } else {
+                    inputRef.current.select();
+                }
+            }, 0);
         }
     }, [isEditingThis]);
 
@@ -127,20 +157,62 @@ export const TreeItem = ({
         return () => clearTimeout(t);
     }, [editError]);
 
+    const containingFolderId = parentId ?? "root";
+
+    const getValidationError = useCallback(
+        (name: string) => {
+            const siblingNames = getSiblingNames(containingFolderId, isFolder, item.id);
+            return validateItemName(name, siblingNames, currentItem.title);
+        },
+        [containingFolderId, isFolder, item.id, currentItem.title, getSiblingNames],
+    );
+
     const commitEdit = async () => {
-        if (!editTitle.trim()) {
-            setEditError("Name cannot be empty");
+        const trimmed = editTitle.trim();
+        const validationError = getValidationError(trimmed);
+        if (validationError) {
+            setEditError(validationError);
             return;
         }
+
         setIsSaving(true);
         setEditError(null);
         try {
             if (isFolder) {
-                await editLibraryTitle(item.id, editTitle);
+                await editLibraryTitle(item.id, trimmed);
+                setCurrentItem((prev) => ({ ...prev, title: trimmed }));
+                renameItem(containingFolderId, item.id, trimmed, true);
             } else {
-                await editSnippetTitle(item.id, editTitle);
+                const hasExt = trimmed.includes(".");
+                const originalExt = getExtension(currentItem.title);
+                const finalTitle =
+                    hasExt || !originalExt ? trimmed : `${trimmed}.${originalExt}`;
+
+                await editSnippetTitle(item.id, finalTitle);
+
+                const inferredConfig = inferLanguageFromTitle(finalTitle);
+                const newLangValue = inferredConfig?.value;
+                const currentLangValue = (currentItem as Snippet).language;
+                const langChanged =
+                    newLangValue !== undefined && newLangValue !== currentLangValue;
+
+                const updatedSnippet: Snippet = {
+                    ...(currentItem as Snippet),
+                    title: finalTitle,
+                    ...(langChanged ? { language: newLangValue } : {}),
+                };
+
+                if (langChanged) {
+                    await editSnippet(updatedSnippet);
+                }
+
+                setCurrentItem(updatedSnippet);
+
+                renameItem(containingFolderId, item.id, finalTitle, false);
+
+                updateTab(updatedSnippet);
             }
-            setCurrentItem((prev) => ({ ...prev, title: editTitle }));
+
             exitEditMode();
         } catch (err) {
             setEditError((err as Error).message || "Failed to save");
@@ -151,16 +223,14 @@ export const TreeItem = ({
 
     const cancelEdit = () => {
         if (isSaving) return;
+        setEditTitle(currentItem.title);
         setEditError(null);
         exitEditMode();
     };
 
     const exitEditMode = () => {
-        if (isFolder) {
-            setIsEditingFolder(false);
-        } else {
-            setIsEditingSnippet(false);
-        }
+        if (isFolder) setIsEditingFolder(false);
+        else setIsEditingSnippet(false);
     };
 
     const handleEditKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -175,6 +245,12 @@ export const TreeItem = ({
         else cancelEdit();
     };
 
+    const handleEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        setEditTitle(val);
+        if (editError && val.trim()) setEditError(null);
+    };
+
     const handleContextMenu = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -184,11 +260,8 @@ export const TreeItem = ({
     const handleDelete = async () => {
         setIsDeleting(true);
         try {
-            if (isFolder) {
-                await deleteLibrary(item.id);
-            } else {
-                await deleteSnippet(item.id);
-            }
+            if (isFolder) await deleteLibrary(item.id);
+            else await deleteSnippet(item.id);
             onDelete?.(item.id);
         } catch (err) {
             console.error("Failed to delete:", err);
@@ -220,7 +293,7 @@ export const TreeItem = ({
                 },
             });
             items.push({
-                label: "Change Name",
+                label: "Rename",
                 icon: <CgRename className="w-4 h-4" />,
                 onClick: () => {
                     setSelectedItem(item.id, ExplorerItemType.Folder);
@@ -242,7 +315,7 @@ export const TreeItem = ({
                 },
             });
             items.push({
-                label: "Change Name",
+                label: "Rename",
                 icon: <CgRename className="w-4 h-4" />,
                 onClick: () => {
                     setSelectedItem(item.id, ExplorerItemType.File, parentId);
@@ -263,6 +336,11 @@ export const TreeItem = ({
 
     const paddingLeft = level * 12;
 
+    const previewLangConfig: LanguageConfig | null = isEditingThis && !isFolder
+        ? (inferLanguageFromTitle(editTitle) ?? langConfig)
+        : langConfig;
+    const PreviewIcon = previewLangConfig?.icon ?? FileIcon;
+
     return (
         <div className={isDeleting ? "opacity-40 pointer-events-none" : ""}>
             <div
@@ -277,7 +355,7 @@ export const TreeItem = ({
                         isExpanded ? collapseFolder(item.id) : expandFolder(item.id);
                         setAddingLibrary(false);
                     } else {
-                        addTab(currentItem.id); // ← add this for files
+                        addTab(currentItem.id);
                     }
                     setSelectedItem(currentItem.id, type, parentId);
                 }}
@@ -292,12 +370,13 @@ export const TreeItem = ({
                                 } ${loadingChildren ? "opacity-50" : ""}`}
                         />
                     )}
+
                     {isFolder ? (
                         <BiFolder className="w-4 h-4 mr-1.5 shrink-0 text-[#dcb67a]" />
                     ) : (
-                        <FileIcon
-                            className="w-4 h-4 mr-1.5 shrink-0"
-                            style={{ color: langConfig?.color || "#cccccc" }}
+                        <PreviewIcon
+                            className="w-4 h-4 mr-1.5 shrink-0 transition-colors"
+                            style={{ color: previewLangConfig?.color ?? "#cccccc" }}
                         />
                     )}
                 </div>
@@ -308,10 +387,7 @@ export const TreeItem = ({
                             ref={inputRef}
                             type="text"
                             value={editTitle}
-                            onChange={(e) => {
-                                setEditTitle(e.target.value);
-                                setEditError(null);
-                            }}
+                            onChange={handleEditChange}
                             onKeyDown={handleEditKeyDown}
                             onBlur={handleEditBlur}
                             disabled={isSaving}
@@ -319,7 +395,9 @@ export const TreeItem = ({
                             className={`
                                 flex-1 text-sm bg-transparent text-white
                                 border-b placeholder-gray-400 focus:outline-none min-w-10
-                                ${editError ? "border-red-500" : "border-gray-500 focus:border-blue-500"}
+                                ${editError
+                                    ? "border-red-500"
+                                    : "border-gray-500 focus:border-blue-500"}
                                 ${isSaving ? "cursor-not-allowed opacity-60" : ""}
                             `}
                             onClick={(e) => e.stopPropagation()}
@@ -331,11 +409,13 @@ export const TreeItem = ({
                 ) : (
                     <>
                         <span className="flex-1 text-[13px] truncate text-[#cccccc] font-normal">
-                            {currentItem.title}
+                            {isFolder ? currentItem.title : stripExtension(currentItem.title)}
                         </span>
                         {!isFolder && (
                             <span className="text-[11px] text-[#858585] mr-2 shrink-0">
-                                .{langConfig?.ext}
+                                {getExtension(currentItem.title)
+                                    ? `.${getExtension(currentItem.title)}`
+                                    : ""}
                             </span>
                         )}
                         {loadingChildren && (
@@ -347,7 +427,7 @@ export const TreeItem = ({
 
             {isEditingThis && editError && (
                 <div
-                    className="text-xs text-red-400 py-1 px-2"
+                    className="text-xs text-red-400 py-1 px-2 leading-tight"
                     style={{ paddingLeft: paddingLeft + 36 }}
                 >
                     {editError}
@@ -455,7 +535,3 @@ export const TreeItem = ({
         </div>
     );
 };
-
-function useTabStore(): { addTab: any; } {
-    throw new Error("Function not implemented.");
-}

@@ -78,7 +78,7 @@ export const useLibrary = () => {
     try {
       const res = await fetch(`/api/libraries`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" }, // ← was missing
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ parentId, title }),
         signal: addController.signal,
       });
@@ -87,8 +87,6 @@ export const useLibrary = () => {
 
       const newLibrary: LibraryDTO = await res.json();
 
-      // Guard: if the server returned something malformed, throw instead of
-      // silently propagating a broken object into the tree cache.
       if (!newLibrary?.id || !newLibrary?.title) {
         throw new Error(`Server returned invalid library: ${JSON.stringify(newLibrary)}`);
       }

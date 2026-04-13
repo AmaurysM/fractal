@@ -19,7 +19,7 @@ import { getTabStore } from "./store/tabStore";
 const SIDEBAR_MIN = 180;
 const SIDEBAR_MAX = 600;
 const SIDEBAR_DEFAULT = 260;
-const SNAP_THRESHOLD = 80; // px — drag below this width to snap closed
+const SNAP_THRESHOLD = 80;
 
 enum ActivityItem {
   Explorer = "Explorer",
@@ -38,7 +38,6 @@ export default function Home() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerHeight, setDrawerHeight] = useState(65);
 
-  // Sidebar resize/collapse state
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
@@ -69,8 +68,6 @@ export default function Home() {
 
   const isInitialLoading = !user;
 
-  // ── Sidebar resize handlers ────────────────────────────────────────────────
-
   const onResizerMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     resizeStartX.current = e.clientX;
@@ -82,7 +79,6 @@ export default function Home() {
       const raw = resizeStartWidth.current + delta;
 
       if (raw < SNAP_THRESHOLD) {
-        // Floor to snap threshold visually while dragging so it doesn't flicker to 0 mid-drag
         setSidebarWidth(SNAP_THRESHOLD);
       } else {
         const clamped = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, raw));
@@ -97,7 +93,6 @@ export default function Home() {
       const raw = resizeStartWidth.current + delta;
 
       if (raw < SNAP_THRESHOLD) {
-        // Snap closed
         setSidebarCollapsed(true);
         setSidebarWidth(SIDEBAR_DEFAULT);
         lastOpenWidth.current = SIDEBAR_DEFAULT;
@@ -168,8 +163,6 @@ export default function Home() {
   function handleSignout() {
     signOut({ callbackUrl: "/landing" });
   }
-
-  // ── Render ─────────────────────────────────────────────────────────────────
 
   const effectiveSidebarWidth = sidebarCollapsed ? 0 : sidebarWidth;
 

@@ -13,14 +13,12 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Query the snippet junction to find the parent library
     const result = await db.query(
       `SELECT libraryid FROM "SnippetJunction" WHERE id = $1 LIMIT 1`,
       [snippetId]
     );
 
     if (result.rows.length === 0) {
-      // No parent found - this is a root level snippet
       return NextResponse.json({ parentId: null });
     }
 
