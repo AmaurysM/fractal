@@ -1,11 +1,11 @@
 "use client"
 
 import { useDraggable, useDroppable } from "@dnd-kit/react";
-import { closestCorners, directionBiased } from "@dnd-kit/collision";
+import { closestCorners } from "@dnd-kit/collision";
 import { ExplorerItemType } from "../../../types/types";
 import { LibraryDTO } from "../api/libraries/parents/route";
 import { SnippetDTO } from "../api/snippets/parents/route";
-import { useEffect } from "react";
+import { PointerSensor, PointerActivationConstraints } from "@dnd-kit/dom";
 
 export const TreeItemDropContainer = ({
     dto,
@@ -23,6 +23,13 @@ export const TreeItemDropContainer = ({
     const { ref: draggableRef } = useDraggable({
         id: dto.id,
         data: { id: dto.id, type, title: dto.title, parentId: parentId ?? null },
+        sensors: [
+            PointerSensor.configure({
+                activationConstraints: () => [
+                    new PointerActivationConstraints.Distance({ value: 8 }),
+                ],
+            }),
+        ],
     });
 
     const { ref: droppableRef, isDropTarget } = useDroppable({
@@ -41,7 +48,7 @@ export const TreeItemDropContainer = ({
         <div
             ref={ref}
             style={{
-                outline: isDropTarget && isFolder ? '1px solid #007fd4' : undefined,
+                outline: isDropTarget && isFolder ? "1px solid #007fd4" : undefined,
             }}
         >
             {children}

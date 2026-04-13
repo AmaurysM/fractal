@@ -131,7 +131,6 @@ export const SearchSidebar = () => {
                                         item={snip}
                                         onSuccess={() => {
                                             setIsEditingSnippet(false);
-                                            // Re-fetch so renamed title reflects in results
                                             runSearch(searchValueRef.current);
                                         }}
                                     />
