@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "@/app/api/auth/authOptions";
 import { getServerSession } from "next-auth";
 import { SnippetDTO } from "./parents/route";
+import { LANGUAGES } from "../../../../types/languages";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -109,6 +110,13 @@ export async function PATCH(req: NextRequest) {
     );
   }
 
+  let titleWithExtension = title;
+
+  if (language) {
+    const entension = LANGUAGES.find(l => l.value === language)?.ext;
+    titleWithExtension = title + "." + entension
+  }
+
   const UserId = session.user.id;
   try {
     const result = await db.query(
@@ -119,7 +127,7 @@ export async function PATCH(req: NextRequest) {
            description = $4,
            text = $5
        WHERE id = $6`,
-      [UserId, language, title, description, text, id]
+      [UserId, language, titleWithExtension, description, text, id]
     );
 
 
