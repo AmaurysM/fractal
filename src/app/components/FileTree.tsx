@@ -14,7 +14,7 @@ import { useSnippet } from "../hooks/useSnippet";
 import { DragDropProvider, useDroppable } from "@dnd-kit/react";
 import { TreeItemDropContainer } from "./TreeItemDropContainer";
 import { directionBiased } from "@dnd-kit/collision";
-import { ROOT_KEY, useTreeStore } from "../store/treeStore";
+import { findParentFolder, ROOT_KEY, useTreeStore } from "../store/treeStore";
 import { VscNewFile, VscNewFolder } from "react-icons/vsc";
 
 const RootDropZone = ({
@@ -56,9 +56,10 @@ const FileTreeInner = () => {
         selectedParentId,
         setAddingSnippet,
         setAddingLibrary,
+        selectedItemType
     } = useLibraryStore();
 
-    const { cache, setFolder, moveItem, isRevalidating, setRevalidating } = useTreeStore();
+    const { cache, setFolder, moveItem, isRevalidating, setRevalidating, expandFolder } = useTreeStore();
     const { data: session } = useSession();
 
     const rootContents = cache[ROOT_KEY];
@@ -143,7 +144,16 @@ const FileTreeInner = () => {
                         onClick={() => {
                             if (selectedItem === null) {
                                 setSelectedItem(null);
+                                
+                            } else if (selectedItemType === ExplorerItemType.Folder) {
+                                expandFolder(selectedItem);
+                            } else if (selectedParentId != null) {
+                                const parentId = findParentFolder(cache, selectedParentId)
+                                setSelectedItem(selectedParentId, ExplorerItemType.Folder, parentId )
+                                expandFolder(selectedParentId)
+                                setAddingLibrary(true)
                             }
+                            
                             setAddingSnippet(true);
                         }}
                         className="p-1.5 rounded-sm hover:bg-[#2a2d2e] transition-colors text-[#cccccc]"
@@ -156,7 +166,15 @@ const FileTreeInner = () => {
                         onClick={() => {
                             if (selectedItem === null) {
                                 setSelectedItem(null);
+                            } else if (selectedItemType === ExplorerItemType.Folder) {
+                                expandFolder(selectedItem);
+                            } else if (selectedParentId != null){
+                                const parentId = findParentFolder(cache, selectedParentId)
+                                setSelectedItem(selectedParentId, ExplorerItemType.Folder, parentId )
+                                expandFolder(selectedParentId)
+                                setAddingLibrary(true)
                             }
+                            
                             setAddingLibrary(true);
                         }}
                         className="p-1.5 rounded-sm hover:bg-[#2a2d2e] transition-colors text-[#cccccc]"

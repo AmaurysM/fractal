@@ -34,6 +34,15 @@ export function validateItemName(
   return null;
 }
 
+export function findParentFolder(cache: Record<string, FolderContents>, snippetId: string) {
+  for (const [folderId, contents] of Object.entries(cache)) {
+    if (contents.snips.some(s => s.id === snippetId)) {
+      return folderId;
+    }
+  }
+  return null;
+}
+
 export type FolderContents = {
   libs: LibraryDTO[];
   snips: SnippetDTO[];
