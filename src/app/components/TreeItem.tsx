@@ -298,6 +298,7 @@ export const TreeItem = ({
                 onClick: () => {
                     setSelectedItem(item.id, ExplorerItemType.Folder);
                     setIsEditingFolder(true);
+
                 },
             });
         } else {
@@ -342,196 +343,197 @@ export const TreeItem = ({
     const PreviewIcon = previewLangConfig?.icon ?? FileIcon;
 
     return (
-        <div className={isDeleting ? "opacity-40 pointer-events-none" : ""}>
-            <div
-                style={{ paddingLeft }}
-                className={`flex items-center h-5.5 cursor-pointer transition-colors select-none ${isSelected ? "bg-[#37373d]" : isHovered ? "bg-[#2a2d2e]" : ""
-                    }`}
-                onClick={(e) => {
-                    e.stopPropagation();
-                    if (isEditingThis) return;
-                    if (loadingChildren) return;
-                    if (isFolder) {
-                        isExpanded ? collapseFolder(item.id) : expandFolder(item.id);
-                        setAddingLibrary(false);
-                    } else {
-                        addTab(currentItem.id);
-                    }
-                    setSelectedItem(currentItem.id, type, parentId);
-                }}
-                onContextMenu={handleContextMenu}
-                onMouseEnter={() => setIsHovered(true)}
-                onMouseLeave={() => setIsHovered(false)}
-            >
-                <div className="flex w-9 justify-center items-center">
-                    {isFolder && (
-                        <BiChevronRight
-                            className={`w-3 h-3 text-[#cccccc] transition-transform mr-0.5 shrink-0 ${isExpanded ? "rotate-90" : ""
-                                } ${loadingChildren ? "opacity-50" : ""}`}
-                        />
-                    )}
 
-                    {isFolder ? (
-                        <BiFolder className="w-4 h-4 mr-1.5 shrink-0 text-[#dcb67a]" />
-                    ) : (
-                        <PreviewIcon
-                            className="w-4 h-4 mr-1.5 shrink-0 transition-colors"
-                            style={{ color: previewLangConfig?.color ?? "#cccccc" }}
-                        />
-                    )}
-                </div>
+        <div>
+            <div className={isDeleting ? "opacity-40 pointer-events-none" : ""}>
+                <div
+                    style={{ paddingLeft }}
+                    className={`flex items-center h-5.5 cursor-pointer transition-colors select-none ${isSelected ? "bg-[#37373d]" : isHovered ? "bg-[#2a2d2e]" : ""
+                        }`}
+                    onClick={() => {
+                        if (isEditingThis) return;
 
-                {isEditingThis ? (
-                    <>
-                        <input
-                            ref={inputRef}
-                            type="text"
-                            value={editTitle}
-                            onChange={handleEditChange}
-                            onKeyDown={handleEditKeyDown}
-                            onBlur={handleEditBlur}
-                            disabled={isSaving}
-                            placeholder={isFolder ? "Folder name" : "File name"}
-                            className={`
+                        if (loadingChildren) return;
+
+                        if (isFolder) {
+
+                            isExpanded ? collapseFolder(item.id) : expandFolder(item.id);
+
+                            setAddingLibrary(false);
+
+                        } else {
+                            addTab(currentItem.id);
+                        }
+                        setSelectedItem(currentItem.id, type, parentId);
+                    }}
+                    onContextMenu={handleContextMenu}
+                    onMouseEnter={() => setIsHovered(true)}
+                    onMouseLeave={() => setIsHovered(false)}
+                >
+                    <div className="flex w-9 justify-center items-center">
+                        {isFolder && (
+                            <BiChevronRight
+                                className={`w-3 h-3 text-[#cccccc] transition-transform mr-0.5 shrink-0 ${isExpanded ? "rotate-90" : ""
+                                    } ${loadingChildren ? "opacity-50" : ""}`}
+                            />
+                        )}
+
+                        {isFolder ? (
+                            <BiFolder className="w-4 h-4 mr-1.5 shrink-0 text-[#dcb67a]" />
+                        ) : (
+                            <PreviewIcon
+                                className="w-4 h-4 mr-1.5 shrink-0 transition-colors"
+                                style={{ color: previewLangConfig?.color ?? "#cccccc" }}
+                            />
+                        )}
+                    </div>
+
+                    {isEditingThis ? (
+                        <>
+                            <input
+                                ref={inputRef}
+                                type="text"
+                                value={editTitle}
+                                onChange={handleEditChange}
+                                onKeyDown={handleEditKeyDown}
+                                onBlur={handleEditBlur}
+                                disabled={isSaving}
+                                placeholder={isFolder ? "Folder name" : "File name"}
+                                className={`
                                 flex-1 text-sm bg-transparent text-white
                                 border-b placeholder-gray-400 focus:outline-none min-w-10
                                 ${editError
-                                    ? "border-red-500"
-                                    : "border-gray-500 focus:border-blue-500"}
+                                        ? "border-red-500"
+                                        : "border-gray-500 focus:border-blue-500"}
                                 ${isSaving ? "cursor-not-allowed opacity-60" : ""}
                             `}
-                            onClick={(e) => e.stopPropagation()}
-                        />
-                        {isSaving && (
-                            <div className="flex-none ml-2 w-2.5 h-2.5 border border-[#cccccc] border-t-transparent rounded-full animate-spin mr-2" />
-                        )}
-                    </>
-                ) : (
-                    <>
-                        <span className="flex-1 text-[13px] truncate text-[#cccccc] font-normal">
-                            {isFolder ? currentItem.title : stripExtension(currentItem.title)}
-                        </span>
-                        {!isFolder && (
-                            <span className="text-[11px] text-[#858585] mr-2 shrink-0">
-                                {getExtension(currentItem.title)
-                                    ? `.${getExtension(currentItem.title)}`
-                                    : ""}
+                                onClick={(e) => e.stopPropagation()}
+                            />
+                            {isSaving && (
+                                <div className="flex-none ml-2 w-2.5 h-2.5 border border-[#cccccc] border-t-transparent rounded-full animate-spin mr-2" />
+                            )}
+                        </>
+                    ) : (
+                        <>
+                            <span className="flex-1 text-[13px] truncate text-[#cccccc] font-normal">
+                                {isFolder ? currentItem.title : stripExtension(currentItem.title)}
                             </span>
-                        )}
-                        {loadingChildren && (
-                            <div className="w-2.5 h-2.5 border border-[#cccccc] border-t-transparent rounded-full animate-spin mr-2" />
-                        )}
-                    </>
+                            {!isFolder && (
+                                <span className="text-[11px] text-[#858585] mr-2 shrink-0">
+                                    {getExtension(currentItem.title)
+                                        ? `.${getExtension(currentItem.title)}`
+                                        : ""}
+                                </span>
+                            )}
+                            {loadingChildren && (
+                                <div className="w-2.5 h-2.5 border border-[#cccccc] border-t-transparent rounded-full animate-spin mr-2" />
+                            )}
+                        </>
+                    )}
+                </div>
+
+                {isEditingThis && editError && (
+                    <div
+                        className="text-xs text-red-400 py-1 px-2 leading-tight"
+                        style={{ paddingLeft: paddingLeft + 36 }}
+                    >
+                        {editError}
+                    </div>
+                )}
+
+                {contextMenu && (
+                    <ContextMenu
+                        x={contextMenu.x}
+                        y={contextMenu.y}
+                        onClose={() => setContextMenu(null)}
+                        items={getContextMenuItems()}
+                    />
                 )}
             </div>
 
-            {isEditingThis && editError && (
-                <div
-                    className="text-xs text-red-400 py-1 px-2 leading-tight"
-                    style={{ paddingLeft: paddingLeft + 36 }}
-                >
-                    {editError}
-                </div>
-            )}
-
-            {contextMenu && (
-                <ContextMenu
-                    x={contextMenu.x}
-                    y={contextMenu.y}
-                    onClose={() => setContextMenu(null)}
-                    items={getContextMenuItems()}
-                />
-            )}
-
-            {isFolder && isExpanded && (
-                <div>
-                    {addingLibrary && isSelected && (
-                        <TreeItemCreation
-                            level={level + 1}
-                            type={ExplorerItemType.Folder}
-                            parentId={item.id}
-                            onSuccess={(newItem) =>
-                                setFolder(folderId, {
-                                    libs: [...libraries, newItem as LibraryDTO],
-                                    snips: snippets,
-                                })
-                            }
-                        />
-                    )}
-
-                    {libraries.map((lib) => (
-                        <div
-                            key={lib.id}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedItem(lib.id, ExplorerItemType.Folder, item.id);
-                            }}
-                        >
-                            <TreeItemDropContainer
-                                dto={lib}
-                                parentId={item.id}
+            <div>
+                {isFolder && isExpanded && (
+                    <div>
+                        {addingLibrary && isSelected && (
+                            <TreeItemCreation
+                                level={level + 1}
                                 type={ExplorerItemType.Folder}
-                            >
-                                <TreeItem
-                                    item={{ id: lib.id, userid: session?.user.id!, title: lib.title } as Library}
-                                    type={ExplorerItemType.Folder}
-                                    level={level + 1}
-                                    parentId={item.id}
-                                    onDelete={(id) =>
-                                        setFolder(folderId, {
-                                            libs: libraries.filter((l) => l.id !== id),
-                                            snips: snippets,
-                                        })
-                                    }
-                                />
-                            </TreeItemDropContainer>
-                        </div>
-                    ))}
-
-                    {addingSnippet && isSelected && (
-                        <TreeItemCreation
-                            level={level + 1}
-                            type={ExplorerItemType.File}
-                            parentId={item.id}
-                            onSuccess={(newItem) =>
-                                setFolder(folderId, {
-                                    libs: libraries,
-                                    snips: [...snippets, newItem as SnippetDTO],
-                                })
-                            }
-                        />
-                    )}
-
-                    {snippets.map((snip) => (
-                        <div
-                            key={snip.id}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedItem(snip.id, ExplorerItemType.File, item.id);
-                            }}
-                        >
-                            <TreeItemDropContainer
-                                dto={snip}
                                 parentId={item.id}
-                                type={ExplorerItemType.File}
+                                onSuccess={(newItem) =>
+                                    setFolder(folderId, {
+                                        libs: [...libraries, newItem as LibraryDTO],
+                                        snips: snippets,
+                                    })
+                                }
+                            />
+                        )}
+
+                        {libraries.map((lib) => (
+                            <div
+                                key={lib.id}
                             >
-                                <TreeItem
-                                    item={{ id: snip.id, title: snip.title, userId: session?.user.id! } as Snippet}
-                                    type={ExplorerItemType.File}
-                                    level={level + 1}
+                                <TreeItemDropContainer
+                                    dto={lib}
                                     parentId={item.id}
-                                    onDelete={(id) =>
-                                        setFolder(folderId, {
-                                            libs: libraries,
-                                            snips: snippets.filter((s) => s.id !== id),
-                                        })
-                                    }
-                                />
-                            </TreeItemDropContainer>
-                        </div>
-                    ))}
-                </div>
-            )}
+                                    type={ExplorerItemType.Folder}
+                                >
+                                    <TreeItem
+                                        item={{ id: lib.id, userid: session?.user.id!, title: lib.title } as Library}
+                                        type={ExplorerItemType.Folder}
+                                        level={level + 1}
+                                        parentId={item.id}
+                                        onDelete={(id) =>
+                                            setFolder(folderId, {
+                                                libs: libraries.filter((l) => l.id !== id),
+                                                snips: snippets,
+                                            })
+                                        }
+                                    />
+                                </TreeItemDropContainer>
+                            </div>
+                        ))}
+
+                        {addingSnippet && isSelected && (
+                            <TreeItemCreation
+                                level={level + 1}
+                                type={ExplorerItemType.File}
+                                parentId={item.id}
+                                onSuccess={(newItem) =>
+                                    setFolder(folderId, {
+                                        libs: libraries,
+                                        snips: [...snippets, newItem as SnippetDTO],
+                                    })
+                                }
+                            />
+                        )}
+
+                        {snippets.map((snip) => (
+                            <div
+                                key={snip.id}
+                            >
+                                <TreeItemDropContainer
+                                    dto={snip}
+                                    parentId={item.id}
+                                    type={ExplorerItemType.File}
+                                >
+                                    <TreeItem
+                                        item={{ id: snip.id, title: snip.title, userId: session?.user.id! } as Snippet}
+                                        type={ExplorerItemType.File}
+                                        level={level + 1}
+                                        parentId={item.id}
+                                        onDelete={(id) =>
+                                            setFolder(folderId, {
+                                                libs: libraries,
+                                                snips: snippets.filter((s) => s.id !== id),
+                                            })
+                                        }
+                                    />
+                                </TreeItemDropContainer>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
     );
 };

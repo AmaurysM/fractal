@@ -49,7 +49,7 @@ export const Tab = ({
       style={style}
       {...attributes}
       {...listeners}
-      className={`flex items-center gap-2 px-3 py-1 min-w-30 max-w-50 cursor-grab active:cursor-grabbing border-r border-[#252526] ${isActive
+      className={`flex items-center gap-2 px-3 py-1 min-w-30 max-w-50 hover:cursor-pointer border-r border-[#252526] ${isActive
         ? "bg-[#1e1e1e] border-t-2 border-t-[#007acc] text-[#cccccc]"
         : "bg-[#2d2d2d] text-[#969696] hover:bg-[#2a2d2e]"
         }`}
